@@ -1,0 +1,65 @@
+<?xml version='1.0' encoding='utf-8'?>
+
+<lng:Language  xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
+   xmlns:lng='http://axis.core.pulsar/language'
+   version='1.0'
+   languageId='com.axis.core.XFilterLanguage'
+   imports='el:com.axis.core.ExpressionLanguage;'>
+
+  <lng:RootSymbol name='language'>
+    <lng:Symbol name='path-expressions'/>
+  </lng:RootSymbol>
+
+
+  <lng:NonTerminal name='path-expressions'>
+    <lng:Sequence maxOccurs='unbounded'>
+      <lng:Symbol name='path-expression'/>
+    </lng:Sequence>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='path-expression'>
+    <lng:Symbol name='filter-depth'/>
+    <lng:Symbol name='white-space' minOccurs='0'/>
+    <lng:Symbol name='path-name'/>
+    <lng:Sequence minOccurs='0'>
+      <lng:Symbol name='white-space' minOccurs='0'/>
+      <lng:Symbol name='evaluation-exp'/>
+    </lng:Sequence>
+    <lng:Symbol name='white-space' minOccurs='0'/>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='filter-depth'>
+    <lng:Choice>
+      <lng:Symbol name='multi-level-depth' />
+      <lng:Symbol name='single-level-depth' />
+    </lng:Choice>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='path-name'>
+    <lng:Choice>
+      <lng:Symbol name='root' />
+      <lng:Symbol name='identifier' />
+      <lng:Symbol name='star' />
+    </lng:Choice>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='evaluation-exp'>
+    <lng:Symbol name='l-sbrace'/>
+    <lng:Symbol name='white-space' minOccurs='0'/>
+    <lng:Symbol name='el:boolean-exp'/>
+    <lng:Symbol name='white-space' minOccurs='0'/>
+    <lng:Symbol name='r-sbrace'/>
+  </lng:NonTerminal>
+
+
+  <!-- Terminals -->
+  <lng:CharacterTerminal name='root' string='#root' />
+  <lng:CharacterTerminal name='star' string='*' />
+  <lng:CharacterTerminal name='l-sbrace' string='[' />
+  <lng:CharacterTerminal name='r-sbrace' string=']' />
+  <lng:CharacterTerminal name='single-level-depth' string='/' />
+  <lng:CharacterTerminal name='multi-level-depth' string='//' />
+  <lng:Terminal name='identifier' pattern='[a-zA-Z_]\w*' />
+  <lng:Terminal name='white-space' pattern='\s+' />
+
+</lng:Language>

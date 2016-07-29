@@ -1,0 +1,446 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+
+<!--
+    Document   : ConditionalExpressionLanguage.xml
+    Created on : 23 February 2010, 15:29
+    Author     : biobra
+    Description:
+        Purpose of the document follows.
+-->
+
+<lng:Language  xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
+   xmlns:lng='http://axis.core.pulsar/language'
+   version='1.0'
+   languageId='com.axis.core.ExpressionLanguage'>
+
+
+  <!--
+EXPRESSION LANGUAGE=======================================================
+-->
+  <lng:RootSymbol name='language'>
+    <lng:Symbol name='expression'/>
+  </lng:RootSymbol>
+
+  <lng:NonTerminal name='expression' group='optional'>
+    <lng:Choice>
+      <lng:Symbol name='boolean-exp'/>
+      <lng:Symbol name='string-exp'/>
+      <lng:Symbol name='arithmetic-exp'/>
+      <lng:Symbol name='object-exp'/>
+    </lng:Choice>
+  </lng:NonTerminal>
+
+
+  <!--
+OBJECT EXPRESSION=======================================================
+-->
+
+  <lng:NonTerminal name='object-exp'>
+    <lng:Choice>
+      <lng:Symbol name='object-literal'/>
+      <lng:Symbol name='value-access'/>
+    </lng:Choice>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='value-access'>
+    <lng:Symbol name='variable'/>
+    <lng:Choice minOccurs='0' maxOccurs='unbounded'>
+      <lng:Sequence>
+        <lng:Symbol name='dot'/>
+        <lng:Symbol name='v-exp'/>
+      </lng:Sequence>
+      <lng:Symbol name='array-access'/>
+    </lng:Choice>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='array-access'>
+    <lng:Symbol name='l-sbrace'/>
+    <lng:Symbol name='white-space' minOccurs='0'/>
+    <lng:Symbol name='arithmetic-exp'/>
+    <lng:Symbol name='white-space' minOccurs='0'/>
+    <lng:Symbol name='r-sbrace'/>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='v-exp'>
+    <lng:Choice>
+      <lng:Symbol name='method-call'/>
+      <lng:Symbol name='variable'/>
+    </lng:Choice>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='variable'>
+    <lng:Choice minOccurs='0'>
+      <lng:Symbol name='atuna'/>
+      <lng:Symbol name='sharp'/>
+      <lng:Symbol name='dollar'/>
+    </lng:Choice>
+    <lng:Symbol name='identifier'/>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='method-call'>
+    <lng:Symbol name='identifier'/>
+    <lng:Symbol name='l-brace'/>
+    <lng:Sequence minOccurs='0'>
+      <lng:Symbol name='arg'/>
+      <lng:Sequence minOccurs='0' maxOccurs='unbounded'>
+        <lng:Symbol name='comma'/>
+        <lng:Symbol name='white-space' minOccurs='0'/>
+        <lng:Symbol name='arg'/>
+      </lng:Sequence>
+    </lng:Sequence>
+    <lng:Symbol name='white-space' minOccurs='0'/>
+    <lng:Symbol name='r-brace'/>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='arg'>
+    <lng:Symbol name='expression'/>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='object-literal'>
+    <lng:Symbol name='null'/>
+  </lng:NonTerminal>
+
+
+  <!--
+BOOLEAN EXPRESSION=======================================================
+Some modification was made here. See the 'language.bnf' file for claraification.
+-->
+
+  <lng:NonTerminal name='boolean-exp' group='optional'>
+    <lng:Symbol name='logical-term'/>
+    <lng:Sequence minOccurs='0' maxOccurs='unbounded'>
+      <lng:Symbol name='white-space' minOccurs='0'/>
+      <lng:Symbol name='conditional-op'/>
+      <lng:Symbol name='white-space' minOccurs='0'/>
+      <lng:Symbol name='logical-term'/>
+    </lng:Sequence>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='logical-term'>
+    <lng:Choice>
+      <lng:Symbol name='relational-exp' />
+      <lng:Symbol name='boolean-value' />
+    </lng:Choice>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='relational-exp'>
+    <lng:Choice>
+      <lng:Symbol name='boolean-relational'/>
+      <lng:Symbol name='arithmetic-relational'/>
+      <lng:Symbol name='string-relational'/>
+      <lng:Symbol name='object-relational'/>
+    </lng:Choice>
+  </lng:NonTerminal>
+
+
+
+  <lng:NonTerminal name='boolean-relational'>
+    <lng:Symbol name='boolean-value'/>
+    <lng:Symbol name='white-space' minOccurs='0'/>
+    <lng:Symbol name='logical-rel-op'/>
+    <lng:Symbol name='white-space' minOccurs='0'/>
+    <lng:Symbol name='boolean-value'/>
+  </lng:NonTerminal>
+
+
+  <lng:NonTerminal name='arithmetic-relational'>
+    <lng:Symbol name='arithmetic-exp'/>
+    <lng:Symbol name='white-space' minOccurs='0'/>
+    <lng:Symbol name='arithmetic-rel-op'/>
+    <lng:Symbol name='white-space' minOccurs='0'/>
+    <lng:Symbol name='arithmetic-exp'/>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='string-relational'>
+    <lng:Symbol name='string-exp'/>
+    <lng:Symbol name='string-rel-op'/>
+    <lng:Symbol name='string-exp'/>
+  </lng:NonTerminal>
+
+
+  <lng:NonTerminal name='object-relational'>
+    <lng:Choice>
+      <lng:Symbol name='object-eq-rel'/>
+      <lng:Symbol name='object-inst-rel'/>
+    </lng:Choice>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='object-eq-rel'>
+    <lng:Symbol name='object-exp'/>
+    <lng:Symbol name='white-space' minOccurs='0'/>
+    <lng:Symbol name='object-eq-rel-op'/>
+    <lng:Symbol name='white-space' minOccurs='0'/>
+    <lng:Symbol name='object-exp'/>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='object-inst-rel'>
+    <lng:Symbol name='object-exp'/>
+    <lng:Symbol name='white-space'/>
+    <lng:Symbol name='instanceof-op'/>
+    <lng:Symbol name='white-space'/>
+    <lng:Symbol name='identifier'/>
+  </lng:NonTerminal>
+
+
+
+  <lng:NonTerminal name='logical-op'>
+    <lng:Choice>
+      <lng:Symbol name='and' />
+      <lng:Symbol name='or' />
+      <lng:Symbol name='xor' />
+    </lng:Choice>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='conditional-op'>
+    <lng:Choice>
+      <lng:Symbol name='aand' />
+      <lng:Symbol name='oor' />
+      <lng:Symbol name='xxor' />
+    </lng:Choice>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='logical-rel-op'>
+    <lng:Choice>
+      <lng:Symbol name='equal' />
+      <lng:Symbol name='not-equal' />
+    </lng:Choice>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='arithmetic-rel-op'>
+    <lng:Choice>
+      <lng:Symbol name='equal' />
+      <lng:Symbol name='not-equal' />
+      <lng:Symbol name='greater-equal' />
+      <lng:Symbol name='less-equal' />
+      <lng:Symbol name='greater-than' />
+      <lng:Symbol name='less-than' />
+    </lng:Choice>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='string-rel-op'>
+    <lng:Choice>
+      <lng:Sequence>
+        <lng:Symbol name='white-space' minOccurs='0'/>
+        <lng:Choice>
+          <lng:Symbol name='equal' />
+          <lng:Symbol name='not-equal' />
+        </lng:Choice>
+        <lng:Symbol name='white-space' minOccurs='0'/>
+      </lng:Sequence>
+      <lng:Sequence>
+        <lng:Symbol name='white-space'/>
+        <lng:Choice>
+          <lng:Symbol name='contains' />
+          <lng:Symbol name='starts-with' />
+          <lng:Symbol name='ends-with' />
+          <lng:Symbol name='matches' />
+        </lng:Choice>
+        <lng:Symbol name='white-space'/>
+      </lng:Sequence>
+    </lng:Choice>
+  </lng:NonTerminal>
+
+  <!-- equiv resolves to obj1.equals(obj2), while equals resolves to obj1 == obj2 -->
+  <lng:NonTerminal name='object-eq-rel-op'>
+    <lng:Choice>
+      <lng:Symbol name='equiv' />
+      <lng:Symbol name='equal' />
+      <lng:Symbol name='not-equal' />
+    </lng:Choice>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='instanceof-op'>
+    <lng:Symbol name='instanceof'/>
+  </lng:NonTerminal>
+
+
+  <lng:NonTerminal name='boolean-value'>
+    <lng:Symbol name='not' minOccurs='0'/>
+    <lng:Symbol name='white-space' minOccurs='0'/>
+    <lng:Symbol name='logical-value'/>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='logical-value'>
+    <lng:Choice>
+      <lng:Symbol name='boolean-literal'/>
+      <lng:Symbol name='object-exp'/>
+      <lng:Symbol name='boolean-exp' group='required'/>
+    </lng:Choice>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='boolean-literal'>
+    <lng:Choice>
+      <lng:Symbol name='boolean-true'/>
+      <lng:Symbol name='boolean-false'/>
+    </lng:Choice>
+  </lng:NonTerminal>
+
+
+  <!--
+ARITHMETIC EXPRESSION===========================================================
+-->
+  <lng:NonTerminal name='arithmetic-exp'>
+    <lng:Symbol name='bitwise-exp'/>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='bitwise-exp'>
+    <lng:Symbol name='additive-exp'/>
+    <lng:Sequence minOccurs='0' maxOccurs='unbounded'>
+      <lng:Symbol name='white-space' minOccurs='0'/>
+      <lng:Symbol name='logical-op'/>
+      <lng:Symbol name='white-space' minOccurs='0'/>
+      <lng:Symbol name='additive-exp'/>
+    </lng:Sequence>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='additive-exp'>
+    <lng:Symbol name='factoral-exp'/>
+    <lng:Sequence minOccurs='0' maxOccurs='unbounded'>
+      <lng:Symbol name='white-space' minOccurs='0'/>
+      <lng:Symbol name='additive-op'/>
+      <lng:Symbol name='white-space' minOccurs='0'/>
+      <lng:Symbol name='factoral-exp'/>
+    </lng:Sequence>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='factoral-exp'>
+    <lng:Symbol name='numeric-value'/>
+    <lng:Sequence minOccurs='0' maxOccurs='unbounded'>
+      <lng:Symbol name='white-space' minOccurs='0'/>
+      <lng:Symbol name='factoral-op'/>
+      <lng:Symbol name='white-space' minOccurs='0'/>
+      <lng:Symbol name='numeric-value'/>
+    </lng:Sequence>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='numeric-value'>
+    <lng:Choice>
+      <lng:Symbol name='numeric-literal'/>
+      <lng:Symbol name='object-exp'/>
+      <lng:Symbol name='arithmetic-exp' group='required'/>
+    </lng:Choice>
+  </lng:NonTerminal>
+
+
+  <lng:NonTerminal name='additive-op'>
+    <lng:Choice>
+      <lng:Symbol name='plus'/>
+      <lng:Symbol name='minus'/>
+    </lng:Choice>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='factoral-op'>
+    <lng:Choice>
+      <lng:Symbol name='divide'/>
+      <lng:Symbol name='multiply'/>
+      <lng:Symbol name='modulo'/>
+    </lng:Choice>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='numeric-literal'>
+    <lng:Symbol name='minus' minOccurs='0'/>
+    <lng:Symbol name='white-space' minOccurs='0'/>
+    <lng:Symbol name='digits'/>
+    <lng:Sequence minOccurs='0'>
+      <lng:Symbol name='white-space' minOccurs='0'/>
+      <lng:Symbol name='dot' />
+      <lng:Symbol name='white-space' minOccurs='0'/>
+      <lng:Symbol name='digits'/>
+    </lng:Sequence>
+  </lng:NonTerminal>
+
+
+  <!--
+STRING EXPRESSION===============================================================
+-->
+  <lng:NonTerminal name='string-exp' group='optional'>
+    <lng:Symbol name='string-value'/>
+    <lng:Sequence minOccurs='0' maxOccurs='unbounded'>
+      <lng:Symbol name='white-space' minOccurs='0'/>
+      <lng:Symbol name='concact-op'/>
+      <lng:Symbol name='white-space' minOccurs='0'/>
+      <lng:Symbol name='string-value'/>
+    </lng:Sequence>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='string-value'>
+    <lng:Choice>
+      <lng:Symbol name='string-literal'/>
+      <lng:Symbol name='object-exp'/>
+      <lng:Symbol name='expression' group='required'/>
+    </lng:Choice>
+  </lng:NonTerminal>
+
+  <lng:NonTerminal name='string-literal'>
+    <lng:Sequence>
+      <lng:Symbol name='apos'/>
+      <lng:Symbol name='any-string'/>
+      <lng:Symbol name='apos'/>
+    </lng:Sequence>
+  </lng:NonTerminal>
+
+
+  <lng:NonTerminal name='concact-op'>
+    <lng:Symbol name='plus'/>
+  </lng:NonTerminal>
+
+
+  <!--
+TERMINALS=======================================================================
+-->
+
+
+  <lng:CharacterTerminal name='and' string='&amp;' />
+  <lng:CharacterTerminal name='or' string='|' />
+  <lng:CharacterTerminal name='aand' string='&amp;&amp;' />
+  <lng:CharacterTerminal name='oor' string='||' />
+  <lng:CharacterTerminal name='xor' string='^' />
+  <lng:CharacterTerminal name='xxor' string='^^' />
+  <lng:CharacterTerminal name='l-brace' string='(' />
+  <lng:CharacterTerminal name='r-brace' string=')' />
+  <lng:CharacterTerminal name='l-sbrace' string='[' />
+  <lng:CharacterTerminal name='r-sbrace' string=']' />
+  <lng:CharacterTerminal name='not' string='!' />
+  <lng:CharacterTerminal name='equal' string='=' />
+  <lng:CharacterTerminal name='equiv' string='==' />
+  <!-- for testing object equivalence i.e object.equals(object) -->
+  <lng:CharacterTerminal name='not-equal' string='!=' />
+  <lng:CharacterTerminal name='less-than' string='&lt;' />
+  <lng:CharacterTerminal name='greater-than' string='>' />
+  <lng:CharacterTerminal name='less-equal' string='&lt;=' />
+  <lng:CharacterTerminal name='greater-equal' string='>=' />
+  <lng:CharacterTerminal name='plus' string='+' />
+  <lng:CharacterTerminal name='minus' string='-' />
+  <lng:CharacterTerminal name='multiply' string='*' />
+  <lng:CharacterTerminal name='divide' string='/' />
+  <lng:CharacterTerminal name='modulo' string='%' />
+  <lng:CharacterTerminal name='atuna' string='@' />
+  <lng:CharacterTerminal name='dollar' string='$' />
+  <lng:CharacterTerminal name='dot' string='.' />
+  <lng:CharacterTerminal name='comma' string=',' />
+  <lng:CharacterTerminal name='sharp' string='#' />
+  <lng:CharacterTerminal name='apos' string='&apos;' />
+  <lng:CharacterTerminal name='boolean-true' string='true' />
+  <lng:CharacterTerminal name='boolean-false' string='false' />
+  <lng:CharacterTerminal name='starts-with' string='starts-with' />
+  <lng:CharacterTerminal name='ends-with' string='ends-with' />
+  <lng:CharacterTerminal name='contains' string='contains' />
+  <lng:CharacterTerminal name='matches' string='matches' />
+  <lng:CharacterTerminal name='null' string='null' />
+  <lng:CharacterTerminal name='instanceof' string='instanceof' />
+  <lng:Terminal name='digits' pattern='\d+' />
+  <lng:Terminal name='any-string' pattern="[^']*" />
+  <lng:Terminal name='identifier' pattern='[a-zA-Z_]\w*' />
+  <lng:Terminal name='white-space' pattern='\s+' />
+
+  <!--
+    Note: since this language doesnt recognize the apostrophy within a string literal, the only way to specify the apostrophy will be to
+    delimit it. instead of going with the conventional flavour of delimiting withing strings, i.e \", \n, etc. i'll go with the xml flavour.
+    there are only 4 recognized "entity-like" delimiters
+    1. apostrophy: &apos;
+    2. ampersand:  &amp;
+    3. new line:   &newl;
+    4. Quote: &quot;
+    -->
+
+</lng:Language>

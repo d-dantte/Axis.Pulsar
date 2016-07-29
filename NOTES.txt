@@ -1,0 +1,8 @@
+
+2016-07-06 =======================================================
+1. Review the 'Any' production-combiner in the grammer namespace. it currently repeats parsing unnecessarily
+2. I have found that production that has a MinCardinality of 0 must be in a sequence preceeded or succeeded 
+   by some other production whose MinCardinality is greater than 0 - else if such a setup is within another
+   production whose MaxCardinality is unbounded, you'll have an infinite loop on your hands.
+3. The Language.xsd document is grossly outdated and needs to be updated - although i dont use it to verify
+   the actual language anymore.
