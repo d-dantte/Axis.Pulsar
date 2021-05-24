@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Axis.Pulsar.Parser\Axis.Pulsar.Parser.csproj" />
+  </ItemGroup>
+
+</Project>
