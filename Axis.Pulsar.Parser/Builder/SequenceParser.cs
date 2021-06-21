@@ -1,6 +1,5 @@
 ﻿using Axis.Pulsar.Parser.Input;
-using Axis.Pulsar.Parser.Language;
-using System;
+using Axis.Pulsar.Parser.Utils;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -10,6 +9,11 @@ namespace Axis.Pulsar.Parser.Builder
     {
         public static readonly string PSEUDO_NAME = "#Sequence";
 
+
+
+        public SequenceParser(IParser parser)
+            : this(Cardinality.OccursOnlyOnce(), parser)
+        { }
 
         public SequenceParser(Cardinality cardinality, params IParser[] children)
             :base(cardinality, children)

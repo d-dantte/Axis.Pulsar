@@ -30,10 +30,70 @@ namespace Axis.Pulsar.Parser.Syntax
             _children = children?.ToArray() ?? throw new ArgumentNullException(nameof(children));
             _children.ThrowIf(ContainsNull, t => new ArgumentException("Symbol array must not contain null elements"));
             _value = _children
-                .Aggregate(new StringBuilder(), (acc, next) => acc.Append(next))
+                .Aggregate(new StringBuilder(), (acc, next) => acc.Append(next.Value))
                 .ToString();
         }
 
+        /// <summary>
+        /// Get the first symbol found by searching corresponding child-symbols that match the path given.
+        /// The path is a '.' separated list of symbol names. e.g expression.operator.constant
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="child"></param>
+        /// <returns></returns>
+        public bool TryFIndSymbol(string path, out Symbol child)
+        {
+            if (TryFindSymbols(path, out var children))
+            {
+                child = children[0];
+                return true;
+            }
+            else
+            {
+                child = null;
+                return false;
+            }
+        }
+
+
+        /// <summary>
+        /// Gets all symbols found by searching corresponding child-symbols that match the path given.
+        /// The path is a '.' separated list of symbol names. e.g expression.operator.constant
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="child"></param>
+        /// <returns></returns>
+        public bool TryFindSymbols(string path, out Symbol[] children)
+        {
+            var names = path.Split('.', StringSplitOptions.RemoveEmptyEntries);
+
+            try
+            {
+                children = names
+                    .Aggregate(this.Enumerate(), GetChildren)
+                    .ToArray();
+
+                if (children.Length > 0)
+                    return true;
+
+                else
+                {
+                    children = null;
+                    return false;
+                }
+            }
+            catch
+            {
+                children = null;
+                return false;
+            }
+        }
+
+        private IEnumerable<Symbol> GetChildren(string name)
+            => _children.Where(symbol => symbol.Name.Equals(name, StringComparison.InvariantCulture));
+
         private static bool ContainsNull(IEnumerable<Symbol> symbols) => symbols.Any(s => s == null);
+
+        private static IEnumerable<Symbol> GetChildren(IEnumerable<Symbol> symbols, string name) => symbols.SelectMany(symbol => symbol.GetChildren(name));
     }
 }

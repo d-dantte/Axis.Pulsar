@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Axis.Pulsar.Parser.Language
+namespace Axis.Pulsar.Parser.Utils
 {
     /// <summary>
     /// Defines the number of times a group can occur
@@ -10,18 +10,23 @@ namespace Axis.Pulsar.Parser.Language
         /// <summary>
         /// Maximum number of occurences
         /// </summary>
-        public uint? MaxOccurence { get; }
+        public int? MaxOccurence { get; }
 
         /// <summary>
         /// Minimum number of occurence
         /// </summary>
-        public uint MinOccurence { get; }
+        public int MinOccurence { get; }
 
 
-        public Cardinality(uint? max, uint min)
+        public Cardinality(int min, int? max = null)
         {
-            MaxOccurence = max;
-            MinOccurence = min;
+            MaxOccurence = max.ThrowIf(
+                Extensions.IsNegative,
+                v => new ArgumentException($"{nameof(max)} cannot be negative"));
+
+            MinOccurence = min.ThrowIf(
+                Extensions.IsNegative,
+                v => new ArgumentException($"{nameof(min)} cannot be negative"));
 
             Validate();
         }
@@ -50,16 +55,22 @@ namespace Axis.Pulsar.Parser.Language
 
         public static Cardinality OccursOnlyOnce() => OccursOnly(1);
 
-        public static Cardinality OccursOnly(uint occurences) => new(occurences, occurences);
+        public static Cardinality OccursOnly(int occurences) => new(occurences, occurences);
 
         public static Cardinality OccursAtLeastOnce() => OccursAtLeast(1);
 
-        public static Cardinality OccursAtLeast(uint leastOccurences) => new(null, leastOccurences);
+        public static Cardinality OccursAtLeast(int leastOccurences) => new(leastOccurences);
 
         public static Cardinality OccursOptionally() => OccursNeverOrAtMost(1);
 
-        public static Cardinality OccursAtMost(uint maximumOccurences) => new(maximumOccurences, 1);
+        public static Cardinality OccursAtMost(int maximumOccurences) => new(1, maximumOccurences);
 
-        public static Cardinality OccursNeverOrAtMost(uint maximumOccurences) => new(maximumOccurences, 0);
+        public static Cardinality OccursNeverOrAtMost(int maximumOccurences) => new(0, maximumOccurences);
+
+        public static Cardinality OccursNeverOrMore() => new(0);
+
+        public static bool operator ==(Cardinality left, Cardinality right) => left.Equals(right);
+
+        public static bool operator !=(Cardinality left, Cardinality right) => !(left == right);
     }
 }

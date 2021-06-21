@@ -20,21 +20,25 @@ namespace Axis.Pulsar.Parser.Builder
             try
             {
                 string symbolValue = null;
-                if(_terminal.Info.MaxLength == null) //open ended
+                if(_terminal.CharacterCardinality.MaxOccurence == null) //open ended
                 {
                     //pull the min number of characters from the source, then keep pulling and matching till a false match is encountered
-                    if (!tokenReader.TryNextTokens(_terminal.Info.MinLength, out var tokens))
+                    if (!tokenReader.TryNextTokens(_terminal.CharacterCardinality.MinOccurence, out var tokens))
                         throw new System.IO.EndOfStreamException();
 
                     else if (!_terminal.Value.IsMatch(new string(tokens)))
-                        throw new Exception();
+                    {
+                        result = new ParseResult(new ParseError(_terminal.Name, position + 1));
+                        tokenReader.Reset(position);
+                        return false;
+                    }
 
                     var sbuffer = new StringBuilder(new string(tokens));
                     while (tokenReader.TryNextToken(out var token))
                     {
                         if(!_terminal.Value.IsMatch(sbuffer.Append(token).ToString()))
                         {
-                            tokenReader.Back(1);
+                            tokenReader.Back();
                             sbuffer.Remove(sbuffer.Length - 1, 1);
                             break;
                         }
@@ -45,8 +49,8 @@ namespace Axis.Pulsar.Parser.Builder
                 else //close ended
                 {
                     //pull the max number of characters from the source, then keep removing from the end till a positive match is encountered
-                    for (int charCount = _terminal.Info.MaxLength.Value;
-                        charCount >= _terminal.Info.MinLength;
+                    for (int charCount = _terminal.CharacterCardinality.MaxOccurence.Value;
+                        charCount >= _terminal.CharacterCardinality.MinOccurence;
                         charCount--)
                     {
                         if (!tokenReader.TryNextTokens(charCount, out var tokens))
@@ -66,7 +70,11 @@ namespace Axis.Pulsar.Parser.Builder
 
                     //no match at all
                     if (symbolValue == null)
-                        throw new Exception();
+                    {
+                        result = new ParseResult(new ParseError(_terminal.Name, position + 1));
+                        tokenReader.Reset(position);
+                        return false;
+                    }
                 }
 
                 result = new ParseResult(new Syntax.Symbol(_terminal.Name, symbolValue));

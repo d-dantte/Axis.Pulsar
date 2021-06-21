@@ -1,5 +1,5 @@
 ﻿using Axis.Pulsar.Parser.Input;
-using Axis.Pulsar.Parser.Language;
+using Axis.Pulsar.Parser.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +9,12 @@ namespace Axis.Pulsar.Parser.Builder
     public class SetParser : ProductionParser
     {
         public static readonly string PSEUDO_NAME = "#Set";
+
+
+
+        public SetParser(IParser parser)
+            : this(Cardinality.OccursOnlyOnce(), parser)
+        { }
 
         public SetParser(Cardinality cardinality, params IParser[] children)
             :base(cardinality, children)

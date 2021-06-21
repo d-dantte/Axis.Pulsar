@@ -1,5 +1,5 @@
 ﻿using Axis.Pulsar.Parser.Input;
-using Axis.Pulsar.Parser.Language;
+using Axis.Pulsar.Parser.Utils;
 using System;
 using System.Linq;
 
@@ -29,7 +29,7 @@ namespace Axis.Pulsar.Parser.Builder
         /// <param name="cardinality"></param>
         public ProductionParser(Cardinality cardinality, IParser[] children)
         {
-            Cardinality = cardinality.ThrowIf(IsDefault, t => new ArgumentException("'default(Cardinality)' is not a valid argument"));
+            Cardinality = cardinality;
 
             if (children == null)
                 throw new ArgumentNullException(nameof(children));
@@ -73,7 +73,5 @@ namespace Axis.Pulsar.Parser.Builder
 
             else return false;
         }
-
-        private static bool IsDefault(Cardinality c) => default(Cardinality).Equals(c);
     }
 }

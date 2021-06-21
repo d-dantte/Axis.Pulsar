@@ -5,6 +5,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Folder Include="Json\" />
+    <Folder Include="BNF\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Axis.Pulsar.Parser\Axis.Pulsar.Parser.csproj" />
   </ItemGroup>
 

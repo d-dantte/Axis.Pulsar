@@ -50,6 +50,8 @@ namespace Axis.Pulsar.Parser
             IEnumerable<T> otherValue)
             => Enumerable.Concat(initialValues, otherValue);
 
+        public static IEnumerable<T> Enumerate<T>(this T value) => new[] { value };
+
         public static T ThrowIf<T>(this 
             T value, Func<T, bool> predicate,
             Func<T, Exception> exception = null)
@@ -99,6 +101,12 @@ namespace Axis.Pulsar.Parser
         public static bool IsZero(this int value) => value == 0;
 
         public static bool IsPositive(this int value) => value > 0;
+
+        public static bool IsNegative(this int? value) => value < 0;
+
+        public static bool IsZero(this int? value) => value == 0;
+
+        public static bool IsPositive(this int? value) => value > 0;
 
         public static Syntax.Symbol[] FlattenProduction(this Syntax.Symbol symbol)
         {

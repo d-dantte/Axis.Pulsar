@@ -8,13 +8,17 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		NOTES.txt = NOTES.txt
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Axis.Pulsar.Parser", "Axis.Pulsar.Parser\Axis.Pulsar.Parser.csproj", "{F527318F-D150-4DCB-8944-2068622C0BCE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Axis.Pulsar.Parser", "Axis.Pulsar.Parser\Axis.Pulsar.Parser.csproj", "{F527318F-D150-4DCB-8944-2068622C0BCE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Axis.Pulsar.Parser.Tests", "Axis.Pulsar.Parser.Tests\Axis.Pulsar.Parser.Tests.csproj", "{5F0572CF-5B84-4C63-B62B-E772490C385E}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Axis.Pulsar.XmlLanguageImporter", "Axis.Pulsar.XmlLanguageImporter\Axis.Pulsar.XmlLanguageImporter.csproj", "{F14579CD-3DAD-4189-A0C5-9B08DA0DADF5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Axis.Pulsar.Parser.Tests", "Axis.Pulsar.Parser.Tests\Axis.Pulsar.Parser.Tests.csproj", "{5F0572CF-5B84-4C63-B62B-E772490C385E}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{1FF108D1-A5A3-440E-A034-1EE03D1D80B7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Src", "Src", "{EA81C491-927F-46E2-A283-8E64DD3A0704}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Axis.Pulsar.Importer.Common", "Axis.Pulsar.Importer.Common\Axis.Pulsar.Importer.Common.csproj", "{B1519914-E22C-4BC0-BCB7-F742795F46CB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Axis.Pulsar.Importer.Tests", "Axis.Pulsar.Importer.Tests\Axis.Pulsar.Importer.Tests.csproj", "{90405144-74F3-4FFF-8F56-AFA953445350}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -30,16 +34,23 @@ Global
 		{5F0572CF-5B84-4C63-B62B-E772490C385E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5F0572CF-5B84-4C63-B62B-E772490C385E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5F0572CF-5B84-4C63-B62B-E772490C385E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F14579CD-3DAD-4189-A0C5-9B08DA0DADF5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F14579CD-3DAD-4189-A0C5-9B08DA0DADF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F14579CD-3DAD-4189-A0C5-9B08DA0DADF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F14579CD-3DAD-4189-A0C5-9B08DA0DADF5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1519914-E22C-4BC0-BCB7-F742795F46CB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1519914-E22C-4BC0-BCB7-F742795F46CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1519914-E22C-4BC0-BCB7-F742795F46CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1519914-E22C-4BC0-BCB7-F742795F46CB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{90405144-74F3-4FFF-8F56-AFA953445350}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{90405144-74F3-4FFF-8F56-AFA953445350}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{90405144-74F3-4FFF-8F56-AFA953445350}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{90405144-74F3-4FFF-8F56-AFA953445350}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{F527318F-D150-4DCB-8944-2068622C0BCE} = {EA81C491-927F-46E2-A283-8E64DD3A0704}
 		{5F0572CF-5B84-4C63-B62B-E772490C385E} = {1FF108D1-A5A3-440E-A034-1EE03D1D80B7}
+		{B1519914-E22C-4BC0-BCB7-F742795F46CB} = {EA81C491-927F-46E2-A283-8E64DD3A0704}
+		{90405144-74F3-4FFF-8F56-AFA953445350} = {1FF108D1-A5A3-440E-A034-1EE03D1D80B7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C6B54FB7-90D9-4D99-BC79-E903FFBDF3A9}

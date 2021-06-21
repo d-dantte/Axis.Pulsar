@@ -1,5 +1,5 @@
 ﻿using Axis.Pulsar.Parser.Input;
-using Axis.Pulsar.Parser.Language;
+using Axis.Pulsar.Parser.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,8 +13,12 @@ namespace Axis.Pulsar.Parser.Builder
         public IParser Parser { get; }
 
 
+        public SingleSymbolParser(IParser parser)
+            :this(Cardinality.OccursOnlyOnce(), parser)
+        { }
+
         public SingleSymbolParser(Cardinality cardinality, IParser parser)
-            :base(cardinality, new[] { parser })
+            : base(cardinality, new[] { parser })
         {
             if (parser == null)
                 throw new ArgumentNullException(nameof(parser));
@@ -38,7 +42,7 @@ namespace Axis.Pulsar.Parser.Builder
                     if (Parser.TryParse(tokenReader, out cycleResult))
                         results.Add(cycleResult);
                 }
-                while (CanRepeat(++cycleCount));
+                while (cycleResult.Succeeded && CanRepeat(++cycleCount));
 
 
                 var cycles = results.Count;

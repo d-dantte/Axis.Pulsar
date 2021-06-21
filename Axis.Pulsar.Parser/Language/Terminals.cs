@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Axis.Pulsar.Parser.Utils;
+using System;
 using System.Text.RegularExpressions;
 
 namespace Axis.Pulsar.Parser.Language
@@ -32,8 +33,14 @@ namespace Axis.Pulsar.Parser.Language
         {
             IsRoot = isRoot;
             IsCaseSensitive = isCaseSensitive;
-            Name = name.ThrowIf(string.IsNullOrWhiteSpace, n => new ArgumentException("Invalid rule name"));
-            Value = value.ThrowIf(string.IsNullOrEmpty, n => new ArgumentException("Invalid rule value"));
+
+            Name = name.ThrowIf(
+                string.IsNullOrWhiteSpace,
+                n => new ArgumentException("Invalid rule name"));
+
+            Value = value.ThrowIf(
+                string.IsNullOrEmpty,
+                n => new ArgumentException("Invalid rule value"));
         }
 
         public StringTerminal(string name, string value, bool isCaseSensitive = true)
@@ -52,48 +59,24 @@ namespace Axis.Pulsar.Parser.Language
 
         public string Name { get; }
 
-        public PatternInfo Info { get; }
+        public Cardinality CharacterCardinality { get; }
 
-        public PatternTerminal(string name, bool isRoot, Regex value, PatternInfo info)
+        public PatternTerminal(string name, bool isRoot, Regex value, Cardinality characterCardinality)
         {
             IsRoot = isRoot;
-            Name = name.ThrowIf(string.IsNullOrWhiteSpace, n => new ArgumentException("Invalid rule name"));
             Value = value ?? throw new ArgumentNullException(nameof(value));
-            Info = info.ThrowIf(PatternInfo.IsDefault, n => new ArgumentException("Invalid pattern info"));
+
+            Name = name.ThrowIf(
+                string.IsNullOrWhiteSpace,
+                n => new ArgumentException("Invalid rule name"));
+
+            CharacterCardinality = characterCardinality.ThrowIf(
+                Extensions.IsDefault,
+                n => new ArgumentException("Invalid pattern cardinality"));
         }
 
-        public PatternTerminal(string name, Regex value, PatternInfo info)
-            : this(name, false, value, info)
+        public PatternTerminal(string name, Regex value, Cardinality characterCardinality)
+            : this(name, false, value, characterCardinality)
         { }
-
-
-        /// <summary>
-        /// Represents the length of substrings that the pattern terminal attempts to match.
-        /// NOTE: all values supplied into this struct are converted to their absolute values - negatives aren't allowed
-        /// </summary>
-        public struct PatternInfo
-        {
-            public int MinLength { get; }
-            public int? MaxLength { get; }
-
-            public PatternInfo(int minLength, int? maxLength = null)
-            {
-                MinLength = Math.Abs(minLength);
-                MaxLength = maxLength.HasValue ? Math.Abs(maxLength.Value) : null;
-
-                Validate();
-            }
-
-            private void Validate()
-            {
-                if (MinLength == 0 || MaxLength == 0)
-                    throw new Exception("Neither length should be 0");
-
-                if (MinLength > MaxLength)
-                    throw new Exception("Min length must be less than or equal to Max length");
-            }
-
-            public static bool IsDefault(PatternInfo info) => info.Equals(default(PatternInfo));
-        }
     }
 }

@@ -1,20 +1,25 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Axis.Pulsar.Parser
 {
     public class ParseError
     {
-        public ParseError Cause { get; }
+        private readonly ParseError[] _causes;
+
+        public IEnumerable<ParseError> Causes => _causes.AsEnumerable();
         
         public string SymbolName { get; }
 
         public int CharacterIndex { get; }
 
-        public string Message { get; }
-
-        public ParseError(string symbolName, int characterIndex, ParseError cause = null)
+        public ParseError(string symbolName, int characterIndex, params ParseError[] causes)
         {
-            Cause = cause;
+            _causes = causes.ThrowIf(
+                Extensions.ContainsNull,
+                n => new ArgumentException("Causes cannot contain null"))
+                ?? throw new ArgumentNullException(nameof(causes));
 
             CharacterIndex = characterIndex.ThrowIf(
                 Extensions.IsNegative,
@@ -23,9 +28,6 @@ namespace Axis.Pulsar.Parser
             SymbolName = symbolName.ThrowIf(
                 string.IsNullOrWhiteSpace,
                 n => new ArgumentException($"Invalid {nameof(symbolName)}"));
-
-            Message = $"{SymbolName} was not found at stream index: {CharacterIndex}"
-                + (Cause == null ? "" : $" because [{Cause.Message}]");
         }
     }
 }

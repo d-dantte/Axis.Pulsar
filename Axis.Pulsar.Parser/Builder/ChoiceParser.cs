@@ -1,5 +1,5 @@
 ﻿using Axis.Pulsar.Parser.Input;
-using Axis.Pulsar.Parser.Language;
+using Axis.Pulsar.Parser.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +10,10 @@ namespace Axis.Pulsar.Parser.Builder
     {
         public static readonly string PSEUDO_NAME = "#Choice";
 
+
+        public ChoiceParser(IParser parser)
+            : this(Cardinality.OccursOnlyOnce(), parser)
+        { }
 
         public ChoiceParser(Cardinality cardinality, params IParser[] children)
             :base(cardinality, children)
@@ -57,7 +61,7 @@ namespace Axis.Pulsar.Parser.Builder
                     return false;
                 }
             }
-            catch (Exception e)
+            catch
             {
                 tokenReader.Reset(position);
                 result = new(new ParseError(PSEUDO_NAME, position + 1));
