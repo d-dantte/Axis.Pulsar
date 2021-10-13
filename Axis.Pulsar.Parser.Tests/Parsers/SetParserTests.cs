@@ -1,6 +1,6 @@
-﻿using Axis.Pulsar.Parser.Builder;
+﻿using Axis.Pulsar.Parser.Parsers;
 using Axis.Pulsar.Parser.Input;
-using Axis.Pulsar.Parser.Language;
+using Axis.Pulsar.Parser.Grammar;
 using Axis.Pulsar.Parser.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Text.RegularExpressions;
@@ -12,32 +12,27 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
     {
 
         private static readonly PatternMatcherParser PublicParser = new(
-            new PatternTerminal(
-                "keyword_public",
+            new PatternRule(
                 new Regex("^public,\\s*$"),
                 Cardinality.OccursAtLeast(7)));
 
         private static readonly PatternMatcherParser PrivateParser = new(
-            new PatternTerminal(
-                "keyword_private",
+            new PatternRule(
                 new Regex("^private,\\s*$"),
                 Cardinality.OccursAtLeast(8)));
 
         private static readonly PatternMatcherParser PackageParser = new(
-            new PatternTerminal(
-                "keyword_package",
+            new PatternRule(
                 new Regex("^package,\\s*$"),
                 Cardinality.OccursAtLeast(8)));
 
         private static readonly PatternMatcherParser InternalParser = new(
-            new PatternTerminal(
-                "keyword_internal",
+            new PatternRule(
                 new Regex("^internal,\\s*$"),
                 Cardinality.OccursAtLeast(9)));
 
         private static readonly PatternMatcherParser ProtectedParser = new(
-            new PatternTerminal(
-                "keyword_protected",
+            new PatternRule(
                 new Regex("^protected,\\s*$"),
                 Cardinality.OccursAtLeast(10)));
 

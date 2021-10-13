@@ -1,6 +1,6 @@
-﻿using Axis.Pulsar.Parser.Builder;
+﻿using Axis.Pulsar.Parser.Parsers;
 using Axis.Pulsar.Parser.Input;
-using Axis.Pulsar.Parser.Language;
+using Axis.Pulsar.Parser.Grammar;
 using Axis.Pulsar.Parser.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -15,27 +15,19 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
     [TestClass]
     public class SequenceParserTest
     {
-        private static readonly StringMatcherParser OpenBraceParser = new(
-            new StringTerminal(
-                "open_brace",
-                "("));
+        private static readonly LiteralParser OpenBraceParser = new(
+            new LiteralRule("("));
 
-        private static readonly StringMatcherParser CloseBraceParser = new(
-            new StringTerminal(
-                "close_brace",
-                ")"));
+        private static readonly LiteralParser CloseBraceParser = new(
+            new LiteralRule(")"));
 
-        private static readonly SingleSymbolParser WhitespaceParser = new(
-            Cardinality.OccursNeverOrMore(),
-            new PatternMatcherParser(
-                new PatternTerminal(
-                    "whitespace",
+        private static readonly PatternMatcherParser WhitespaceParser = new PatternMatcherParser(
+                new PatternRule(
                     new Regex("^\\s*$", RegexOptions.IgnoreCase),
-                    Cardinality.OccursAtLeast(1))));
+                    Cardinality.OccursNeverOrMore()));
 
         private static readonly PatternMatcherParser VariableParser = new(
-            new PatternTerminal(
-                "identifier_name",
+            new PatternRule(
                 new Regex("^[a-z_\\$]\\w*$", RegexOptions.IgnoreCase),
                 Cardinality.OccursAtLeast(1)));
 

@@ -72,41 +72,11 @@ namespace Axis.Pulsar.Parser
             return value;
         }
 
-        public static bool IsNull<T>(this T value) where T : class => value == null;
-
-        public static bool IsNotNull<T>(this T value) where T : class => value != null;
-
-        public static bool IsDefault<T>(this T value)
-        {
-            if (typeof(T).IsClass)
-                return value == null;
-
-            else return default(T).Equals(value);
-        }
-
         public static bool ContainsNull<T>(this IEnumerable<T> enm) => enm.Any(t => t == null);
-
-        public static Func<IEnumerable<T>, bool> Contains<T>(T value)
-        {
-            return enm => enm.Any(t => value.Equals(t));
-        }
-
-        public static bool ContainsAny<T>(this IEnumerable<T> enm, params T[] values)
-        {
-            return enm.Any(t => values.Contains(t));
-        }
 
         public static bool IsNegative(this int value) => value < 0;
 
-        public static bool IsZero(this int value) => value == 0;
-
-        public static bool IsPositive(this int value) => value > 0;
-
         public static bool IsNegative(this int? value) => value < 0;
-
-        public static bool IsZero(this int? value) => value == 0;
-
-        public static bool IsPositive(this int? value) => value > 0;
 
         public static Syntax.Symbol[] FlattenProduction(this Syntax.Symbol symbol)
         {
@@ -121,6 +91,20 @@ namespace Axis.Pulsar.Parser
                     .Aggregate(Enumerable.Empty<Syntax.Symbol>(), (enm, next) => enm.Concat(next))
                     .ToArray();
             }
+        }
+
+        public static void ForAll<T>(this IEnumerable<T> @enum, Action<T> action)
+        {
+            foreach (var t in @enum)
+                action.Invoke(t);
+        }
+
+        public static Dictionary<TKey, TValue> Add<TKey, TValue>(this
+            Dictionary<TKey, TValue> dictionary,
+            KeyValuePair<TKey, TValue> keyValuePair)
+        {
+            dictionary.Add(keyValuePair.Key, keyValuePair.Value);
+            return dictionary;
         }
     }
 }

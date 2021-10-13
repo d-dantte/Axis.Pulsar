@@ -34,6 +34,13 @@ namespace Axis.Pulsar.Parser.Input
             try
             {
                 tokens = new char[tokenCount];
+
+                if(tokenCount == 0)
+                {
+                    tokens = Array.Empty<char>();
+                    return true;
+                }
+
                 int index = 0;
 
                 //get as many characters as are available in the buffer

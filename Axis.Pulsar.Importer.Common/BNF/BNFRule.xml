@@ -32,11 +32,14 @@
   </non-terminal>
 
   <non-terminal name="grouping">
-    <choice>
-      <symbol name="choice"/>
-      <symbol name="set"/>
-      <symbol name="sequence"/>
-    </choice>  
+    <sequence>
+      <choice>
+        <symbol name="choice"/>
+        <symbol name="set"/>
+        <symbol name="sequence"/>
+      </choice>
+      <symbol name="cardinality"/>
+    </sequence>
   </non-terminal>
 
   <non-terminal name="choice">
@@ -86,26 +89,61 @@
 
   <non-terminal name="value">
     <choice>
-      <symbol name="symbol"/>
+      <symbol name="symbol-ref"/>
       <symbol name="grouping"/>
     </choice>
   </non-terminal>
 
+  <non-terminal name="symbol-ref">
+    <sequence>
+      <symbol name="symbol"/>
+      <symbol name="cardinality"/>
+    </sequence>
+  </non-terminal>
+
   <non-terminal name="literal">
+    <choice>
+      <symbol name="case-sensitive" />
+      <symbol name="case-insensitive" />
+    </choice>
+  </non-terminal>
+
+  <non-terminal name="case-sensitive">
     <sequence>
       <symbol name="quote"/>
-      <symbol name="string-literal"/>
       <!--this is a non-terminal regex that describes escapable strings that lie between the " symbol. -->
+      <symbol name="case-literal"/>
       <symbol name="quote"/>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="case-insensitive">
+    <sequence>
+      <symbol name="squote"/>
+      <!--this is a non-terminal regex that describes escapable strings that lie between the ' symbol. -->
+      <symbol name="non-case-literal"/>
+      <symbol name="squote"/>
     </sequence>
   </non-terminal>
 
   <non-terminal name="pattern">
     <sequence>
-      <symbol name="squote"/>
+      <symbol name="fslash"/>
+      <!--this is a non-terminal regex that describes escapable strings that lie between the / symbol. -->
       <symbol name="pattern-literal"/>
-      <!--this is a non-terminal regex that describes escapable strings that lie between the ' symbol. -->
-      <symbol name="squote"/>
+      <symbol name="fslash"/>
+      <symbol name="cardinality"/>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="cardinality">
+    <sequence min-occurs="0" max-occurs="1">
+      <symbol name="dot"/>
+      <symbol name="digits"/>
+      <sequence min-occurs="0" max-occurs="1">
+        <symbol name="comma"/>
+        <symbol name="digits" min-occurs="0" max-occurs="1"/>
+      </sequence>
     </sequence>
   </non-terminal>
 
@@ -124,22 +162,38 @@
     max-match="unbounded"/>
 
   <pattern
-    name="string-literal"
+    name="case-literal"
     regex="^([^&quot;]|&quot;&quot;)*$"
     min-match="0"
     max-match="unbounded"/>
 
   <pattern
-    name="pattern-literal"
+    name="non-case-literal"
     regex="^([^']|'')*$"
     min-match="0"
     max-match="unbounded"/>
 
-  <pattern 
+  <pattern
+    name="pattern-literal"
+    regex="^([^/]|//)*$"
+    min-match="0"
+    max-match="unbounded"/>
+
+  <pattern
     name="new-line"
     regex="^(\r\n|\r|\n)$"
     min-match="1"
     max-match="2"/>
+
+  <pattern
+    name="digits"
+    regex="^\d+$"
+    min-match="1"
+    max-match="2"/>
+
+  <literal
+    name="comma"
+    value=","/>
 
   <literal
     name="rewrite-op"
@@ -148,6 +202,10 @@
   <literal
     name="q-mark"
     value="?"/>
+
+  <literal
+    name="fslash"
+    value="/"/>
 
   <literal
     name="plus"
@@ -172,5 +230,9 @@
   <literal
     name="rs-brace"
     value="]"/>
+
+  <literal
+    name="dot"
+    value="."/>
   
 </language>

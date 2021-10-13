@@ -1,23 +1,29 @@
-﻿namespace Axis.Pulsar.Importer.Common.Xml.Legend
+﻿using System.Xml.Linq;
+
+namespace Axis.Pulsar.Importer.Common.Xml.Legend
 {
     public static class Enumerations
     {
         #region Pattern Element
-        public static readonly string PatterElement_Name = "name";
-        public static readonly string PatterElement_Regex = "regex";
-        public static readonly string PatterElement_MinMatch = "min-match";
-        public static readonly string PatterElement_MaxMatch = "max-match";
-        public static readonly string PatterElement_CaseSensitive = "case-sensitive";
+        public static readonly string PatternElement_Name = "name";
+        public static readonly string PatternElement_Regex = "regex";
+        public static readonly string PatternElement_MinMatch = "min-match";
+        public static readonly string PatternElement_MaxMatch = "max-match";
+        public static readonly string PatternElement_CaseSensitive = "case-sensitive";
         #endregion
 
-        #region String Element
-        public static readonly string StringElement_Name = "name";
-        public static readonly string StringElement_Value = "value";
-        public static readonly string StringElement_CaseSensitive = "case-sensitive";
+        #region Literal Element
+        public static readonly string LiteralElement_Name = "name";
+        public static readonly string LiteralElement_Value = "value";
+        public static readonly string LiteralElement_CaseSensitive = "case-sensitive";
         #endregion
 
         #region NonTerminal Element
         public static readonly string NonTerminalElement_Name = "name";
+        #endregion
+
+        #region Symbol Element
+        public static readonly string SymbolElement_Name = "name";
         #endregion
 
         #region Production Element

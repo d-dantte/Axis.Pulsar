@@ -1,5 +1,5 @@
 ﻿using Axis.Pulsar.Parser.Input;
-using Axis.Pulsar.Parser.Language;
+using Axis.Pulsar.Parser.Grammar;
 using Axis.Pulsar.Parser.Utils;
 using System;
 using System.Collections.Generic;
@@ -15,30 +15,39 @@ using System.Xml.Schema;
 
 namespace Axis.Pulsar.Importer.Common.Xml
 {
-    public class RuleImporter: IRuleImporter
+    public class RuleImporter : IRuleImporter
     {
-        public IRule ImportRule(Stream inputStream)
+        public RuleMap ImportRule(Stream inputStream)
         {
             var xml = XDocument.Load(inputStream);
 
-            ValidateDocument(xml);
-
-            return ImportLanguage(xml);
+            return new RuleBuilder(xml).RuleMap;
         }
 
-        public async Task<IRule> ImportRuleAsync(Stream inputStream)
+        public async Task<RuleMap> ImportRuleAsync(Stream inputStream)
         {
             var xml = await XDocument.LoadAsync(
                 inputStream,
                 LoadOptions.None,
                 CancellationToken.None);
 
-            ValidateDocument(xml);
+            return new RuleBuilder(xml).RuleMap;
+        }
+    }
 
-            return ImportLanguage(xml);
+    internal class RuleBuilder
+    {
+
+        public RuleMap RuleMap { get; }
+
+        public RuleBuilder(XDocument document)
+        {
+            RuleMap = new RuleMap();
+            ValidateDocument(document);
+            ImportLanguage(document.Root);
         }
 
-        public static void ValidateDocument(XDocument xml)
+        internal static void ValidateDocument(XDocument xml)
         {
             var schemas = new XmlSchemaSet();
             schemas.Add("", XmlReader.Create(GetXsdResourceStream()));
@@ -53,106 +62,128 @@ namespace Axis.Pulsar.Importer.Common.Xml
                 throw new XmlImporterException(errors.ToArray());
         }
 
-        public static Stream GetXsdResourceStream()
+        internal void ImportLanguage(XElement rootElement)
         {
-            return Assembly
-                .GetExecutingAssembly()
-                .GetManifestResourceStream($"{nameof(Axis.Pulsar.Importer.Common.Xml)}.RuleDefinition.xsd");
+            var rootSymbol = rootElement.Attribute("root").Value;
+
+            rootElement
+                .Elements()
+                .Select(ToProductionMap)
+                .ForAll(map => RuleMap.AddRule(
+                    map.Key,
+                    map.Value,
+                    map.Key.Equals(rootSymbol, StringComparison.InvariantCulture)));
+
+            RuleMap.Validate();
         }
 
-        public static PatternTerminal ImportPattern(XElement patternElement) => new PatternTerminal(
-            patternElement.Attribute(Legend.Enumerations.PatterElement_Name).Value,
-            ExtractPatternRegex(patternElement),
-            ExtractPatternMatchCardinality(patternElement));
-
-        public static StringTerminal ImportString(XElement stringElement) => new StringTerminal(
-            stringElement.Attribute(Legend.Enumerations.StringElement_Name).Value,
-            stringElement.Attribute(Legend.Enumerations.StringElement_Value).Value,
-            ExtractStringCaseSensitivity(stringElement));
-
-        public static Production ImportProduction(XElement productionElement)
+        internal KeyValuePair<string, Rule> ToProductionMap(XElement element)
         {
-            var innerProductions = productionElement
-                .Nodes()
-                .Cast<XElement>()
-                .Select(ImportProduction)
-                .ToArray();
-
-            return productionElement.Name.LocalName switch
+            var name = element.Attribute("name").Value;
+            var rule = element.Name.LocalName switch
             {
-                "set" => Production.Set(
-                    ExtractProductionCardinality(productionElement),
-                    innerProductions[0],
-                    innerProductions[1],
-                    innerProductions[2..]),
+                "non-terminal" => ToRule(element.FirstChild()),
+                "literal" => ToRule(element),
+                "pattern" => ToRule(element),
+                _ => throw new Exception($"Invalid element: {element.Name}")
+            };
 
-                "sequence" => Production.Sequence(
-                    ExtractProductionCardinality(productionElement),
-                    innerProductions[0],
-                    innerProductions[1],
-                    innerProductions[2..]),
+            return new(name, rule);
+        }
 
-                "choice" => Production.Choice(
-                    ExtractProductionCardinality(productionElement),
-                    innerProductions[0],
-                    innerProductions[1],
-                    innerProductions[2..]),
+        internal Rule ToRule(XElement element)
+        {
+            return element.Name.LocalName switch
+            {
+                "sequence" => GroupingRule.Sequence(
+                    ExtractCardinality(element),
+                    element.Elements().Select(ToRule).ToArray()),
 
-                "non-terminal" => Production.Single(ImportNonTerminal(productionElement)),
+                "set" => GroupingRule.Set(
+                    ExtractCardinality(element),
+                    element.Elements().Select(ToRule).ToArray()),
 
-                "string" => Production.Single(
-                    ExtractProductionCardinality(productionElement),
-                    ImportString(productionElement)),
+                "choice" => GroupingRule.Choice(
+                    ExtractCardinality(element),
+                    element.Elements().Select(ToRule).ToArray()),
 
-                "pattern" => Production.Single(
-                    ExtractProductionCardinality(productionElement),
-                    ImportPattern(productionElement)),
+                "pattern" => new PatternRule(
+                    ExtractPatternRegex(element),
+                    ExtractMatchCardinality(element)),
 
-                _ => throw new Exception($"Invalid production element name: {productionElement.Name}")
+                "literal" => new LiteralRule(
+                    element.Attribute(Legend.Enumerations.LiteralElement_Value).Value,
+                    ExtractCaseSensitivity(element)),
+
+                "symbol" => new RuleRef(
+                    element.Attribute(Legend.Enumerations.SymbolElement_Name).Value,
+                    ExtractCardinality(element)),
+
+                _ => throw new ArgumentException($"Invalid element: {element.Name}")
             };
         }
 
-        public static NonTerminal ImportNonTerminal(XElement nonTerminalElement) => new NonTerminal(
-            nonTerminalElement.Attribute(Legend.Enumerations.NonTerminalElement_Name).Value,
-            ImportProduction(nonTerminalElement.FirstChild()));
 
-        public static IRule ImportLanguage(XDocument language) => ImportNonTerminal(language.Root);
-
-        public static Cardinality ExtractPatternMatchCardinality(XElement patternElement)
+        public static Cardinality ExtractMatchCardinality(XElement patternElement)
         {
-            var minOccurs = patternElement.Attribute(Legend.Enumerations.PatterElement_MinMatch)?.Value;
-            var maxOCcurs = patternElement.Attribute(Legend.Enumerations.PatterElement_MaxMatch)?.Value;
+            var minOccurs = patternElement.Attribute(Legend.Enumerations.PatternElement_MinMatch)?.Value;
+            var maxOccurs = patternElement.Attribute(Legend.Enumerations.PatternElement_MaxMatch)?.Value;
 
-            return new Cardinality(
-                int.Parse(minOccurs ?? "0"),
-                maxOCcurs == null ? null : int.Parse(maxOCcurs));
+            if (minOccurs == null && maxOccurs == null)
+                return Cardinality.OccursOnlyOnce();
+
+            else
+            {
+                return new Cardinality(
+                    int.Parse(minOccurs ?? "1"),
+                    maxOccurs == null ? null :
+                    maxOccurs.Equals("unbounded") ? null :
+                    int.Parse(maxOccurs));
+            }
+        }
+
+        public static Cardinality ExtractCardinality(XElement element)
+        {
+            var minOccurs = element.Attribute(Legend.Enumerations.ProductionElement_MinOccurs)?.Value;
+            var maxOccurs = element.Attribute(Legend.Enumerations.ProductionElement_MaxOccurs)?.Value;
+
+            if (minOccurs == null && maxOccurs == null)
+                return Cardinality.OccursOnlyOnce();
+
+            else
+            {
+                return new Cardinality(
+                    int.Parse(minOccurs ?? "1"),
+                    maxOccurs == null ? null :
+                    maxOccurs.Equals("unbounded") ? null :
+                    int.Parse(maxOccurs));
+            }
         }
 
         public static Regex ExtractPatternRegex(XElement patternElement)
         {
-            var regexPattern = patternElement.Attribute(Legend.Enumerations.PatterElement_Regex).Value;
+            var regexPattern = patternElement.Attribute(Legend.Enumerations.PatternElement_Regex).Value;
             var options =
-                !patternElement.TryAttribute(Legend.Enumerations.PatterElement_CaseSensitive, out var att) ? RegexOptions.IgnoreCase
-                : !bool.Parse(att.Value) ? RegexOptions.IgnoreCase
+                !patternElement.TryAttribute(Legend.Enumerations.PatternElement_CaseSensitive, out var att) ? RegexOptions.IgnoreCase
+                : !bool.Parse(att.Value?.ToLower()) ? RegexOptions.IgnoreCase
                 : RegexOptions.None;
 
             return new Regex(regexPattern, options);
         }
 
-        public static bool ExtractStringCaseSensitivity(XElement element)
+        public static bool ExtractCaseSensitivity(XElement element)
         {
-            return element.TryAttribute(Legend.Enumerations.StringElement_CaseSensitive, out var att)
-                && bool.Parse(att.Value);
+            return element.TryAttribute(Legend.Enumerations.LiteralElement_CaseSensitive, out var att)
+                && bool.Parse(att.Value?.ToLower());
         }
 
-        public static Cardinality ExtractProductionCardinality(XElement productionElement)
-        {
-            var minOccurs = productionElement.Attribute(Legend.Enumerations.ProductionElement_MinOccurs)?.Value;
-            var maxOCcurs = productionElement.Attribute(Legend.Enumerations.ProductionElement_MaxOccurs)?.Value;
 
-            return new Cardinality(
-                int.Parse(minOccurs ?? "0"),
-                maxOCcurs == null ? null : int.Parse(maxOCcurs));
+
+        private static Stream GetXsdResourceStream()
+        {
+            return Assembly
+                .GetExecutingAssembly()
+                .GetManifestResourceStream($"{typeof(RuleBuilder).Namespace}.RuleDefinition.xsd");
         }
     }
 }

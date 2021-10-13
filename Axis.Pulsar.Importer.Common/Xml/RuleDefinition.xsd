@@ -11,22 +11,24 @@
     <xs:attribute name="root" type="xs:string" use="required"/>
   </xs:complexType>
 
+  <xs:complexType name="SymbolType">
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="min-occurs" type="xs:string" use="optional" />
+    <xs:attribute name="max-occurs" type="xs:string" use="optional" />
+  </xs:complexType>
+
   <xs:complexType name="LiteralType">
     <xs:attribute name="name" type="xs:string" use="required"/>
     <xs:attribute name="value" type="xs:string" use="required"/>
     <xs:attribute name="case-sensitive" type="xs:boolean" use="optional"/>
-    <xs:attribute name="min-occurs" type="xs:unsignedInt" use="optional" />
-    <xs:attribute name="max-occurs" type="xs:unsignedInt" use="optional" />
   </xs:complexType>
 
   <xs:complexType name="PatternType">
     <xs:attribute name="name" type="xs:string" use="required"/>
     <xs:attribute name="regex" type="xs:string" use="required"/>
     <xs:attribute name="case-sensitive" type="xs:boolean" use="optional"/>
-    <xs:attribute name="min-match" type="xs:unsignedInt" use="optional" />
-    <xs:attribute name="max-match" type="xs:unsignedInt" use="optional" />
-    <xs:attribute name="min-occurs" type="xs:unsignedInt" use="optional" />
-    <xs:attribute name="max-occurs" type="xs:unsignedInt" use="optional" />
+    <xs:attribute name="min-match" type="xs:string" use="optional" />
+    <xs:attribute name="max-match" type="xs:string" use="optional" />
   </xs:complexType>
 
   <xs:complexType name="NonTerminalType">
@@ -34,6 +36,7 @@
       <xs:element name="choice" type="GroupType"/>
       <xs:element name="sequence" type="GroupType"/>
       <xs:element name="set" type="GroupType"/>
+      <xs:element name="symbol" type="SymbolType"/>
     </xs:choice>
 
     <xs:attribute name="name" type="xs:string" use="required"/>
@@ -44,13 +47,11 @@
       <xs:element name="choice" type="GroupType"/>
       <xs:element name="sequence" type="GroupType"/>
       <xs:element name="set" type="GroupType"/>
-      <xs:element name="literal" type="LiteralType"/>
-      <xs:element name="pattern" type="PatternType"/>
-      <xs:element name="non-terminal" type="NonTerminalType"/>
+      <xs:element name="symbol" type="SymbolType"/>
     </xs:choice>
 
-    <xs:attribute name="minOccurs" type="xs:unsignedInt" use="optional" />
-    <xs:attribute name="maxOccurs" type="xs:unsignedInt" use="optional" />
+    <xs:attribute name="min-occurs" type="xs:string" use="optional" />
+    <xs:attribute name="max-occurs" type="xs:string" use="optional" />
   </xs:complexType>
 
   <xs:element name="language" type="LanguageRule"/>

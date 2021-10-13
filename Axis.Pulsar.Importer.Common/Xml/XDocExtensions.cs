@@ -1,4 +1,5 @@
-﻿using System.Xml.Linq;
+﻿using System.Linq;
+using System.Xml.Linq;
 
 namespace Axis.Pulsar.Importer.Common.Xml
 {
@@ -15,6 +16,6 @@ namespace Axis.Pulsar.Importer.Common.Xml
             return attribute != null;
         }
 
-        public static XElement FirstChild(this XElement element) => element.FirstNode as XElement;
+        public static XElement FirstChild(this XElement element) => element.Elements().First();
     }
 }

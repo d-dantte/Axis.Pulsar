@@ -19,7 +19,7 @@ namespace Axis.Pulsar.Parser.Syntax
         public Symbol(string name, string value)
         {
             Name = name.ThrowIf(string.IsNullOrWhiteSpace, t => new ArgumentException("invalid name"));
-            _value = value.ThrowIf(string.IsNullOrEmpty, t => new ArgumentException("invalid value"));
+            _value = value ?? throw new ArgumentException("invalid value");
             _children = null;
         }
 
@@ -41,7 +41,7 @@ namespace Axis.Pulsar.Parser.Syntax
         /// <param name="path"></param>
         /// <param name="child"></param>
         /// <returns></returns>
-        public bool TryFIndSymbol(string path, out Symbol child)
+        public bool TryFindSymbol(string path, out Symbol child)
         {
             if (TryFindSymbols(path, out var children))
             {
@@ -87,6 +87,23 @@ namespace Axis.Pulsar.Parser.Syntax
                 children = null;
                 return false;
             }
+        }
+
+
+        public Symbol[] FindSymbols(string path)
+        {
+            if (!TryFindSymbols(path, out var symbols))
+                return null;
+
+            return symbols;
+        }
+
+        public Symbol FindSymbol(string path)
+        {
+            if (!TryFindSymbol(path, out var symbol))
+                return null;
+
+            return symbol;
         }
 
         private IEnumerable<Symbol> GetChildren(string name)

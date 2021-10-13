@@ -1,6 +1,6 @@
-﻿using Axis.Pulsar.Parser.Builder;
+﻿using Axis.Pulsar.Parser.Parsers;
 using Axis.Pulsar.Parser.Input;
-using Axis.Pulsar.Parser.Language;
+using Axis.Pulsar.Parser.Grammar;
 using Axis.Pulsar.Parser.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -19,8 +19,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
         public void Constructor_Should_ReturnValidObject()
         {
             var parser = new PatternMatcherParser(
-                new PatternTerminal(
-                    "identifier_name",
+                new PatternRule(
                     new Regex("[a-z_]\\w*", RegexOptions.IgnoreCase),
                     Cardinality.OccursOnlyOnce()));
 
@@ -31,8 +30,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
         public void TryParse_WithValidInput_Should_ReturnValidParseResult()
         {
             var regex = new Regex("^[a-z_]\\w*$", RegexOptions.IgnoreCase);
-            var terminal = new PatternTerminal(
-                    "identifier_name",
+            var terminal = new PatternRule(
                     regex,
                     Cardinality.OccursOnlyOnce());
             var parser = new PatternMatcherParser(terminal);
@@ -44,15 +42,13 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             Assert.IsNotNull(result);
             Assert.IsNull(result.Error);
             Assert.IsNotNull(result.Symbol);
-            Assert.AreEqual(terminal.Name, result.Symbol.Name);
-            Assert.IsTrue(terminal.Value.IsMatch(result.Symbol.Value));
+            Assert.IsTrue(terminal.Regex.IsMatch(result.Symbol.Value));
 
 
             //test 2
             regex = new Regex("^\\$[a-z_]\\w*$", RegexOptions.IgnoreCase);
 
-            terminal = new PatternTerminal(
-                "identifier_name",
+            terminal = new PatternRule(
                 regex,
                 Cardinality.OccursOnly(2));
             parser = new PatternMatcherParser(terminal);
@@ -64,15 +60,13 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             Assert.IsNotNull(result);
             Assert.IsNull(result.Error);
             Assert.IsNotNull(result.Symbol);
-            Assert.AreEqual(terminal.Name, result.Symbol.Name);
-            Assert.IsTrue(terminal.Value.IsMatch(result.Symbol.Value));
+            Assert.IsTrue(terminal.Regex.IsMatch(result.Symbol.Value));
 
 
             //test 3
             regex = new Regex("^\\$[a-z_]\\w*$", RegexOptions.IgnoreCase);
 
-            terminal = new PatternTerminal(
-                "identifier_name",
+            terminal = new PatternRule(
                 regex,
                 Cardinality.OccursOnly(2));
             parser = new PatternMatcherParser(terminal);
@@ -84,15 +78,13 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             Assert.IsNotNull(result);
             Assert.IsNull(result.Error);
             Assert.IsNotNull(result.Symbol);
-            Assert.AreEqual(terminal.Name, result.Symbol.Name);
-            Assert.IsTrue(terminal.Value.IsMatch(result.Symbol.Value));
+            Assert.IsTrue(terminal.Regex.IsMatch(result.Symbol.Value));
 
 
             //test 4
             regex = new Regex("^\\d{4}([-/]\\d{2})?$", RegexOptions.IgnoreCase);
 
-            terminal = new PatternTerminal(
-                "date",
+            terminal = new PatternRule(
                 regex,
                 new Cardinality(4, 7));
             parser = new PatternMatcherParser(terminal);
@@ -104,8 +96,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             Assert.IsNotNull(result);
             Assert.IsNull(result.Error);
             Assert.IsNotNull(result.Symbol);
-            Assert.AreEqual(terminal.Name, result.Symbol.Name);
-            Assert.IsTrue(terminal.Value.IsMatch(result.Symbol.Value));
+            Assert.IsTrue(terminal.Regex.IsMatch(result.Symbol.Value));
 
 
             //test 5
@@ -116,8 +107,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             Assert.IsNotNull(result);
             Assert.IsNull(result.Error);
             Assert.IsNotNull(result.Symbol);
-            Assert.AreEqual(terminal.Name, result.Symbol.Name);
-            Assert.IsTrue(terminal.Value.IsMatch(result.Symbol.Value));
+            Assert.IsTrue(terminal.Regex.IsMatch(result.Symbol.Value));
         }
 
 
@@ -126,8 +116,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
         {
             //test 1
             var regex = new Regex("^[a-z_]\\w*$", RegexOptions.IgnoreCase);
-            var terminal = new PatternTerminal(
-                    "identifier_name",
+            var terminal = new PatternRule(
                     regex,
                     Cardinality.OccursOnlyOnce());
             var parser = new PatternMatcherParser(terminal);
@@ -142,8 +131,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
 
             //test 2
             regex = new Regex("^[a-z_]\\w*$", RegexOptions.IgnoreCase);
-            terminal = new PatternTerminal(
-                "identifier_name",
+            terminal = new PatternRule(
                 regex,
                 Cardinality.OccursOnlyOnce());
             parser = new PatternMatcherParser(terminal);

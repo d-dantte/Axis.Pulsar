@@ -1,4 +1,4 @@
-﻿using Axis.Pulsar.Parser.Language;
+﻿using Axis.Pulsar.Parser.Grammar;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -6,8 +6,8 @@ namespace Axis.Pulsar.Parser.Input
 {
     public interface IRuleImporter
     {
-        IRule ImportRule(Stream inputStream);
+        RuleMap ImportRule(Stream inputStream);
 
-        Task<IRule> ImportRuleAsync(Stream inputStream);
+        Task<RuleMap> ImportRuleAsync(Stream inputStream);
     }
 }
