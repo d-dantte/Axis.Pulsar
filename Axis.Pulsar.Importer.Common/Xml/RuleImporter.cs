@@ -17,14 +17,14 @@ namespace Axis.Pulsar.Importer.Common.Xml
 {
     public class RuleImporter : IRuleImporter
     {
-        public RuleMap ImportRule(Stream inputStream)
+        public Grammar ImportRule(Stream inputStream)
         {
             var xml = XDocument.Load(inputStream);
 
             return new RuleBuilder(xml).RuleMap;
         }
 
-        public async Task<RuleMap> ImportRuleAsync(Stream inputStream)
+        public async Task<Grammar> ImportRuleAsync(Stream inputStream)
         {
             var xml = await XDocument.LoadAsync(
                 inputStream,
@@ -38,11 +38,11 @@ namespace Axis.Pulsar.Importer.Common.Xml
     internal class RuleBuilder
     {
 
-        public RuleMap RuleMap { get; }
+        public Grammar RuleMap { get; }
 
         public RuleBuilder(XDocument document)
         {
-            RuleMap = new RuleMap();
+            RuleMap = new Grammar();
             ValidateDocument(document);
             ImportLanguage(document.Root);
         }
@@ -77,7 +77,7 @@ namespace Axis.Pulsar.Importer.Common.Xml
             RuleMap.Validate();
         }
 
-        internal KeyValuePair<string, Rule> ToProductionMap(XElement element)
+        internal KeyValuePair<string, IRule> ToProductionMap(XElement element)
         {
             var name = element.Attribute("name").Value;
             var rule = element.Name.LocalName switch
@@ -91,19 +91,19 @@ namespace Axis.Pulsar.Importer.Common.Xml
             return new(name, rule);
         }
 
-        internal Rule ToRule(XElement element)
+        internal IRule ToRule(XElement element)
         {
             return element.Name.LocalName switch
             {
-                "sequence" => GroupingRule.Sequence(
+                "sequence" => SymbolExpressionRule.Sequence(
                     ExtractCardinality(element),
                     element.Elements().Select(ToRule).ToArray()),
 
-                "set" => GroupingRule.Set(
+                "set" => SymbolExpressionRule.Set(
                     ExtractCardinality(element),
                     element.Elements().Select(ToRule).ToArray()),
 
-                "choice" => GroupingRule.Choice(
+                "choice" => SymbolExpressionRule.Choice(
                     ExtractCardinality(element),
                     element.Elements().Select(ToRule).ToArray()),
 

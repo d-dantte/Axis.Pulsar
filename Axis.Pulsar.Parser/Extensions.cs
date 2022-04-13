@@ -7,6 +7,9 @@ namespace Axis.Pulsar.Parser
 {
     internal static class Extensions
     {
+        public static bool IsEmpty<T>(this T[] array) => array.Length == 0;
+        public static bool IsNullEmpty<T>(this T[] array) => array == null || array.IsEmpty();
+
         public static IEnumerable<T> Concat<T>(this T value, T otherValue)
         {
             yield return value;
@@ -105,6 +108,34 @@ namespace Axis.Pulsar.Parser
         {
             dictionary.Add(keyValuePair.Key, keyValuePair.Value);
             return dictionary;
+        }
+
+
+        public static bool NullOrEquals<T>(this T operand1, T operand2)
+        where T : class
+        {
+            if (operand1 == null && operand2 == null)
+                return true;
+
+            return operand1 != null
+                && operand2 != null
+                && operand1.Equals(operand2);
+        }
+
+        public static TOut Map<TIn, TOut>(this TIn @in, Func<TIn, TOut> mapper)
+        {
+            if (mapper == null)
+                throw new ArgumentNullException(nameof(mapper));
+
+            return mapper.Invoke(@in);
+        }
+
+        public static bool ExactlyAll<T>(this IEnumerable<T> enumerable, Func<T, bool> predicate)
+        {
+            var called = false;
+            return enumerable
+                .All(t => called = predicate.Invoke(t))
+                && called;
         }
     }
 }

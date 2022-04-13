@@ -37,6 +37,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
             //occurs once
             element = new XElement(
                 "symbol",
+
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MinOccurs, 1),
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MaxOccurs, 1));
             cardinality = RuleBuilder.ExtractCardinality(element);
@@ -321,19 +322,19 @@ namespace Axis.Pulsar.Importer.Tests.Xml
 
             //run all sorts of tests on the rule map.youtube
             var nonterminalCount = ruleMap
-                .Rules()
-                .Where(rule => rule.Value is GroupingRule || rule.Value is RuleRef)
+                .Productions()
+                .Where(rule => rule.Value is SymbolExpressionRule || rule.Value is RuleRef)
                 .Count();
 
             var terminalCount = ruleMap
-                .Rules()
+                .Productions()
                 .Where(rule => rule.Value is LiteralRule || rule.Value is PatternRule)
                 .Count();
 
             Assert.AreEqual(10, nonterminalCount);
             Assert.AreEqual(13, terminalCount);
-            Assert.AreEqual(10, ruleMap.Rules().Count() - terminalCount);
-            Assert.AreEqual(13, ruleMap.Rules().Count() - nonterminalCount);
+            Assert.AreEqual(10, ruleMap.Productions().Count() - terminalCount);
+            Assert.AreEqual(13, ruleMap.Productions().Count() - nonterminalCount);
 
         }
         #endregion

@@ -1,21 +1,17 @@
 ﻿using System;
-using Axis.Pulsar.Parser.Utils;
 
 namespace Axis.Pulsar.Parser.Grammar
 {
 
     /// <summary>
-    /// 
+    /// Terminal rule representing literal string values
     /// </summary>
-    public class LiteralRule : Rule
+    public class LiteralRule : ITerminal
     {
-        /// <summary>
-        /// 
-        /// </summary>
         public string Value { get; }
 
         /// <summary>
-        /// 
+        /// Indicates case-sensitivity of this literal rule
         /// </summary>
         public bool IsCaseSensitive { get; }
 
@@ -25,7 +21,6 @@ namespace Axis.Pulsar.Parser.Grammar
         /// <param name="value"></param>
         /// <param name="isCaseSensitive"></param>
         public LiteralRule(string value, bool isCaseSensitive = true)
-            : base(Cardinality.OccursOnlyOnce())
         {
             Value = value ?? throw new ArgumentNullException(nameof(value));
             IsCaseSensitive = isCaseSensitive;

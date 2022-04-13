@@ -8,12 +8,15 @@ namespace Axis.Pulsar.Parser.Parsers
     public class PatternMatcherParser : RuleParser
     {
         private readonly PatternRule _terminal;
-        private readonly string _ruleName = "$pattern";
+        private readonly string _symbolName;
 
-        public PatternMatcherParser(PatternRule terminal)
+        public PatternMatcherParser(string symbolName, PatternRule terminal)
             :base(Utils.Cardinality.OccursOnlyOnce())
         {
             _terminal = terminal ?? throw new ArgumentNullException(nameof(terminal));
+            _symbolName = symbolName.ThrowIf(
+                string.IsNullOrWhiteSpace,
+                _ => new ArgumentException("Invalid symbol name"));
         }
 
         public override bool TryParse(BufferedTokenReader tokenReader, out ParseResult result)
@@ -30,7 +33,7 @@ namespace Axis.Pulsar.Parser.Parsers
 
                     else if (!_terminal.Regex.IsMatch(new string(tokens)))
                     {
-                        result = new ParseResult(new ParseError(_ruleName, position + 1));
+                        result = new ParseResult(new ParseError(_symbolName, position + 1));
                         tokenReader.Reset(position);
                         return false;
                     }
@@ -73,23 +76,23 @@ namespace Axis.Pulsar.Parser.Parsers
                     //no match at all
                     if (symbolValue == null)
                     {
-                        result = new ParseResult(new ParseError(_ruleName, position + 1));
+                        result = new ParseResult(new ParseError(_symbolName, position + 1));
                         tokenReader.Reset(position);
                         return false;
                     }
                 }
 
-                result = new ParseResult(new Syntax.Symbol(_ruleName, symbolValue));
+                result = new ParseResult(new Syntax.Symbol(_symbolName, symbolValue));
                 return true;
             }
             catch
             {
-                result = new ParseResult(new ParseError(_ruleName, position + 1));
+                result = new ParseResult(new ParseError(_symbolName, position + 1));
                 tokenReader.Reset(position);
                 return false;
             }
         }
 
-        public override string ToString() => $"Pattern[{_terminal.Regex}]";
+        public override string ToString() => $"{_symbolName}/{_terminal.Regex}/";
     }
 }

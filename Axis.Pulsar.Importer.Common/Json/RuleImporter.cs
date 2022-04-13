@@ -23,30 +23,30 @@ namespace Axis.Pulsar.Importer.Common.Json
             }
         };
 
-        public RuleMap ImportRule(Stream inputStream)
+        public Parser.Grammar.Grammar ImportRule(Stream inputStream)
         {
             using var reader = new StreamReader(inputStream);
             var json = reader.ReadToEnd();
 
-            var grammar = JsonConvert.DeserializeObject<Grammar>(json, SerializerSettings);
+            var grammar = JsonConvert.DeserializeObject<Models.Grammar>(json, SerializerSettings);
 
             return ToRuleMap(grammar);
         }
 
-        public async Task<RuleMap> ImportRuleAsync(Stream inputStream)
+        public async Task<Parser.Grammar.Grammar> ImportRuleAsync(Stream inputStream)
         {
             using var reader = new StreamReader(inputStream);
             var json = await reader.ReadToEndAsync();
 
-            var grammar = JsonConvert.DeserializeObject<Grammar>(json, SerializerSettings);
+            var grammar = JsonConvert.DeserializeObject<Models.Grammar>(json, SerializerSettings);
 
             return ToRuleMap(grammar);
         }
 
 
-        public static RuleMap ToRuleMap(Grammar grammar, RuleMap ruleMap = null)
+        public static Parser.Grammar.Grammar ToRuleMap(Models.Grammar grammar, Parser.Grammar.Grammar ruleMap = null)
         {
-            var _ruleMap = ruleMap ?? new RuleMap();
+            var _ruleMap = ruleMap ?? new Parser.Grammar.Grammar();
 
             grammar.Productions.ForAll(production =>
             {
@@ -61,7 +61,7 @@ namespace Axis.Pulsar.Importer.Common.Json
             return _ruleMap;
         }
 
-        public static Rule ToRule(IRule rule, RuleMap ruleMap)
+        public static Parser.Grammar.IRule ToRule(Models.IRule rule, Parser.Grammar.Grammar ruleMap)
         {
             return rule switch
             {
@@ -75,15 +75,15 @@ namespace Axis.Pulsar.Importer.Common.Json
                     r.Symbol,
                     new Cardinality(r.MinOccurs, r.MaxOCcurs)),
 
-                Grouping g when g.Mode == GroupMode.Sequence => GroupingRule.Sequence(
+                Grouping g when g.Mode == GroupMode.Sequence => SymbolExpressionRule.Sequence(
                     new Cardinality(g.MinOccurs, g.MaxOccurs),
                     g.Rules.Select(gr => ToRule(gr, ruleMap)).ToArray()),
 
-                Grouping g when g.Mode == GroupMode.Set => GroupingRule.Set(
+                Grouping g when g.Mode == GroupMode.Set => SymbolExpressionRule.Set(
                     new Cardinality(g.MinOccurs, g.MaxOccurs),
                     g.Rules.Select(gr => ToRule(gr, ruleMap)).ToArray()),
 
-                Grouping g when g.Mode == GroupMode.Choice => GroupingRule.Choice(
+                Grouping g when g.Mode == GroupMode.Choice => SymbolExpressionRule.Choice(
                     new Cardinality(g.MinOccurs, g.MaxOccurs),
                     g.Rules.Select(gr => ToRule(gr, ruleMap)).ToArray()),
 

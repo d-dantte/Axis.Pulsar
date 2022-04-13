@@ -6,8 +6,8 @@ namespace Axis.Pulsar.Parser.Input
 {
     public interface IRuleImporter
     {
-        RuleMap ImportRule(Stream inputStream);
+        Grammar.Grammar ImportRule(Stream inputStream);
 
-        Task<RuleMap> ImportRuleAsync(Stream inputStream);
+        Task<Grammar.Grammar> ImportRuleAsync(Stream inputStream);
     }
 }

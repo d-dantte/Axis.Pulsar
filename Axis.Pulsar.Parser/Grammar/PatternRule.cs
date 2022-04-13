@@ -6,34 +6,33 @@ namespace Axis.Pulsar.Parser.Grammar
 {
 
     /// <summary>
-    /// 
+    /// Terminal symbol representing regular-expression patterns of strings
     /// </summary>
-    public class PatternRule : Rule
+    public class PatternRule : ITerminal
     {
         /// <summary>
-        /// 
+        /// The regular expression pattern.
+        /// Note: consider converting this to a function that calls <see cref="Regex.ToString"/>
         /// </summary>
         public string Pattern { get; }
 
         /// <summary>
-        /// 
+        /// The <see cref="Regex"/> instance built using the <see cref="PatternRule.Pattern"/> string
         /// </summary>
         public Regex Regex { get; }
 
+        public string Value => Pattern;
+
         /// <summary>
+        /// Defines how the regular expression will be interpreted.
         /// 
+        /// TODO: expand on this description
         /// </summary>
         public Cardinality MatchCardinality { get; }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="regex"></param>
-        /// <param name="matchCardinality"></param>
         public PatternRule(
             Regex regex,
             Cardinality matchCardinality = default)
-            : base(Cardinality.OccursOnlyOnce())
         {
             Regex = regex ?? throw new ArgumentNullException(nameof(regex));
             Pattern = regex.ToString();

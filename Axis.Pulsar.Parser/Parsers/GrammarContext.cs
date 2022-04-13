@@ -8,6 +8,9 @@ using System.Runtime.CompilerServices;
 
 namespace Axis.Pulsar.Parser.Parsers
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public interface IGrammarContext
     {
         public string RootName { get; }
@@ -19,6 +22,9 @@ namespace Axis.Pulsar.Parser.Parsers
         public IParser GetParser(string name);
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
     public class GrammarContext: IGrammarContext
     {
         private readonly Dictionary<string, IParser> _parserMap = new();
@@ -31,16 +37,16 @@ namespace Axis.Pulsar.Parser.Parsers
 
         public IParser GetParser(string name) => _parserMap[name];
 
-        public GrammarContext(RuleMap ruleMap)
+        public GrammarContext(Grammar.Grammar ruleMap)
         {
             ruleMap
-                .Rules()
+                .Productions()
                 .Select(BuildProductionParser)
                 .ForAll(map => _parserMap.Add(map));
             RootName = ruleMap.RootSymbol;
         }
 
-        internal KeyValuePair<string, IParser> BuildProductionParser(KeyValuePair<string, Rule> production)
+        internal KeyValuePair<string, IParser> BuildProductionParser(KeyValuePair<string, IRule> production)
         {
             return new(
                 production.Key,
@@ -50,7 +56,7 @@ namespace Axis.Pulsar.Parser.Parsers
         }
 
 
-        internal RuleParser BuildRuleParser(Rule rule)
+        internal RuleParser BuildRuleParser(IRule rule)
         {
             return rule switch
             {
@@ -63,15 +69,15 @@ namespace Axis.Pulsar.Parser.Parsers
                     @ref: r)
                     .SetGrammarContext(this),
 
-                GroupingRule n when n.GroupingMode == GroupingMode.Choice => new ChoiceParser(
+                SymbolExpressionRule n when n.GroupingMode == GroupingMode.Choice => new ChoiceParser(
                     n.Cardinality,
                     n.Rules.Select(BuildRuleParser).ToArray()),
 
-                GroupingRule n when n.GroupingMode == GroupingMode.Sequence => new SequenceParser(
+                SymbolExpressionRule n when n.GroupingMode == GroupingMode.Sequence => new SequenceParser(
                     n.Cardinality,
                     n.Rules.Select(BuildRuleParser).ToArray()),
 
-                GroupingRule n when n.GroupingMode == GroupingMode.Set => new SetParser(
+                SymbolExpressionRule n when n.GroupingMode == GroupingMode.Set => new SetParser(
                     n.Cardinality,
                     n.Rules.Select(BuildRuleParser).ToArray()),
 

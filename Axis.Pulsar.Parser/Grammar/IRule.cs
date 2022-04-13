@@ -1,24 +1,38 @@
 ﻿using Axis.Pulsar.Parser.Utils;
-using System;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
 
 namespace Axis.Pulsar.Parser.Grammar
 {
+
+    public interface IRule
+    {
+    }
+
     /// <summary>
-    /// Parse rule
+    /// Production rule
     /// 
     /// NOTE: flirting with the idea of adding a Func delegate that represents semantic validation of the symbol that a rule parses. 
     /// This will be given the symbol, which should have access to ancestors; the validation logic can then use the entire syntax tree to do
     /// some semantic validations on the symbol. This validation logic can be injected while the rules are built.
     /// </summary>
-    public abstract class Rule
+    public interface IRule<out T>: IRule
     {
-        public Cardinality Cardinality { get; }
+        /// <summary>
+        /// The value of the Rule
+        /// </summary>
+        T Value { get; }
+    }
 
-        public Rule(Cardinality cardinality = default)
-        {
-            Cardinality = cardinality;
-        }
+    /// <summary>
+    /// Represents rules that produce terminals
+    /// </summary>
+    public interface ITerminal: IRule<string>
+    {
+    }
+
+    /// <summary>
+    /// Represents rules that produce non-terminals
+    /// </summary>
+    public interface INonTerminal : IRule<ISymbolExpression>
+    {
     }
 }
