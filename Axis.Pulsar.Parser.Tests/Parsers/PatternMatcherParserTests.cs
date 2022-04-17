@@ -19,6 +19,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
         public void Constructor_Should_ReturnValidObject()
         {
             var parser = new PatternMatcherParser(
+                "stuff",
                 new PatternRule(
                     new Regex("[a-z_]\\w*", RegexOptions.IgnoreCase),
                     Cardinality.OccursOnlyOnce()));
@@ -33,7 +34,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             var terminal = new PatternRule(
                     regex,
                     Cardinality.OccursOnlyOnce());
-            var parser = new PatternMatcherParser(terminal);
+            var parser = new PatternMatcherParser("stuff", terminal);
 
             var reader = new BufferedTokenReader("variable = 5;");
             var succeeded = parser.TryParse(reader, out var result);
@@ -51,7 +52,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             terminal = new PatternRule(
                 regex,
                 Cardinality.OccursOnly(2));
-            parser = new PatternMatcherParser(terminal);
+            parser = new PatternMatcherParser("stuff", terminal);
 
             reader = new BufferedTokenReader("$variable = 5;");
             succeeded = parser.TryParse(reader, out result);
@@ -69,7 +70,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             terminal = new PatternRule(
                 regex,
                 Cardinality.OccursOnly(2));
-            parser = new PatternMatcherParser(terminal);
+            parser = new PatternMatcherParser("stuff", terminal);
 
             reader = new BufferedTokenReader("$variable = 5;");
             succeeded = parser.TryParse(reader, out result);
@@ -87,7 +88,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             terminal = new PatternRule(
                 regex,
                 new Cardinality(4, 7));
-            parser = new PatternMatcherParser(terminal);
+            parser = new PatternMatcherParser("stuff", terminal);
 
             reader = new BufferedTokenReader("2021- and other stuff");
             succeeded = parser.TryParse(reader, out result);
@@ -119,7 +120,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             var terminal = new PatternRule(
                     regex,
                     Cardinality.OccursOnlyOnce());
-            var parser = new PatternMatcherParser(terminal);
+            var parser = new PatternMatcherParser("stuff", terminal);
 
             var reader = new BufferedTokenReader(" variable = 5;");
             var succeeded = parser.TryParse(reader, out var result);
@@ -134,7 +135,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             terminal = new PatternRule(
                 regex,
                 Cardinality.OccursOnlyOnce());
-            parser = new PatternMatcherParser(terminal);
+            parser = new PatternMatcherParser("stuff", terminal);
 
             reader = new BufferedTokenReader("1_something");
             succeeded = parser.TryParse(reader, out result);

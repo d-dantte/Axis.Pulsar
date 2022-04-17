@@ -12,14 +12,18 @@ namespace Axis.Pulsar.Parser
         
         public string SymbolName { get; }
 
+        public string Message { get; }
+
         public int CharacterIndex { get; }
 
-        public ParseError(string symbolName, int characterIndex, params ParseError[] causes)
+        public ParseError(string symbolName, int characterIndex, string message, params ParseError[] causes)
         {
             _causes = causes.ThrowIf(
                 Extensions.ContainsNull,
                 n => new ArgumentException("Causes cannot contain null"))
                 ?? throw new ArgumentNullException(nameof(causes));
+
+            Message = message;
 
             CharacterIndex = characterIndex.ThrowIf(
                 Extensions.IsNegative,
@@ -28,6 +32,11 @@ namespace Axis.Pulsar.Parser
             SymbolName = symbolName.ThrowIf(
                 string.IsNullOrWhiteSpace,
                 n => new ArgumentException($"Invalid {nameof(symbolName)}"));
+        }
+
+        public ParseError(string symbolName, int characterIndex, params ParseError[] causes)
+            : this(symbolName, characterIndex, null, causes)
+        {
         }
     }
 }

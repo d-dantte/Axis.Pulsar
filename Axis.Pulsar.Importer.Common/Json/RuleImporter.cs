@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace Axis.Pulsar.Importer.Common.Json
 {
-    public class RuleImporter : IRuleImporter
+    public class GrammarImporter : IGrammarImporter
     {
         private static readonly JsonSerializerSettings SerializerSettings = new()
         {
@@ -23,45 +23,38 @@ namespace Axis.Pulsar.Importer.Common.Json
             }
         };
 
-        public Parser.Grammar.Grammar ImportRule(Stream inputStream)
+        public Parser.Grammar.Grammar ImportGrammar(Stream inputStream)
         {
             using var reader = new StreamReader(inputStream);
             var json = reader.ReadToEnd();
 
             var grammar = JsonConvert.DeserializeObject<Models.Grammar>(json, SerializerSettings);
 
-            return ToRuleMap(grammar);
+            return ToGrammar(grammar);
         }
 
-        public async Task<Parser.Grammar.Grammar> ImportRuleAsync(Stream inputStream)
+        public async Task<Parser.Grammar.Grammar> ImportGrammarAsync(Stream inputStream)
         {
             using var reader = new StreamReader(inputStream);
             var json = await reader.ReadToEndAsync();
 
             var grammar = JsonConvert.DeserializeObject<Models.Grammar>(json, SerializerSettings);
 
-            return ToRuleMap(grammar);
+            return ToGrammar(grammar);
         }
 
-
-        public static Parser.Grammar.Grammar ToRuleMap(Models.Grammar grammar, Parser.Grammar.Grammar ruleMap = null)
+        public static Parser.Grammar.Grammar ToGrammar(Models.Grammar grammar)
         {
-            var _ruleMap = ruleMap ?? new Parser.Grammar.Grammar();
-
-            grammar.Productions.ForAll(production =>
-            {
-                _ruleMap.AddRule(
-                    production.Name,
-                    ToRule(production.Rule, _ruleMap),
-                    production.Name.Equals(grammar.Language, StringComparison.InvariantCulture));
-            });
-
-            _ruleMap.Validate();
-
-            return _ruleMap;
+            return grammar.Productions
+                .Aggregate(
+                    GrammarBuilder.NewBuilder(),
+                    (builder, production) => builder.HasRoot
+                        ? builder.WithProduction(production.Name, ToRule(production.Rule))
+                        : builder.WithRootProduction(production.Name, ToRule(production.Rule)))
+                .Build();
         }
 
-        public static Parser.Grammar.IRule ToRule(Models.IRule rule, Parser.Grammar.Grammar ruleMap)
+        public static Parser.Grammar.IRule ToRule(Models.IRule rule)
         {
             return rule switch
             {
@@ -71,34 +64,31 @@ namespace Axis.Pulsar.Importer.Common.Json
                     new Regex(p.Regex, p.IsCaseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase),
                     new Cardinality(p.MinMatch, p.MaxMatch)),
 
-                Ref r => new RuleRef(
-                    r.Symbol,
-                    new Cardinality(r.MinOccurs, r.MaxOCcurs)),
-
-                Grouping g when g.Mode == GroupMode.Sequence => SymbolExpressionRule.Sequence(
-                    new Cardinality(g.MinOccurs, g.MaxOccurs),
-                    g.Rules.Select(gr => ToRule(gr, ruleMap)).ToArray()),
-
-                Grouping g when g.Mode == GroupMode.Set => SymbolExpressionRule.Set(
-                    new Cardinality(g.MinOccurs, g.MaxOccurs),
-                    g.Rules.Select(gr => ToRule(gr, ruleMap)).ToArray()),
-
-                Grouping g when g.Mode == GroupMode.Choice => SymbolExpressionRule.Choice(
-                    new Cardinality(g.MinOccurs, g.MaxOccurs),
-                    g.Rules.Select(gr => ToRule(gr, ruleMap)).ToArray()),
-
-                _ => throw new Exception($"Invalid rule: {rule}")
+                _ => new SymbolExpressionRule(ToExpression(rule))
             };
         }
 
-        public static GroupingMode ToGroupingMode(GroupMode mode)
+        public static ISymbolExpression ToExpression(Models.IRule expression)
         {
-            return mode switch
+            return expression switch
             {
-                GroupMode.Choice => GroupingMode.Choice,
-                GroupMode.Sequence => GroupingMode.Sequence,
-                GroupMode.Set => GroupingMode.Set,
-                _ => throw new Exception($"Invalid group-mode: {mode}")
+                Ref r => new SymbolRef(
+                    r.Symbol,
+                    new Cardinality(r.MinOccurs, r.MaxOCcurs)),
+
+                Grouping g when g.Mode == GroupMode.Sequence => SymbolGroup.Sequence(
+                    new Cardinality(g.MinOccurs, g.MaxOccurs),
+                    g.Rules.Select(ToExpression).ToArray()),
+
+                Grouping g when g.Mode == GroupMode.Set => SymbolGroup.Set(
+                    new Cardinality(g.MinOccurs, g.MaxOccurs),
+                    g.Rules.Select(ToExpression).ToArray()),
+
+                Grouping g when g.Mode == GroupMode.Choice => SymbolGroup.Choice(
+                    new Cardinality(g.MinOccurs, g.MaxOccurs),
+                    g.Rules.Select(ToExpression).ToArray()),
+
+                _ => throw new Exception($"Invalid Expression: {expression}")
             };
         }
     }

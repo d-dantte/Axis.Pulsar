@@ -27,19 +27,32 @@
     <choice>
       <symbol name="literal"/>
       <symbol name="pattern"/>
-      <symbol name="grouping"/>
+      <symbol name="symbol-expression"/>
     </choice>
   </non-terminal>
 
-  <non-terminal name="grouping">
+  <non-terminal name="symbol-expression">
     <sequence>
       <choice>
-        <symbol name="choice"/>
-        <symbol name="set"/>
-        <symbol name="sequence"/>
+        <symbol name="symbol-ref"/>
+        <symbol name="grouping"/>
       </choice>
       <symbol name="cardinality"/>
     </sequence>
+  </non-terminal>
+
+  <non-terminal name="symbol-ref">
+    <sequence>
+      <symbol name="symbol"/>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="grouping">
+    <choice>
+      <symbol name="choice"/>
+      <symbol name="set"/>
+      <symbol name="sequence"/>
+    </choice>
   </non-terminal>
 
   <non-terminal name="choice">
@@ -47,10 +60,10 @@
       <symbol name="q-mark"/>
       <symbol name="ls-brace"/>
       <symbol name="whitespace" min-occurs="0"/>
-      <symbol name="value"/>
+      <symbol name="symbol-expression"/>
       <sequence min-occurs="0" max-occurs="unbounded">
         <symbol name="whitespace"/>
-        <symbol name="value"/>
+        <symbol name="symbol-expression"/>
       </sequence>
       <symbol name="whitespace" min-occurs="0"/>
       <symbol name="rs-brace"/>
@@ -62,10 +75,10 @@
       <symbol name="hash"/>
       <symbol name="ls-brace"/>
       <symbol name="whitespace" min-occurs="0"/>
-      <symbol name="value"/>
+      <symbol name="symbol-expression"/>
       <sequence min-occurs="0" max-occurs="unbounded">
         <symbol name="whitespace"/>
-        <symbol name="value"/>
+        <symbol name="symbol-expression"/>
       </sequence>
       <symbol name="whitespace" min-occurs="0"/>
       <symbol name="rs-brace"/>
@@ -77,27 +90,13 @@
       <symbol name="plus"/>
       <symbol name="ls-brace"/>
       <symbol name="whitespace" min-occurs="0"/>
-      <symbol name="value"/>
+      <symbol name="symbol-expression"/>
       <sequence min-occurs="0" max-occurs="unbounded">
         <symbol name="whitespace"/>
-        <symbol name="value"/>
+        <symbol name="symbol-expression"/>
       </sequence>
       <symbol name="whitespace" min-occurs="0"/>
       <symbol name="rs-brace"/>
-    </sequence>
-  </non-terminal>
-
-  <non-terminal name="value">
-    <choice>
-      <symbol name="symbol-ref"/>
-      <symbol name="grouping"/>
-    </choice>
-  </non-terminal>
-
-  <non-terminal name="symbol-ref">
-    <sequence>
-      <symbol name="symbol"/>
-      <symbol name="cardinality"/>
     </sequence>
   </non-terminal>
 

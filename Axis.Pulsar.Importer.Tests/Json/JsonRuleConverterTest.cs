@@ -159,6 +159,16 @@ namespace Axis.Pulsar.Importer.Tests.Json
         {
             ""Type"": ""Ref"",
             ""Symbol"": ""Meh""
+        },
+        {
+            ""Type"": ""Grouping"",
+            ""Mode"": ""Set"",
+            ""Rules"":[
+                {
+                    ""Type"": ""Literal"",
+                    ""Value"": ""Outer""
+                }
+            ]
         }
     ]
 }

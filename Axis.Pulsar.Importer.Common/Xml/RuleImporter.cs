@@ -15,36 +15,33 @@ using System.Xml.Schema;
 
 namespace Axis.Pulsar.Importer.Common.Xml
 {
-    public class RuleImporter : IRuleImporter
+    public class GrammarImporter : IGrammarImporter
     {
-        public Grammar ImportRule(Stream inputStream)
+        public Grammar ImportGrammar(Stream inputStream)
         {
             var xml = XDocument.Load(inputStream);
 
-            return new RuleBuilder(xml).RuleMap;
+            return XmlBuilder.CreateGrammar(xml);
         }
 
-        public async Task<Grammar> ImportRuleAsync(Stream inputStream)
+        public async Task<Grammar> ImportGrammarAsync(Stream inputStream)
         {
             var xml = await XDocument.LoadAsync(
                 inputStream,
                 LoadOptions.None,
                 CancellationToken.None);
 
-            return new RuleBuilder(xml).RuleMap;
+            return XmlBuilder.CreateGrammar(xml);
         }
     }
 
-    internal class RuleBuilder
+    internal static class XmlBuilder
     {
 
-        public Grammar RuleMap { get; }
-
-        public RuleBuilder(XDocument document)
+        public static Grammar CreateGrammar(XDocument document)
         {
-            RuleMap = new Grammar();
             ValidateDocument(document);
-            ImportLanguage(document.Root);
+            return ImportLanguage(document.Root);
         }
 
         internal static void ValidateDocument(XDocument xml)
@@ -62,22 +59,22 @@ namespace Axis.Pulsar.Importer.Common.Xml
                 throw new XmlImporterException(errors.ToArray());
         }
 
-        internal void ImportLanguage(XElement rootElement)
+        internal static Grammar ImportLanguage(XElement rootElement)
         {
             var rootSymbol = rootElement.Attribute("root").Value;
 
-            rootElement
+            return rootElement
                 .Elements()
-                .Select(ToProductionMap)
-                .ForAll(map => RuleMap.AddRule(
-                    map.Key,
-                    map.Value,
-                    map.Key.Equals(rootSymbol, StringComparison.InvariantCulture)));
-
-            RuleMap.Validate();
+                .Select(ToProduction)
+                .Aggregate(
+                    GrammarBuilder.NewBuilder(),
+                    (builder, production) => builder.HasRoot
+                        ? builder.WithProduction(production.Symbol, production.Rule)
+                        : builder.WithRootProduction(production.Symbol, production.Rule))
+                .Build();
         }
 
-        internal KeyValuePair<string, IRule> ToProductionMap(XElement element)
+        internal static Production ToProduction(XElement element)
         {
             var name = element.Attribute("name").Value;
             var rule = element.Name.LocalName switch
@@ -91,22 +88,10 @@ namespace Axis.Pulsar.Importer.Common.Xml
             return new(name, rule);
         }
 
-        internal IRule ToRule(XElement element)
+        internal static IRule ToRule(XElement element)
         {
             return element.Name.LocalName switch
             {
-                "sequence" => SymbolExpressionRule.Sequence(
-                    ExtractCardinality(element),
-                    element.Elements().Select(ToRule).ToArray()),
-
-                "set" => SymbolExpressionRule.Set(
-                    ExtractCardinality(element),
-                    element.Elements().Select(ToRule).ToArray()),
-
-                "choice" => SymbolExpressionRule.Choice(
-                    ExtractCardinality(element),
-                    element.Elements().Select(ToRule).ToArray()),
-
                 "pattern" => new PatternRule(
                     ExtractPatternRegex(element),
                     ExtractMatchCardinality(element)),
@@ -115,7 +100,27 @@ namespace Axis.Pulsar.Importer.Common.Xml
                     element.Attribute(Legend.Enumerations.LiteralElement_Value).Value,
                     ExtractCaseSensitivity(element)),
 
-                "symbol" => new RuleRef(
+                _ => new SymbolExpressionRule(ToExpression(element))
+            };
+        }
+
+        internal static ISymbolExpression ToExpression(XElement element)
+        {
+            return element.Name.LocalName switch
+            {
+                "sequence" => SymbolGroup.Sequence(
+                    ExtractCardinality(element),
+                    element.Elements().Select(ToExpression).ToArray()),
+
+                "set" => SymbolGroup.Set(
+                    ExtractCardinality(element),
+                    element.Elements().Select(ToExpression).ToArray()),
+
+                "choice" => SymbolGroup.Choice(
+                    ExtractCardinality(element),
+                    element.Elements().Select(ToExpression).ToArray()),
+
+                "symbol" => new SymbolRef(
                     element.Attribute(Legend.Enumerations.SymbolElement_Name).Value,
                     ExtractCardinality(element)),
 
@@ -183,7 +188,7 @@ namespace Axis.Pulsar.Importer.Common.Xml
         {
             return Assembly
                 .GetExecutingAssembly()
-                .GetManifestResourceStream($"{typeof(RuleBuilder).Namespace}.RuleDefinition.xsd");
+                .GetManifestResourceStream($"{typeof(XmlBuilder).Namespace}.RuleDefinition.xsd");
         }
     }
 }

@@ -14,14 +14,14 @@ namespace Axis.Pulsar.Importer.Tests.Xml
     public class RuleImporterTests
     {
         private static readonly Stream SampleXmlStream = Assembly
-            .GetAssembly(typeof(RuleImporter))
-            .GetManifestResourceStream($"{typeof(RuleImporter).Namespace}.SampleRule.xml");
+            .GetAssembly(typeof(GrammarImporter))
+            .GetManifestResourceStream($"{typeof(GrammarImporter).Namespace}.SampleRule.xml");
 
         [TestMethod]
         public void ValidateDocument_WithValidXml_ShouldPass()
         {
             var xdoc = XDocument.Load(SampleXmlStream);
-            RuleBuilder.ValidateDocument(xdoc);
+            XmlBuilder.ValidateDocument(xdoc);
         }
 
         #region Extract Cardinality
@@ -30,7 +30,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
         {
             //occurs once
             var element = new XElement("symbol");
-            var cardinality = RuleBuilder.ExtractCardinality(element);
+            var cardinality = XmlBuilder.ExtractCardinality(element);
             Assert.AreEqual(1, cardinality.MinOccurence);
             Assert.AreEqual(1, cardinality.MaxOccurence);
 
@@ -40,7 +40,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
 
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MinOccurs, 1),
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MaxOccurs, 1));
-            cardinality = RuleBuilder.ExtractCardinality(element);
+            cardinality = XmlBuilder.ExtractCardinality(element);
             Assert.AreEqual(1, cardinality.MinOccurence);
             Assert.AreEqual(1, cardinality.MaxOccurence);
 
@@ -48,7 +48,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
             element = new XElement(
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MinOccurs, 0));
-            cardinality = RuleBuilder.ExtractCardinality(element);
+            cardinality = XmlBuilder.ExtractCardinality(element);
             Assert.AreEqual(0, cardinality.MinOccurence);
             Assert.IsNull(cardinality.MaxOccurence);
 
@@ -57,7 +57,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MinOccurs, 0),
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MaxOccurs, "unbounded"));
-            cardinality = RuleBuilder.ExtractCardinality(element);
+            cardinality = XmlBuilder.ExtractCardinality(element);
             Assert.AreEqual(0, cardinality.MinOccurence);
             Assert.IsNull(cardinality.MaxOccurence);
 
@@ -66,7 +66,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MinOccurs, 1),
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MaxOccurs, "unbounded"));
-            cardinality = RuleBuilder.ExtractCardinality(element);
+            cardinality = XmlBuilder.ExtractCardinality(element);
             Assert.AreEqual(1, cardinality.MinOccurence);
             Assert.IsNull(cardinality.MaxOccurence);
 
@@ -74,7 +74,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
             element = new XElement(
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MinOccurs, 1));
-            cardinality = RuleBuilder.ExtractCardinality(element);
+            cardinality = XmlBuilder.ExtractCardinality(element);
             Assert.AreEqual(1, cardinality.MinOccurence);
             Assert.IsNull(cardinality.MaxOccurence);
 
@@ -82,7 +82,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
             element = new XElement(
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MaxOccurs, 5));
-            cardinality = RuleBuilder.ExtractCardinality(element);
+            cardinality = XmlBuilder.ExtractCardinality(element);
             Assert.AreEqual(1, cardinality.MinOccurence);
             Assert.AreEqual(5, cardinality.MaxOccurence);
         }
@@ -94,20 +94,20 @@ namespace Axis.Pulsar.Importer.Tests.Xml
             var element = new XElement(
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MaxOccurs, -1));
-            Assert.ThrowsException<ArgumentException>(() => RuleBuilder.ExtractCardinality(element));
+            Assert.ThrowsException<ArgumentException>(() => XmlBuilder.ExtractCardinality(element));
 
             //negative min-occurs
             element = new XElement(
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MinOccurs, -1));
-            Assert.ThrowsException<ArgumentException>(() => RuleBuilder.ExtractCardinality(element));
+            Assert.ThrowsException<ArgumentException>(() => XmlBuilder.ExtractCardinality(element));
 
             //both zero
             element = new XElement(
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MinOccurs, 0),
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MaxOccurs, 0));
-            Assert.ThrowsException<ArgumentException>(() => RuleBuilder.ExtractCardinality(element));
+            Assert.ThrowsException<ArgumentException>(() => XmlBuilder.ExtractCardinality(element));
         }
         #endregion
 
@@ -117,7 +117,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
         {
             //occurs once
             var element = new XElement("symbol");
-            var cardinality = RuleBuilder.ExtractMatchCardinality(element);
+            var cardinality = XmlBuilder.ExtractMatchCardinality(element);
             Assert.AreEqual(1, cardinality.MinOccurence);
             Assert.AreEqual(1, cardinality.MaxOccurence);
 
@@ -126,7 +126,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MinMatch, 1),
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MaxMatch, 1));
-            cardinality = RuleBuilder.ExtractMatchCardinality(element);
+            cardinality = XmlBuilder.ExtractMatchCardinality(element);
             Assert.AreEqual(1, cardinality.MinOccurence);
             Assert.AreEqual(1, cardinality.MaxOccurence);
 
@@ -134,7 +134,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
             element = new XElement(
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MinMatch, 0));
-            cardinality = RuleBuilder.ExtractMatchCardinality(element);
+            cardinality = XmlBuilder.ExtractMatchCardinality(element);
             Assert.AreEqual(0, cardinality.MinOccurence);
             Assert.IsNull(cardinality.MaxOccurence);
 
@@ -143,7 +143,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MinMatch, 0),
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MaxMatch, "unbounded"));
-            cardinality = RuleBuilder.ExtractMatchCardinality(element);
+            cardinality = XmlBuilder.ExtractMatchCardinality(element);
             Assert.AreEqual(0, cardinality.MinOccurence);
             Assert.IsNull(cardinality.MaxOccurence);
 
@@ -152,7 +152,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MinMatch, 1),
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MaxMatch, "unbounded"));
-            cardinality = RuleBuilder.ExtractMatchCardinality(element);
+            cardinality = XmlBuilder.ExtractMatchCardinality(element);
             Assert.AreEqual(1, cardinality.MinOccurence);
             Assert.IsNull(cardinality.MaxOccurence);
 
@@ -160,7 +160,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
             element = new XElement(
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MinMatch, 1));
-            cardinality = RuleBuilder.ExtractMatchCardinality(element);
+            cardinality = XmlBuilder.ExtractMatchCardinality(element);
             Assert.AreEqual(1, cardinality.MinOccurence);
             Assert.IsNull(cardinality.MaxOccurence);
 
@@ -168,7 +168,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
             element = new XElement(
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MaxMatch, 5));
-            cardinality = RuleBuilder.ExtractMatchCardinality(element);
+            cardinality = XmlBuilder.ExtractMatchCardinality(element);
             Assert.AreEqual(1, cardinality.MinOccurence);
             Assert.AreEqual(5, cardinality.MaxOccurence);
         }
@@ -180,20 +180,20 @@ namespace Axis.Pulsar.Importer.Tests.Xml
             var element = new XElement(
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MaxMatch, -1));
-            Assert.ThrowsException<ArgumentException>(() => RuleBuilder.ExtractMatchCardinality(element));
+            Assert.ThrowsException<ArgumentException>(() => XmlBuilder.ExtractMatchCardinality(element));
 
             //negative min-match
             element = new XElement(
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MinMatch, -1));
-            Assert.ThrowsException<ArgumentException>(() => RuleBuilder.ExtractMatchCardinality(element));
+            Assert.ThrowsException<ArgumentException>(() => XmlBuilder.ExtractMatchCardinality(element));
 
             //both zero
             element = new XElement(
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MinMatch, 0),
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MaxMatch, 0));
-            Assert.ThrowsException<ArgumentException>(() => RuleBuilder.ExtractMatchCardinality(element));
+            Assert.ThrowsException<ArgumentException>(() => XmlBuilder.ExtractMatchCardinality(element));
         }
         #endregion
 
@@ -202,55 +202,55 @@ namespace Axis.Pulsar.Importer.Tests.Xml
         public void ExtractCaseSensitivity_WithValidElement_ShouldReturnValidResult()
         {
             var element = new XElement("any-element");
-            var cardinality = RuleBuilder.ExtractCaseSensitivity(element);
+            var cardinality = XmlBuilder.ExtractCaseSensitivity(element);
             Assert.IsFalse(cardinality);
 
             element = new XElement(
                 "any-element",
                 new XAttribute("case-sensitive", false));
-            cardinality = RuleBuilder.ExtractCaseSensitivity(element);
+            cardinality = XmlBuilder.ExtractCaseSensitivity(element);
             Assert.IsFalse(cardinality);
 
             element = new XElement(
                 "any-element",
                 new XAttribute("case-sensitive", "False"));
-            cardinality = RuleBuilder.ExtractCaseSensitivity(element);
+            cardinality = XmlBuilder.ExtractCaseSensitivity(element);
             Assert.IsFalse(cardinality);
 
             element = new XElement(
                 "any-element",
                 new XAttribute("case-sensitive", "FALSE"));
-            cardinality = RuleBuilder.ExtractCaseSensitivity(element);
+            cardinality = XmlBuilder.ExtractCaseSensitivity(element);
             Assert.IsFalse(cardinality);
 
             element = new XElement(
                 "any-element",
                 new XAttribute("case-sensitive", "false"));
-            cardinality = RuleBuilder.ExtractCaseSensitivity(element);
+            cardinality = XmlBuilder.ExtractCaseSensitivity(element);
             Assert.IsFalse(cardinality);
 
             element = new XElement(
                 "any-element",
                 new XAttribute("case-sensitive", true));
-            cardinality = RuleBuilder.ExtractCaseSensitivity(element);
+            cardinality = XmlBuilder.ExtractCaseSensitivity(element);
             Assert.IsTrue(cardinality);
 
             element = new XElement(
                 "any-element",
                 new XAttribute("case-sensitive", "True"));
-            cardinality = RuleBuilder.ExtractCaseSensitivity(element);
+            cardinality = XmlBuilder.ExtractCaseSensitivity(element);
             Assert.IsTrue(cardinality);
 
             element = new XElement(
                 "any-element",
                 new XAttribute("case-sensitive", "TRUE"));
-            cardinality = RuleBuilder.ExtractCaseSensitivity(element);
+            cardinality = XmlBuilder.ExtractCaseSensitivity(element);
             Assert.IsTrue(cardinality);
 
             element = new XElement(
                 "any-element",
                 new XAttribute("case-sensitive", "true"));
-            cardinality = RuleBuilder.ExtractCaseSensitivity(element);
+            cardinality = XmlBuilder.ExtractCaseSensitivity(element);
             Assert.IsTrue(cardinality);
         }
 
@@ -260,17 +260,17 @@ namespace Axis.Pulsar.Importer.Tests.Xml
             var element = new XElement(
                 "any-element",
                 new XAttribute("case-sensitive", 5));
-            Assert.ThrowsException<FormatException>(() => RuleBuilder.ExtractCaseSensitivity(element));
+            Assert.ThrowsException<FormatException>(() => XmlBuilder.ExtractCaseSensitivity(element));
 
             element = new XElement(
                 "any-element",
                 new XAttribute("case-sensitive", new object()));
-            Assert.ThrowsException<FormatException>(() => RuleBuilder.ExtractCaseSensitivity(element));
+            Assert.ThrowsException<FormatException>(() => XmlBuilder.ExtractCaseSensitivity(element));
 
             element = new XElement(
                 "any-element",
                 new XAttribute("case-sensitive", "null"));
-            Assert.ThrowsException<FormatException>(() => RuleBuilder.ExtractCaseSensitivity(element));
+            Assert.ThrowsException<FormatException>(() => XmlBuilder.ExtractCaseSensitivity(element));
         }
         #endregion
 
@@ -283,7 +283,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
                 "any-name",
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_Regex, pattern),
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_CaseSensitive, false));
-            var regex = RuleBuilder.ExtractPatternRegex(element);
+            var regex = XmlBuilder.ExtractPatternRegex(element);
             Assert.IsTrue(regex.Options.HasFlag(RegexOptions.IgnoreCase));
             Assert.AreEqual(pattern, regex.ToString());
 
@@ -293,7 +293,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
                 "any-name",
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_Regex, pattern),
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_CaseSensitive, true));
-            regex = RuleBuilder.ExtractPatternRegex(element);
+            regex = XmlBuilder.ExtractPatternRegex(element);
             Assert.IsTrue(regex.Options.HasFlag(RegexOptions.None));
             Assert.AreEqual(pattern, regex.ToString());
 
@@ -302,7 +302,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
             element = new XElement(
                 "any-name",
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_Regex, pattern));
-            regex = RuleBuilder.ExtractPatternRegex(element);
+            regex = XmlBuilder.ExtractPatternRegex(element);
             Assert.IsTrue(regex.Options.HasFlag(RegexOptions.IgnoreCase));
             Assert.AreEqual(pattern, regex.ToString());
         }
@@ -313,28 +313,28 @@ namespace Axis.Pulsar.Importer.Tests.Xml
         [TestMethod]
         public void ImportRule_WithValidSequenceElement_ShouldReturnValidResult()
         {
-            var ruleImporter = new RuleImporter();
-            var sampleStream = typeof(RuleImporter)
+            var ruleImporter = new GrammarImporter();
+            var sampleStream = typeof(GrammarImporter)
                 .Assembly
-                .GetManifestResourceStream($"{typeof(RuleImporter).Namespace}.SampleRule.xml");
+                .GetManifestResourceStream($"{typeof(GrammarImporter).Namespace}.SampleRule.xml");
 
-            var ruleMap = ruleImporter.ImportRule(sampleStream);
+            var grammar = ruleImporter.ImportGrammar(sampleStream);
 
             //run all sorts of tests on the rule map.youtube
-            var nonterminalCount = ruleMap
-                .Productions()
-                .Where(rule => rule.Value is SymbolExpressionRule || rule.Value is RuleRef)
+            var nonterminalCount = grammar
+                .Productions
+                .Where(production => production.Rule is SymbolExpressionRule)
                 .Count();
 
-            var terminalCount = ruleMap
-                .Productions()
-                .Where(rule => rule.Value is LiteralRule || rule.Value is PatternRule)
+            var terminalCount = grammar
+                .Productions
+                .Where(rule => rule.Rule is ITerminal)
                 .Count();
 
             Assert.AreEqual(10, nonterminalCount);
             Assert.AreEqual(13, terminalCount);
-            Assert.AreEqual(10, ruleMap.Productions().Count() - terminalCount);
-            Assert.AreEqual(13, ruleMap.Productions().Count() - nonterminalCount);
+            Assert.AreEqual(10, grammar.Productions.Count() - terminalCount);
+            Assert.AreEqual(13, grammar.Productions.Count() - nonterminalCount);
 
         }
         #endregion

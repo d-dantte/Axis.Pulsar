@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Axis.Pulsar.Parser.Utils;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -17,5 +18,7 @@ namespace Axis.Pulsar.Parser.Grammar
     /// </summary>
     public interface ISymbolExpression
     {
+
+        Cardinality Cardinality { get; }
     }
 }

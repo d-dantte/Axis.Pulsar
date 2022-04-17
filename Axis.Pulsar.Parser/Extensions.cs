@@ -7,8 +7,9 @@ namespace Axis.Pulsar.Parser
 {
     internal static class Extensions
     {
-        public static bool IsEmpty<T>(this T[] array) => array.Length == 0;
-        public static bool IsNullEmpty<T>(this T[] array) => array == null || array.IsEmpty();
+        public static bool IsNull(this object obj) => obj == null;
+        public static bool IsEmpty<T>(this ICollection<T> collection) => collection.Count == 0;
+        public static bool IsNullOrEmpty<T>(this T[] array) => array == null || array.IsEmpty();
 
         public static IEnumerable<T> Concat<T>(this T value, T otherValue)
         {

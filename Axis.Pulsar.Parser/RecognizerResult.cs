@@ -13,7 +13,7 @@ namespace Axis.Pulsar.Parser
 
         public RecognizerResult(params Symbol[] symbols)
         {
-            Symbols = symbols.IsNullEmpty()
+            Symbols = symbols.IsNullOrEmpty()
                 ? throw new ArgumentNullException(nameof(symbols))
                 : symbols;
             Succeeded = true;

@@ -12,6 +12,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
         public void Constructor_Should_ReturnValidObject()
         {
             var parser = new LiteralParser(
+                "catch",
                 new LiteralRule(
                     "catch",
                     false));
@@ -23,9 +24,8 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
         public void TryParse_WithValidInput_Should_ReturnValidParseResult()
         {
             var terminal =
-                new LiteralRule(
-                    "catch");
-            var parser = new LiteralParser(terminal);
+                new LiteralRule("catch");
+            var parser = new LiteralParser("catch", terminal);
 
             var reader = new BufferedTokenReader("catch (Exception e){}");
             var succeeded = parser.TryParse(reader, out var result);
@@ -42,7 +42,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
                 new LiteralRule(
                     "catch",
                     false);
-            parser = new LiteralParser(terminal);
+            parser = new LiteralParser("catch", terminal);
 
             reader = new BufferedTokenReader("CATCH (Exception e){}");
             succeeded = parser.TryParse(reader, out result);
@@ -61,7 +61,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             var terminal =
                 new LiteralRule(
                     "catch");
-            var parser = new LiteralParser(terminal);
+            var parser = new LiteralParser("catch", terminal);
 
             var reader = new BufferedTokenReader("}\n\tcatch (Exception e){}");
             var succeeded = parser.TryParse(reader, out var result);
@@ -76,7 +76,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             terminal =
                 new LiteralRule(
                     "catch");
-            parser = new LiteralParser(terminal);
+            parser = new LiteralParser("catch", terminal);
 
             reader = new BufferedTokenReader("CATCH (Exception e){}");
             succeeded = parser.TryParse(reader, out result);

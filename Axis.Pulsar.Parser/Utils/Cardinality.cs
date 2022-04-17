@@ -40,6 +40,17 @@ namespace Axis.Pulsar.Parser.Utils
 
         public override int GetHashCode() => HashCode.Combine(MinOccurence, MaxOccurence);
 
+        public override string ToString()
+        {
+            return this switch
+            {
+                Cardinality c when c.MinOccurence.Equals(c.MaxOccurence) && c.MinOccurence > 1 => $".{MinOccurence}",
+                { MinOccurence: 1, MaxOccurence: 1 } => "",
+                { MaxOccurence: null } => $".{MinOccurence},",
+                {} => $".{MinOccurence},{MaxOccurence}"
+            };
+        }
+
         /// <summary>
         /// Validates the cardinality
         /// </summary>

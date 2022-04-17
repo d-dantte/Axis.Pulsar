@@ -12,23 +12,34 @@ namespace Axis.Pulsar.Importer.Tests.BNF
         public void MiscTest()
         {
             var now = DateTimeOffset.Now;
-            var ruleImporter = new Common.BNF.RuleImporter();
+            var ruleImporter = new Common.BNF.GrammarImporter();
             var elapsed = DateTimeOffset.Now - now;
             Console.WriteLine("Time to Create Importer: " + elapsed);
 
             now = DateTimeOffset.Now;
-            var x = ruleImporter.ImportRule(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF2)));
+            var x = ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF3)));
             elapsed = DateTimeOffset.Now - now;
             Console.WriteLine("Time to Importer: " + elapsed);
 
 
             now = DateTimeOffset.Now;
-            ruleImporter = new Common.BNF.RuleImporter();
+            ruleImporter = new Common.BNF.GrammarImporter();
             elapsed = DateTimeOffset.Now - now;
             Console.WriteLine("Time to Create Importer: " + elapsed);
 
             now = DateTimeOffset.Now;
-            x = ruleImporter.ImportRule(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF2)));
+            x = ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF2)));
+            elapsed = DateTimeOffset.Now - now;
+            Console.WriteLine("Time to Importer: " + elapsed);
+
+
+            now = DateTimeOffset.Now;
+            ruleImporter = new Common.BNF.GrammarImporter();
+            elapsed = DateTimeOffset.Now - now;
+            Console.WriteLine("Time to Create Importer: " + elapsed);
+
+            now = DateTimeOffset.Now;
+            x = ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF1)));
             elapsed = DateTimeOffset.Now - now;
             Console.WriteLine("Time to Importer: " + elapsed);
         }

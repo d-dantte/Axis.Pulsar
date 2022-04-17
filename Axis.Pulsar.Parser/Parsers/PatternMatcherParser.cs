@@ -5,21 +5,21 @@ using System.Text;
 
 namespace Axis.Pulsar.Parser.Parsers
 {
-    public class PatternMatcherParser : RuleParser
+    public class PatternMatcherParser : IParser
     {
         private readonly PatternRule _terminal;
-        private readonly string _symbolName;
+
+        public string SymbolName { get; }
 
         public PatternMatcherParser(string symbolName, PatternRule terminal)
-            :base(Utils.Cardinality.OccursOnlyOnce())
         {
             _terminal = terminal ?? throw new ArgumentNullException(nameof(terminal));
-            _symbolName = symbolName.ThrowIf(
+            SymbolName = symbolName.ThrowIf(
                 string.IsNullOrWhiteSpace,
                 _ => new ArgumentException("Invalid symbol name"));
         }
 
-        public override bool TryParse(BufferedTokenReader tokenReader, out ParseResult result)
+        public bool TryParse(BufferedTokenReader tokenReader, out ParseResult result)
         {
             var position = tokenReader.Position;
             try
@@ -33,7 +33,7 @@ namespace Axis.Pulsar.Parser.Parsers
 
                     else if (!_terminal.Regex.IsMatch(new string(tokens)))
                     {
-                        result = new ParseResult(new ParseError(_symbolName, position + 1));
+                        result = new ParseResult(new ParseError(SymbolName, position + 1));
                         tokenReader.Reset(position);
                         return false;
                     }
@@ -76,23 +76,23 @@ namespace Axis.Pulsar.Parser.Parsers
                     //no match at all
                     if (symbolValue == null)
                     {
-                        result = new ParseResult(new ParseError(_symbolName, position + 1));
+                        result = new ParseResult(new ParseError(SymbolName, position + 1));
                         tokenReader.Reset(position);
                         return false;
                     }
                 }
 
-                result = new ParseResult(new Syntax.Symbol(_symbolName, symbolValue));
+                result = new ParseResult(new Syntax.Symbol(SymbolName, symbolValue));
                 return true;
             }
             catch
             {
-                result = new ParseResult(new ParseError(_symbolName, position + 1));
+                result = new ParseResult(new ParseError(SymbolName, position + 1));
                 tokenReader.Reset(position);
                 return false;
             }
         }
 
-        public override string ToString() => $"{_symbolName}/{_terminal.Regex}/";
+        public override string ToString() => $"/{_terminal.Regex}/";
     }
 }

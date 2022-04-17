@@ -12,5 +12,9 @@
         {
             Value = expression;
         }
+
+        public static implicit operator SymbolExpressionRule(SymbolGroup group) => new(group);
+
+        public static implicit operator SymbolExpressionRule(SymbolRef @ref) => new(@ref);
     }
 }

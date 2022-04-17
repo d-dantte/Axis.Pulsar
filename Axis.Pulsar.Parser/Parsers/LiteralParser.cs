@@ -4,21 +4,21 @@ using System;
 
 namespace Axis.Pulsar.Parser.Parsers
 {
-    public class LiteralParser: RuleParser
+    public class LiteralParser: IParser
     {
         private readonly LiteralRule _terminal;
-        private readonly string _symbolName;
+
+        public string SymbolName { get; }
 
         public LiteralParser(string symbolName, LiteralRule terminal)
-            :base(Utils.Cardinality.OccursOnlyOnce())
         {
             _terminal = terminal ?? throw new ArgumentNullException(nameof(terminal));
-            _symbolName = symbolName.ThrowIf(
+            SymbolName = symbolName.ThrowIf(
                 string.IsNullOrWhiteSpace,
                 _ => new ArgumentException("Invalid symbol name"));
         }
 
-        public override bool TryParse(BufferedTokenReader tokenReader, out ParseResult result)
+        public bool TryParse(BufferedTokenReader tokenReader, out ParseResult result)
         {
             var position = tokenReader.Position;
             try
@@ -32,26 +32,26 @@ namespace Axis.Pulsar.Parser.Parsers
                 {
                     result = new ParseResult(
                         new Syntax.Symbol(
-                            _symbolName,
+                            SymbolName,
                             new string(tokens)));
 
                     return true;
                 }
 
                 //add relevant information into the parse error
-                result = new ParseResult(new ParseError(_symbolName, position + 1));
+                result = new ParseResult(new ParseError(SymbolName, position + 1));
                 tokenReader.Reset(position);
                 return false;
             }
             catch
             {
                 //add relevant information into the parse error
-                result = new ParseResult(new ParseError(_symbolName, position + 1));
+                result = new ParseResult(new ParseError(SymbolName, position + 1));
                 tokenReader.Reset(position);
                 return false;
             }
         }
 
-        public override string ToString() => $"{_symbolName}[{_terminal.Value}]";
+        public override string ToString() => $"'{_terminal.Value}'";
     }
 }
