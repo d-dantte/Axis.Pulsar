@@ -1,4 +1,5 @@
 ﻿using Axis.Pulsar.Parser.Input;
+using Axis.Pulsar.Parser.Recognizers;
 using System;
 
 namespace Axis.Pulsar.Parser.Parsers

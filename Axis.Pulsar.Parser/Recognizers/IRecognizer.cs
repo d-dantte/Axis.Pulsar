@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Axis.Pulsar.Parser
+namespace Axis.Pulsar.Parser.Recognizers
 {
     /// <summary>
     /// 
@@ -23,5 +23,12 @@ namespace Axis.Pulsar.Parser
         /// <param name="result"></param>
         /// <returns></returns>
         bool TryRecognize(BufferedTokenReader tokenReader, out RecognizerResult result);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="tokenReader"></param>
+        /// <returns></returns>
+        Result Recognize(BufferedTokenReader tokenReader);
     }
 }

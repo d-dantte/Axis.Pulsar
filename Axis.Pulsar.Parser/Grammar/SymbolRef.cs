@@ -10,9 +10,18 @@ namespace Axis.Pulsar.Parser.Grammar
 
         public Cardinality Cardinality { get; }
 
+        public int RecognitionThreshold { get; }
 
         public SymbolRef(string productionSymbol, Cardinality cardinality)
+            :this(productionSymbol, 1, cardinality)
+        { }
+
+        public SymbolRef(
+            string productionSymbol,
+            int recognitionThreshold,
+            Cardinality cardinality)
         {
+            RecognitionThreshold = recognitionThreshold;
             Cardinality = cardinality;
             ProductionSymbol = !string.IsNullOrWhiteSpace(productionSymbol)
                 ? productionSymbol

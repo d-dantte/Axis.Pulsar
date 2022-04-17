@@ -6,3 +6,13 @@
    production whose MaxCardinality is unbounded, you'll have an infinite loop on your hands.
 3. The Language.xsd document is grossly outdated and needs to be updated - although i dont use it to verify
    the actual language anymore.
+
+
+2022-04-17 ======================================================
+1. Combine contents of the Recognizers and Parsers namespaces back together.
+2. 2 successful result variants should exist:
+	a. SymbolSuccess, that represents the successful parsing of a single symbol.
+	b. SymbolGroupSuccess, that represetns the successful parsing of a group of symbols
+	c. All parse methods will now consider the recognition threshold.
+3. Make sure that the Grammar rules and SymbolExpressions all validate Cardinality against RecognitionThreshold.
+   This ensures that we will never have a scenario where the cardinality passes and the threshold doesn't.

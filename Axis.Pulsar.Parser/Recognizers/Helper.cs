@@ -5,25 +5,6 @@ namespace Axis.Pulsar.Parser.Recognizers
 {
     internal static class Helper
     {
-        /// <summary>
-        /// Check if, given the completed repetitions, it is legal to repeat the parse cycle based on the cardinality
-        /// </summary>
-        /// <param name="completedRepetitions"></param>
-        /// <returns>Value indicating if a repetition is legal</returns>
-        public static bool CanRepeat(this Cardinality cardinality, int completedRepetitions)
-        {
-            if (completedRepetitions < cardinality.MinOccurence)
-                return true;
-
-            else if (cardinality.MaxOccurence == null)
-                return true;
-
-            else if (completedRepetitions < cardinality.MaxOccurence)
-                return true;
-
-            else return false;
-        }
-
         public static char ToChar(this Grammar.SymbolGroup.GroupingMode mode) => mode switch
         {
             Grammar.SymbolGroup.GroupingMode.Set => '#',

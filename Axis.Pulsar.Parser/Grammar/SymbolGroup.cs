@@ -16,17 +16,17 @@ namespace Axis.Pulsar.Parser.Grammar
         public enum GroupingMode
         {
             /// <summary>
-            /// Given a group of rules, each rule is tried in the order they were presented, and the first rule that passes signifies this grouping-rule is satisfied.
+            /// Given a group of rules, each rule is tried in the order they were presented, and the first rule that passes signifies this grouping-expression is satisfied.
             /// </summary>
             Choice,
 
             /// <summary>
-            /// Given a group of unique rules, all individual rules from the group must pass once for this grouping-rule to be satisfied
+            /// Given a group of unique rules, all individual rules from the group must pass once for this grouping-expression to be satisfied
             /// </summary>
             Set,
 
             /// <summary>
-            /// Given a gorup of rules, all individual rules must pass, in the provided order, for this grouping-rule to be satisfied.
+            /// Given a gorup of rules, all individual rules must pass, in the provided order, for this grouping-expression to be satisfied.
             /// </summary>
             Sequence
         }
@@ -35,6 +35,8 @@ namespace Axis.Pulsar.Parser.Grammar
         public GroupingMode Mode { get; }
 
         public Cardinality Cardinality { get; }
+
+        public int RecognitionThreshold { get; }
 
         public IReadOnlyCollection<ISymbolExpression> Expressions { get; }
 
@@ -59,6 +61,7 @@ namespace Axis.Pulsar.Parser.Grammar
         /// <param name="expressions">The symbol-refs</param>
         private SymbolGroup(
             GroupingMode mode,
+            int recognitionThreshold,
             Cardinality cardinality,
             params ISymbolExpression[] expressions)
         {
@@ -67,6 +70,9 @@ namespace Axis.Pulsar.Parser.Grammar
 
             Mode = mode;
             Cardinality = cardinality;
+            RecognitionThreshold = recognitionThreshold.ThrowIf(
+                value => value <= 0,
+                _ => new ArgumentException($"{nameof(recognitionThreshold)} must be >= 1"));
 
             if (Mode == GroupingMode.Set)
                 Expressions = expressions
@@ -113,64 +119,110 @@ namespace Axis.Pulsar.Parser.Grammar
 
         #region Set
         /// <summary>
-        /// Creates a set-rule. Note that duplicates will be discarded from the <paramref name="symbolExpressions"/> array.
+        /// Creates a set-expression
         /// </summary>
+        /// <param name="recognitionThreshold"><see cref="ISymbolExpression.RecognitionThreshold"/> for documentation</param>
         /// <param name="cardinality">The cardinality for this rule</param>
         /// <param name="symbolExpressions">The symbol-refs</param>
-        public static SymbolGroup Set(Cardinality cardinality, params ISymbolExpression[] symbolExpressions)
+        public static SymbolGroup Set(
+            int recognitionThreshold,
+            Cardinality cardinality,
+            params ISymbolExpression[] symbolExpressions)
         {
-            return new(GroupingMode.Set, cardinality, symbolExpressions);
+            return new(GroupingMode.Choice, recognitionThreshold, cardinality, symbolExpressions);
         }
 
         /// <summary>
-        /// Creates a set-rule. Note that duplicates will be discarded from the <paramref name="symbolExpressions"/> array.
+        /// Creates a set-expression. Note that duplicates will be discarded from the <paramref name="symbolExpressions"/> array.
+        /// </summary>
+        /// <param name="cardinality">The cardinality for this rule</param>
+        /// <param name="symbolExpressions">The symbol-refs</param>
+        public static SymbolGroup Set(
+            Cardinality cardinality,
+            params ISymbolExpression[] symbolExpressions)
+        {
+            return new(GroupingMode.Set, 1, cardinality, symbolExpressions);
+        }
+
+        /// <summary>
+        /// Creates a set-expression. Note that duplicates will be discarded from the <paramref name="symbolExpressions"/> array.
         /// </summary>
         /// <param name="symbolExpressions">The symbol-refs</param>
         public static SymbolGroup Set(params ISymbolExpression[] rules)
         {
-            return new(GroupingMode.Set, Cardinality.OccursOnlyOnce(), rules);
+            return new(GroupingMode.Set, 1, Cardinality.OccursOnlyOnce(), rules);
         }
         #endregion
 
         #region Sequence
         /// <summary>
-        /// Creates a sequence-rule.
+        /// Creates a sequence-expression
+        /// </summary>
+        /// <param name="recognitionThreshold"><see cref="ISymbolExpression.RecognitionThreshold"/> for documentation</param>
+        /// <param name="cardinality">The cardinality for this rule</param>
+        /// <param name="symbolExpressions">The symbol-refs</param>
+        public static SymbolGroup Sequence(
+            int recognitionThreshold,
+            Cardinality cardinality,
+            params ISymbolExpression[] symbolExpressions)
+        {
+            return new(GroupingMode.Choice, recognitionThreshold, cardinality, symbolExpressions);
+        }
+
+        /// <summary>
+        /// Creates a sequence-expression.
         /// </summary>
         /// <param name="cardinality">The cardinality for this rule</param>
         /// <param name="symbolExpressions">The symbol-refs</param>
         public static SymbolGroup Sequence(Cardinality cardinality, params ISymbolExpression[] symbolExpressions)
         {
-            return new(GroupingMode.Sequence, cardinality, symbolExpressions);
+            return new(GroupingMode.Sequence, 1, cardinality, symbolExpressions);
         }
 
         /// <summary>
-        /// Creates a sequence-rule.
+        /// Creates a sequence-expression.
         /// </summary>
         /// <param name="symbolExpressions">The symbol-refs</param>
         public static SymbolGroup Sequence(params ISymbolExpression[] symbolExpressions)
         {
-            return new(GroupingMode.Sequence, Cardinality.OccursOnlyOnce(), symbolExpressions);
+            return new(GroupingMode.Sequence, 1, Cardinality.OccursOnlyOnce(), symbolExpressions);
         }
         #endregion
 
         #region Choice
         /// <summary>
-        /// Creates a choice-rule
+        /// Creates a choice-expression
         /// </summary>
+        /// <param name="recognitionThreshold"><see cref="ISymbolExpression.RecognitionThreshold"/> for documentation</param>
         /// <param name="cardinality">The cardinality for this rule</param>
         /// <param name="symbolExpressions">The symbol-refs</param>
-        public static SymbolGroup Choice(Cardinality cardinality, params ISymbolExpression[] rules)
+        public static SymbolGroup Choice(
+            int recognitionThreshold,
+            Cardinality cardinality,
+            params ISymbolExpression[] symbolExpressions)
         {
-            return new(GroupingMode.Choice, cardinality, rules);
+            return new(GroupingMode.Choice, recognitionThreshold, cardinality, symbolExpressions);
         }
 
         /// <summary>
-        /// Creates a choice-rule
+        /// Creates a choice-expression
+        /// </summary>
+        /// <param name="cardinality">The cardinality for this rule</param>
+        /// <param name="symbolExpressions">The symbol-refs</param>
+        public static SymbolGroup Choice(
+            Cardinality cardinality,
+            params ISymbolExpression[] symbolExpressions)
+        {
+            return new(GroupingMode.Choice, 1, cardinality, symbolExpressions);
+        }
+
+        /// <summary>
+        /// Creates a choice-expression
         /// </summary>
         /// <param name="symbolExpressions">The symbol-refs</param>
         public static SymbolGroup Choice(params ISymbolExpression[] symbolExpressions)
         {
-            return new(GroupingMode.Choice, Cardinality.OccursOnlyOnce(), symbolExpressions);
+            return new(GroupingMode.Choice, 1, Cardinality.OccursOnlyOnce(), symbolExpressions);
         }
         #endregion
     }

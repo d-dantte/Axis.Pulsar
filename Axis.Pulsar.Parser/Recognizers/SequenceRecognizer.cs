@@ -14,13 +14,22 @@ namespace Axis.Pulsar.Parser.Recognizers
 
         public Cardinality Cardinality { get; }
 
-        public SequenceRecognizer(Cardinality cardinality, params IRecognizer[] recognizers)
+        public int RecognitionThreshold { get; }
+
+        public SequenceRecognizer(int recognitionThreshold, Cardinality cardinality, params IRecognizer[] recognizers)
         {
+            RecognitionThreshold = recognitionThreshold;
             Cardinality = cardinality;
             _recognizers = recognizers
                 .ThrowIf(Extensions.IsNull, _ => new ArgumentNullException(nameof(recognizers)))
                 .ThrowIf(Extensions.IsEmpty, _ => new ArgumentException("empty recognizer array supplied"));
         }
+
+        public SequenceRecognizer(
+            Cardinality cardinality,
+            params IRecognizer[] recognizers)
+            : this(1, cardinality, recognizers)
+        { }
 
         public bool TryRecognize(BufferedTokenReader tokenReader, out RecognizerResult result)
         {
@@ -78,6 +87,104 @@ namespace Axis.Pulsar.Parser.Recognizers
                 tokenReader.Reset(position);
                 result = new(new ParseError(PSEUDO_NAME, position + 1));
                 return false;
+            }
+        }
+
+        public Result Recognize(BufferedTokenReader tokenReader)
+        {
+            var position = tokenReader.Position;
+            try
+            {
+                Result currentResult = null;
+                List<Result.Success> 
+                    results = new(),
+                    cycleResults = null;
+                int 
+                    cycleCount = 0,
+                    tempPosition = 0;
+                do
+                {
+                    tempPosition = tokenReader.Position;
+                    cycleResults = new List<Result.Success>();
+                    foreach (var recognizer in _recognizers)
+                    {
+                        currentResult = recognizer.Recognize(tokenReader);
+                        if (currentResult is Result.Success success)
+                            cycleResults.Add(success);
+
+                        else
+                        {
+                            tokenReader.Reset(tempPosition);
+                            break;
+                        }
+                    }
+
+                    if (currentResult is Result.Success)
+                        results.AddRange(cycleResults);
+
+                    else break;
+                }
+                while (Cardinality.CanRepeat(++cycleCount));
+
+                #region success
+                var cycles = results.Count / _recognizers.Length;
+                if (Cardinality.MinOccurence == 0
+                    && results.Count == 0
+                    && cycleResults.Count < RecognitionThreshold)
+                    return new Result.Success();
+
+                else if (Cardinality.IsValidRange(cycles)
+                    && cycleResults.Count < RecognitionThreshold)
+                {
+                    return results
+                        .SelectMany(result => result.Symbols)
+                        .Map(symbols => new Result.Success(symbols));
+                }
+                #endregion
+
+                #region Prtial
+                else if((results.Count + cycleResults.Count) >= RecognitionThreshold)
+                {
+                    return currentResult switch
+                    {
+                        Parsers.Result.PartialRecognition partial => new Result.PartialRecognition(
+                            expectedSymbol: partial.ExpectedSymbol,
+                            inputPosition: partial.InputPosition,
+                            recognizedSymbols: results
+                                .Concat(cycleResults)
+                                .SelectMany(result => result)
+                                .SelectMany(result => result.Symbols)
+                                .Concat(partial.PartialSymbol)),
+
+                        Parsers.Result.FailedRecognition failed => new Result.PartialRecognition(
+                            expectedSymbol: failed.SymbolName,
+                            inputPosition: failed.InputPosition,
+                            recognizedSymbols: results
+                                .Concat(cycleResults)
+                                .SelectMany(result => result)
+                                .SelectMany(result => result.Symbols)),
+
+                        Parsers.Result.Exception exception => new Result.Exception(exception.Error, exception.InputPosition),
+
+                        _ => new Result.Exception(
+                            new Exception($"invaid result type: {currentResult.GetType()}"),
+                            position)
+                    };
+                }
+                #endregion
+
+                #region Failed
+                // Not enough symbols were recognized; this was a failed attempt
+                var currentPosition = tokenReader.Position + 1;
+                _ = tokenReader.Reset(position);
+
+                return new Result.FailedRecognition(PSEUDO_NAME, currentPosition);
+                #endregion
+            }
+            catch (Exception e)
+            {
+                _ = tokenReader.Reset(position);
+                return new Result.Exception(e, position + 1);
             }
         }
 

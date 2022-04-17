@@ -50,6 +50,28 @@ namespace Axis.Pulsar.Parser.Utils
                 {} => $".{MinOccurence},{MaxOccurence}"
             };
         }
+        
+        /// <summary>
+        /// Check that the <paramref name="occurenceCount"/> is within range of the cardinality
+        /// </summary>
+        /// <param name="occurenceCount">The occurence count</param>
+        public bool IsValidRange(int occurenceCount)
+        {
+            return occurenceCount >= MinOccurence
+                && (MaxOccurence == null || occurenceCount <= MaxOccurence);
+        }
+
+        /// <summary>
+        /// Check if, given the completed repetitions, it is legal to repeat the parse cycle based on the cardinality
+        /// </summary>
+        /// <param name="completedRepetitions"></param>
+        /// <returns>Value indicating if a repetition is legal</returns>
+        public bool CanRepeat(int completedRepetitions)
+        {
+            return completedRepetitions < MinOccurence
+                || MaxOccurence == null
+                || completedRepetitions < MaxOccurence;
+        }
 
         /// <summary>
         /// Validates the cardinality

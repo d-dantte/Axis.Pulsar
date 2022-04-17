@@ -18,7 +18,14 @@ namespace Axis.Pulsar.Parser.Grammar
     /// </summary>
     public interface ISymbolExpression
     {
-
+        /// <summary>
+        /// The cardinality of this expression
+        /// </summary>
         Cardinality Cardinality { get; }
+
+        /// <summary>
+        /// Represents the lowest number of elements that need to match for this expression to be at least 
+        /// </summary>
+        int RecognitionThreshold { get; }
     }
 }

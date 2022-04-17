@@ -14,13 +14,22 @@ namespace Axis.Pulsar.Parser.Recognizers
 
         public Cardinality Cardinality { get; }
 
-        public SetRecognizer(Cardinality cardinality, params IRecognizer[] recognizers)
+        public int RecognitionThreshold { get; }
+
+        public SetRecognizer(int recognitionThreshold, Cardinality cardinality, params IRecognizer[] recognizers)
         {
+            RecognitionThreshold = recognitionThreshold;
             Cardinality = cardinality;
             _recognizers = recognizers
                 .ThrowIf(Extensions.IsNull, _ => new ArgumentNullException(nameof(recognizers)))
                 .ThrowIf(Extensions.IsEmpty, _ => new ArgumentException("empty recognizer array supplied"));
         }
+
+        public SetRecognizer(
+            Cardinality cardinality,
+            params IRecognizer[] recognizers)
+            : this(1, cardinality, recognizers)
+        { }
 
         public bool TryRecognize(BufferedTokenReader tokenReader, out RecognizerResult result)
         {
@@ -91,6 +100,11 @@ namespace Axis.Pulsar.Parser.Recognizers
                 result = new(new ParseError(PSEUDO_NAME, position + 1));
                 return false;
             }
+        }
+
+        public Result Recognize(BufferedTokenReader tokenReader)
+        {
+
         }
 
         public override string ToString() => Helper.AsString(Grammar.SymbolGroup.GroupingMode.Set, Cardinality, _recognizers);
