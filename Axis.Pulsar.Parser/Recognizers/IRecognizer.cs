@@ -29,6 +29,6 @@ namespace Axis.Pulsar.Parser.Recognizers
         /// </summary>
         /// <param name="tokenReader"></param>
         /// <returns></returns>
-        Result Recognize(BufferedTokenReader tokenReader);
+        IResult Recognize(BufferedTokenReader tokenReader);
     }
 }

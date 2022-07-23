@@ -72,13 +72,15 @@ namespace Axis.Pulsar.Parser.Grammar
                 PatternRule pattern => new PatternMatcherParser(production.Symbol, pattern),
                 SymbolExpressionRule expressionRule => (IParser) new ExpressionParser(
                     production.Symbol,
-                    CreateRecognizer(expressionRule.Value)),
+                    expressionRule.RecognitionThreshold,
+                    CreateRecognizer(expressionRule)),
                 _ => throw new ArgumentException("Invalid rule type: {production.Rule.GetType()}")
             };
         }
 
-        internal IRecognizer CreateRecognizer(ISymbolExpression expression)
+        internal IRecognizer CreateRecognizer(SymbolExpressionRule rule)
         {
+            var expression = rule.Value;
             return expression switch
             {
                 SymbolRef @ref => new SymbolRefRecognizer(
@@ -90,9 +92,18 @@ namespace Axis.Pulsar.Parser.Grammar
                     .Select(CreateRecognizer)
                     .Map(recogniers => group.Mode switch
                     {
-                        SymbolGroup.GroupingMode.Choice => new ChoiceRecognizer(group.Cardinality, recogniers.ToArray()),
-                        SymbolGroup.GroupingMode.Sequence => new SequenceRecognizer(group.Cardinality, recogniers.ToArray()),
-                        SymbolGroup.GroupingMode.Set => (IRecognizer) new SetRecognizer(group.Cardinality, recogniers.ToArray()),
+                        SymbolGroup.GroupingMode.Choice => new ChoiceRecognizer(
+                            group.Cardinality,
+                            recogniers.ToArray()),
+
+                        SymbolGroup.GroupingMode.Sequence => new SequenceRecognizer(
+                            group.Cardinality,
+                            recogniers.ToArray()),
+
+                        SymbolGroup.GroupingMode.Set => (IRecognizer) new SetRecognizer(
+                            group.Cardinality,
+                            recogniers.ToArray()),
+
                         _ => throw new ArgumentException($"Invalid {typeof(SymbolGroup.GroupingMode)}: {group.Mode}")
                     }),
 

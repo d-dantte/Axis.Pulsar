@@ -46,13 +46,13 @@ namespace Axis.Pulsar.Importer.Tests.BNF
 
 
         public static readonly string SampleBNF1 =
-@"$grama ::= ?[$stuff $other-stuff]
+@"$grama -> ?[$stuff $other-stuff]
 $stuff ::= /bleh/
 $other-stuff ::= ""meh""
 ";
 
         public static readonly string SampleBNF2 =
-@"$grama ::= ?[$stuff #[$other-stuff $main-stuff].1,2 $nothing  ]
+@"$grama ::= ?[$stuff #[$other-stuff $main-stuff].1,4|4 $nothing  ]
 $stuff ::= /bleh+/.4,
 $other-stuff ::= ""meh""
 $main-stuff ::= '34'
@@ -60,7 +60,7 @@ $nothing ::= 'moja hiden'
 ";
 
         public static readonly string SampleBNF3 =
-@"$grama ::= ?[$stuff $other-stuff]
+@"$grama ::= ?[$stuff $other-stuff].1,2;3
 $stuff ::= /bleh+/.4,6
 $other-stuff ::= ""meh""
 ";

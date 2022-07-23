@@ -8,12 +8,12 @@ namespace Axis.Pulsar.Parser.Parsers
     /// <summary>
     /// 
     /// </summary>
-    public interface Result
+    public interface IResult
     {
         /// <summary>
         /// 
         /// </summary>
-        public record Success : Result
+        public record Success : IResult
         {
             public Symbol Symbol { get; }
 
@@ -26,7 +26,7 @@ namespace Axis.Pulsar.Parser.Parsers
         /// <summary>
         /// 
         /// </summary>
-        public record PartialRecognition: Result
+        public record PartialRecognition: IResult
         {
             public Symbol PartialSymbol { get; }
 
@@ -54,7 +54,7 @@ namespace Axis.Pulsar.Parser.Parsers
         /// <summary>
         /// 
         /// </summary>
-        public record FailedRecognition: Result
+        public record FailedRecognition: IResult
         {
             public string SymbolName { get; }
 
@@ -75,7 +75,7 @@ namespace Axis.Pulsar.Parser.Parsers
         /// <summary>
         /// 
         /// </summary>
-        public record Exception: Result
+        public record Exception: IResult
         {
             public System.Exception Error { get; }
 

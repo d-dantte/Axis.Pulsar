@@ -90,13 +90,13 @@ namespace Axis.Pulsar.Parser.Recognizers
             }
         }
 
-        public Result Recognize(BufferedTokenReader tokenReader)
+        public IResult Recognize(BufferedTokenReader tokenReader)
         {
             var position = tokenReader.Position;
             try
             {
-                Result currentResult = null;
-                List<Result.Success> 
+                IResult currentResult = null;
+                List<IResult.Success> 
                     results = new(),
                     cycleResults = null;
                 int 
@@ -105,11 +105,11 @@ namespace Axis.Pulsar.Parser.Recognizers
                 do
                 {
                     tempPosition = tokenReader.Position;
-                    cycleResults = new List<Result.Success>();
+                    cycleResults = new List<IResult.Success>();
                     foreach (var recognizer in _recognizers)
                     {
                         currentResult = recognizer.Recognize(tokenReader);
-                        if (currentResult is Result.Success success)
+                        if (currentResult is IResult.Success success)
                             cycleResults.Add(success);
 
                         else
@@ -119,7 +119,7 @@ namespace Axis.Pulsar.Parser.Recognizers
                         }
                     }
 
-                    if (currentResult is Result.Success)
+                    if (currentResult is IResult.Success)
                         results.AddRange(cycleResults);
 
                     else break;
@@ -131,42 +131,43 @@ namespace Axis.Pulsar.Parser.Recognizers
                 if (Cardinality.MinOccurence == 0
                     && results.Count == 0
                     && cycleResults.Count < RecognitionThreshold)
-                    return new Result.Success();
+                    return new IResult.Success();
 
                 else if (Cardinality.IsValidRange(cycles)
                     && cycleResults.Count < RecognitionThreshold)
                 {
                     return results
                         .SelectMany(result => result.Symbols)
-                        .Map(symbols => new Result.Success(symbols));
+                        .Map(symbols => new IResult.Success(symbols));
                 }
                 #endregion
 
-                #region Prtial
-                else if((results.Count + cycleResults.Count) >= RecognitionThreshold)
+                #region Partial
+                else if(Helper.SymbolCount(results.AsEnumerable().Concat(cycleResults)) >= RecognitionThreshold)
                 {
+                    _ = tokenReader.Reset(position);
                     return currentResult switch
                     {
-                        Parsers.Result.PartialRecognition partial => new Result.PartialRecognition(
+                        IResult.PartialRecognition partial => new IResult.PartialRecognition(
                             expectedSymbol: partial.ExpectedSymbol,
                             inputPosition: partial.InputPosition,
-                            recognizedSymbols: results
+                                recognizedSymbols: results
+                                .AsEnumerable()
                                 .Concat(cycleResults)
-                                .SelectMany(result => result)
                                 .SelectMany(result => result.Symbols)
-                                .Concat(partial.PartialSymbol)),
+                                .Concat(partial.RecognizedSymbols)),
 
-                        Parsers.Result.FailedRecognition failed => new Result.PartialRecognition(
+                        IResult.FailedRecognition failed => new IResult.PartialRecognition(
                             expectedSymbol: failed.SymbolName,
                             inputPosition: failed.InputPosition,
                             recognizedSymbols: results
+                                .AsEnumerable()
                                 .Concat(cycleResults)
-                                .SelectMany(result => result)
                                 .SelectMany(result => result.Symbols)),
 
-                        Parsers.Result.Exception exception => new Result.Exception(exception.Error, exception.InputPosition),
+                        IResult.Exception exception => exception,
 
-                        _ => new Result.Exception(
+                        _ => new IResult.Exception(
                             new Exception($"invaid result type: {currentResult.GetType()}"),
                             position)
                     };
@@ -178,13 +179,13 @@ namespace Axis.Pulsar.Parser.Recognizers
                 var currentPosition = tokenReader.Position + 1;
                 _ = tokenReader.Reset(position);
 
-                return new Result.FailedRecognition(PSEUDO_NAME, currentPosition);
+                return new IResult.FailedRecognition(PSEUDO_NAME, currentPosition);
                 #endregion
             }
             catch (Exception e)
             {
                 _ = tokenReader.Reset(position);
-                return new Result.Exception(e, position + 1);
+                return new IResult.Exception(e, position + 1);
             }
         }
 

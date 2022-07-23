@@ -18,14 +18,18 @@ namespace Axis.Pulsar.Parser.Syntax
 
         public Symbol(string name, string value)
         {
-            Name = name.ThrowIf(string.IsNullOrWhiteSpace, t => new ArgumentException("invalid name"));
+            Name = name.ThrowIf(
+                string.IsNullOrWhiteSpace,
+                _ => new ArgumentException("invalid name"));
             _value = value ?? throw new ArgumentException("invalid value");
             _children = null;
         }
 
         public Symbol(string name, params Symbol[] children)
         {
-            Name = name.ThrowIf(string.IsNullOrWhiteSpace, t => new ArgumentException("invalid name"));
+            Name = name.ThrowIf(
+                string.IsNullOrWhiteSpace,
+                _ => new ArgumentException("invalid name"));
 
             _children = children?.ToArray() ?? throw new ArgumentNullException(nameof(children));
             _children.ThrowIf(ContainsNull, t => new ArgumentException("Symbol array must not contain null elements"));

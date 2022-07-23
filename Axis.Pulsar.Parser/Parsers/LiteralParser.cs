@@ -52,6 +52,36 @@ namespace Axis.Pulsar.Parser.Parsers
             }
         }
 
+        public IResult Parse(BufferedTokenReader tokenReader)
+        {
+            var position = tokenReader.Position;
+            try
+            {
+                if (tokenReader.TryNextTokens(_terminal.Value.Length, out var tokens)
+                    && _terminal.Value.Equals(
+                        new string(tokens),
+                        _terminal.IsCaseSensitive
+                            ? StringComparison.InvariantCulture
+                            : StringComparison.InvariantCultureIgnoreCase))
+                {
+                    return new IResult.Success(
+                        new Syntax.Symbol(
+                            SymbolName,
+                            new string(tokens)));
+                }
+
+                //add relevant information into the parse error
+                tokenReader.Reset(position);
+                return new IResult.FailedRecognition(SymbolName, position + 1);
+            }
+            catch (Exception e)
+            {
+                //add relevant information into the parse error
+                tokenReader.Reset(position);
+                return new IResult.Exception(e, position + 1);
+            }
+        }
+
         public override string ToString() => $"'{_terminal.Value}'";
     }
 }

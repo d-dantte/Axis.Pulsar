@@ -1,7 +1,4 @@
 ﻿using Axis.Pulsar.Parser.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Axis.Pulsar.Parser.Grammar
 {
@@ -10,7 +7,7 @@ namespace Axis.Pulsar.Parser.Grammar
     /// A symbol expression represents an ordering of <see cref="Parser.Grammar.SymbolRef"/> or <see cref="Parser.Grammar.SymbolGroup"/> instances that are intended to be evaluated to yield
     /// a boolean result, based on the individual grouping where needed.
     /// <para>
-    /// A <see cref="SymbolExpression"/> represents the discriminated union of either a <see cref="Parser.Grammar.SymbolGroup"/> or a <see cref="Parser.Grammar.SymbolRef"/>.
+    /// A <see cref="ISymbolExpression"/> represents the discriminated union of either a <see cref="Parser.Grammar.SymbolGroup"/> or a <see cref="Parser.Grammar.SymbolRef"/>.
     /// </para>
     /// <para>
     /// Ps: This is a poor man's discriminated union. :D
@@ -22,10 +19,5 @@ namespace Axis.Pulsar.Parser.Grammar
         /// The cardinality of this expression
         /// </summary>
         Cardinality Cardinality { get; }
-
-        /// <summary>
-        /// Represents the lowest number of elements that need to match for this expression to be at least 
-        /// </summary>
-        int RecognitionThreshold { get; }
     }
 }

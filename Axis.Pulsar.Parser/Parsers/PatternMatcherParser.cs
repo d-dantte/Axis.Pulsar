@@ -93,6 +93,80 @@ namespace Axis.Pulsar.Parser.Parsers
             }
         }
 
+        public IResult Parse(BufferedTokenReader tokenReader)
+        {
+            var position = tokenReader.Position;
+            try
+            {
+                string symbolValue = null;
+                if (_terminal.MatchCardinality.MaxOccurence == null) //open ended
+                {
+                    //pull the min number of characters from the source, then keep pulling and matching till a false match is encountered
+                    if (!tokenReader.TryNextTokens(_terminal.MatchCardinality.MinOccurence, out var tokens))
+                        throw new System.IO.EndOfStreamException();
+
+                    else if (!_terminal.Regex.IsMatch(new string(tokens)))
+                    {
+                        tokenReader.Reset(position);
+                        return new IResult.FailedRecognition(SymbolName, position + 1);
+                    }
+
+                    var sbuffer = new StringBuilder(new string(tokens));
+                    while (tokenReader.TryNextToken(out var token))
+                    {
+                        if (!_terminal.Regex.IsMatch(sbuffer.Append(token).ToString()))
+                        {
+                            tokenReader.Back();
+                            sbuffer.Remove(sbuffer.Length - 1, 1);
+                            break;
+                        }
+                    }
+
+                    symbolValue = sbuffer.ToString();
+                }
+                else //close ended
+                {
+                    //pull the max number of characters from the source, then keep removing from the end till a positive match is encountered
+                    for (int charCount = _terminal.MatchCardinality.MaxOccurence.Value;
+                        charCount >= _terminal.MatchCardinality.MinOccurence;
+                        charCount--)
+                    {
+                        if (!tokenReader.TryNextTokens(charCount, out var tokens))
+                            continue;
+
+                        else if (!_terminal.Regex.IsMatch(new string(tokens)))
+                        {
+                            tokenReader.Reset(position);
+                            continue;
+                        }
+                        else
+                        {
+                            symbolValue = new(tokens);
+                            break;
+                        }
+                    }
+
+                    //no match at all
+                    if (symbolValue == null)
+                    {
+                        tokenReader.Reset(position);
+                        return new IResult.FailedRecognition(SymbolName, position + 1);
+                    }
+                }
+
+                return new IResult.Success(
+                    new Syntax.Symbol(
+                        SymbolName,
+                        symbolValue));
+            }
+            catch (Exception e)
+            {
+                tokenReader.Reset(position);
+                return new IResult.Exception(e, position + 1);
+            }
+        }
+
         public override string ToString() => $"/{_terminal.Regex}/";
+
     }
 }

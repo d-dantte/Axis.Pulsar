@@ -36,12 +36,10 @@ namespace Axis.Pulsar.Parser.Grammar
 
         public Cardinality Cardinality { get; }
 
-        public int RecognitionThreshold { get; }
-
         public IReadOnlyCollection<ISymbolExpression> Expressions { get; }
 
         /// <summary>
-        /// Returns all refs that are "leaf-nodes" for the trea starting at the current <see cref="ISymbolExpression"/>
+        /// Returns all refs that are "leaf-nodes" for the tree starting at the current <see cref="ISymbolExpression"/>
         /// </summary>
         public IReadOnlyCollection<SymbolRef> SymbolRefs => Expressions
             .SelectMany(expression => expression switch
@@ -61,7 +59,6 @@ namespace Axis.Pulsar.Parser.Grammar
         /// <param name="expressions">The symbol-refs</param>
         private SymbolGroup(
             GroupingMode mode,
-            int recognitionThreshold,
             Cardinality cardinality,
             params ISymbolExpression[] expressions)
         {
@@ -70,9 +67,6 @@ namespace Axis.Pulsar.Parser.Grammar
 
             Mode = mode;
             Cardinality = cardinality;
-            RecognitionThreshold = recognitionThreshold.ThrowIf(
-                value => value <= 0,
-                _ => new ArgumentException($"{nameof(recognitionThreshold)} must be >= 1"));
 
             if (Mode == GroupingMode.Set)
                 Expressions = expressions
@@ -84,7 +78,7 @@ namespace Axis.Pulsar.Parser.Grammar
                 Expressions = Array.AsReadOnly(expressions);
 
             //ensure that the expressions all terminate in SymbolRefs
-            if (!Expressions.ExactlyAll(IsSymbolExpressionTerminal))
+            if (!Expressions.ExactlyAll(TerminatesAtSymbolRef))
                 throw new SymbolRefResolutionException();
         }
 
@@ -92,11 +86,11 @@ namespace Axis.Pulsar.Parser.Grammar
         /// Returns true if the given expression has all it's branches terminating in <see cref="SymbolRef"/> instances.
         /// </summary>
         /// <param name="expression">The expression to evaluate.</param>
-        private bool IsSymbolExpressionTerminal(ISymbolExpression expression)
+        private bool TerminatesAtSymbolRef(ISymbolExpression expression)
         {
             return expression switch
             {
-                SymbolGroup group => group.Expressions.ExactlyAll(IsSymbolExpressionTerminal),
+                SymbolGroup group => group.Expressions.ExactlyAll(TerminatesAtSymbolRef),
                 SymbolRef @ref => true,
                 _ => false
             };
@@ -118,19 +112,6 @@ namespace Axis.Pulsar.Parser.Grammar
         }
 
         #region Set
-        /// <summary>
-        /// Creates a set-expression
-        /// </summary>
-        /// <param name="recognitionThreshold"><see cref="ISymbolExpression.RecognitionThreshold"/> for documentation</param>
-        /// <param name="cardinality">The cardinality for this rule</param>
-        /// <param name="symbolExpressions">The symbol-refs</param>
-        public static SymbolGroup Set(
-            int recognitionThreshold,
-            Cardinality cardinality,
-            params ISymbolExpression[] symbolExpressions)
-        {
-            return new(GroupingMode.Choice, recognitionThreshold, cardinality, symbolExpressions);
-        }
 
         /// <summary>
         /// Creates a set-expression. Note that duplicates will be discarded from the <paramref name="symbolExpressions"/> array.
@@ -141,7 +122,7 @@ namespace Axis.Pulsar.Parser.Grammar
             Cardinality cardinality,
             params ISymbolExpression[] symbolExpressions)
         {
-            return new(GroupingMode.Set, 1, cardinality, symbolExpressions);
+            return new(GroupingMode.Set, cardinality, symbolExpressions);
         }
 
         /// <summary>
@@ -150,24 +131,12 @@ namespace Axis.Pulsar.Parser.Grammar
         /// <param name="symbolExpressions">The symbol-refs</param>
         public static SymbolGroup Set(params ISymbolExpression[] rules)
         {
-            return new(GroupingMode.Set, 1, Cardinality.OccursOnlyOnce(), rules);
+            return new(GroupingMode.Set, Cardinality.OccursOnlyOnce(), rules);
         }
+
         #endregion
 
         #region Sequence
-        /// <summary>
-        /// Creates a sequence-expression
-        /// </summary>
-        /// <param name="recognitionThreshold"><see cref="ISymbolExpression.RecognitionThreshold"/> for documentation</param>
-        /// <param name="cardinality">The cardinality for this rule</param>
-        /// <param name="symbolExpressions">The symbol-refs</param>
-        public static SymbolGroup Sequence(
-            int recognitionThreshold,
-            Cardinality cardinality,
-            params ISymbolExpression[] symbolExpressions)
-        {
-            return new(GroupingMode.Choice, recognitionThreshold, cardinality, symbolExpressions);
-        }
 
         /// <summary>
         /// Creates a sequence-expression.
@@ -176,7 +145,7 @@ namespace Axis.Pulsar.Parser.Grammar
         /// <param name="symbolExpressions">The symbol-refs</param>
         public static SymbolGroup Sequence(Cardinality cardinality, params ISymbolExpression[] symbolExpressions)
         {
-            return new(GroupingMode.Sequence, 1, cardinality, symbolExpressions);
+            return new(GroupingMode.Sequence, cardinality, symbolExpressions);
         }
 
         /// <summary>
@@ -185,24 +154,12 @@ namespace Axis.Pulsar.Parser.Grammar
         /// <param name="symbolExpressions">The symbol-refs</param>
         public static SymbolGroup Sequence(params ISymbolExpression[] symbolExpressions)
         {
-            return new(GroupingMode.Sequence, 1, Cardinality.OccursOnlyOnce(), symbolExpressions);
+            return new(GroupingMode.Sequence, Cardinality.OccursOnlyOnce(), symbolExpressions);
         }
+
         #endregion
 
         #region Choice
-        /// <summary>
-        /// Creates a choice-expression
-        /// </summary>
-        /// <param name="recognitionThreshold"><see cref="ISymbolExpression.RecognitionThreshold"/> for documentation</param>
-        /// <param name="cardinality">The cardinality for this rule</param>
-        /// <param name="symbolExpressions">The symbol-refs</param>
-        public static SymbolGroup Choice(
-            int recognitionThreshold,
-            Cardinality cardinality,
-            params ISymbolExpression[] symbolExpressions)
-        {
-            return new(GroupingMode.Choice, recognitionThreshold, cardinality, symbolExpressions);
-        }
 
         /// <summary>
         /// Creates a choice-expression
@@ -213,7 +170,7 @@ namespace Axis.Pulsar.Parser.Grammar
             Cardinality cardinality,
             params ISymbolExpression[] symbolExpressions)
         {
-            return new(GroupingMode.Choice, 1, cardinality, symbolExpressions);
+            return new(GroupingMode.Choice, cardinality, symbolExpressions);
         }
 
         /// <summary>
@@ -222,8 +179,9 @@ namespace Axis.Pulsar.Parser.Grammar
         /// <param name="symbolExpressions">The symbol-refs</param>
         public static SymbolGroup Choice(params ISymbolExpression[] symbolExpressions)
         {
-            return new(GroupingMode.Choice, 1, Cardinality.OccursOnlyOnce(), symbolExpressions);
+            return new(GroupingMode.Choice, Cardinality.OccursOnlyOnce(), symbolExpressions);
         }
+
         #endregion
     }
 }

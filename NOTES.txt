@@ -16,3 +16,7 @@
 	c. All parse methods will now consider the recognition threshold.
 3. Make sure that the Grammar rules and SymbolExpressions all validate Cardinality against RecognitionThreshold.
    This ensures that we will never have a scenario where the cardinality passes and the threshold doesn't.
+
+   After much rumination, this seems to be a bad idea. I'm going to look at videos on how to implement parsers,
+   I should get better ideas about implementing that partial parsing feature from those.
+   ps: get rid of the "RecognitionThreshold" feature.

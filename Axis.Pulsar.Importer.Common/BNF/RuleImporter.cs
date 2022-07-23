@@ -1,8 +1,9 @@
-﻿using Axis.Pulsar.Parser;
-using Axis.Pulsar.Parser.Grammar;
+﻿using Axis.Pulsar.Parser.Grammar;
 using Axis.Pulsar.Parser.Input;
+using Axis.Pulsar.Parser.Parsers;
 using Axis.Pulsar.Parser.Syntax;
 using Axis.Pulsar.Parser.Utils;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -134,6 +135,9 @@ namespace Axis.Pulsar.Importer.Common.BNF
 
         private static ISymbolExpression ToRef(Symbol symbolRefExpression, Cardinality cardinality)
         {
+            var list = new List<string>();
+            new Dictionary<string, string>()
+
             return new SymbolRef(
                 symbolRefExpression
                     .Children[0].Value
@@ -163,7 +167,7 @@ namespace Axis.Pulsar.Importer.Common.BNF
 
         private static Cardinality ToCardinality(Symbol symbol)
         {
-            if (string.IsNullOrEmpty(symbol?.Value ?? ""))
+            if (string.IsNullOrEmpty(symbol.Value))
                 return Cardinality.OccursOnlyOnce();
 
             else
@@ -176,6 +180,18 @@ namespace Axis.Pulsar.Importer.Common.BNF
 
                 return new Cardinality(min, max);
             }
+        }
+
+        private static int ToRecognitionThreshold(Symbol symbol)
+        {
+            if (string.IsNullOrEmpty(symbol.Value))
+                return 1;
+
+            else
+                return symbol
+                    .Children[1]
+                    .Value
+                    .Map(int.Parse);
         }
 
         private static bool HasOnlyComma(Symbol symbol)

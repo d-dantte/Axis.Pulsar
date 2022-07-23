@@ -24,11 +24,14 @@
   </non-terminal>
 
   <non-terminal name="rule">
-    <choice>
-      <symbol name="literal"/>
-      <symbol name="pattern"/>
-      <symbol name="symbol-expression"/>
-    </choice>
+    <sequence>
+      <choice>
+        <symbol name="literal"/>
+        <symbol name="pattern"/>
+        <symbol name="symbol-expression"/>
+      </choice>
+      <symbol name="recognition-threshold"/>
+    </sequence>
   </non-terminal>
 
   <non-terminal name="symbol-expression">
@@ -146,6 +149,19 @@
     </sequence>
   </non-terminal>
 
+  <non-terminal name="recognition-threshold">
+    <sequence min-occurs="0" max-occurs="1">
+      <symbol name="s-colon"/>
+      <symbol name="digits"/>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="rewrite-op">
+    <choice>
+      <symbol name="assign"/>
+      <symbol name="arrow"/>
+    </choice>
+  </non-terminal>
 
   <!-- Terminals-->
   <pattern
@@ -195,8 +211,16 @@
     value=","/>
 
   <literal
-    name="rewrite-op"
+    name="assign"
     value="::="/>
+
+  <literal
+    name="arrow"
+    value="->"/>
+
+  <literal
+    name="s-colon"
+    value=";"/>
 
   <literal
     name="q-mark"

@@ -1,4 +1,6 @@
-﻿namespace Axis.Pulsar.Parser.Grammar
+﻿using System;
+
+namespace Axis.Pulsar.Parser.Grammar
 {
 
     /// <summary>
@@ -8,13 +10,16 @@
     {
         public ISymbolExpression Value { get; }
 
-        public SymbolExpressionRule(ISymbolExpression expression)
+        public int RecognitionThreshold { get; }
+
+        public SymbolExpressionRule(
+            int recognitionThreshold,
+            ISymbolExpression expression)
         {
             Value = expression;
+            RecognitionThreshold = recognitionThreshold.ThrowIf(
+                value => value <= 0,
+                _ => new ArgumentException($"{nameof(recognitionThreshold)} must be >= 1"));
         }
-
-        public static implicit operator SymbolExpressionRule(SymbolGroup group) => new(group);
-
-        public static implicit operator SymbolExpressionRule(SymbolRef @ref) => new(@ref);
     }
 }

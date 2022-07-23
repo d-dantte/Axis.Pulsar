@@ -4,24 +4,17 @@ using System.Linq;
 
 namespace Axis.Pulsar.Parser.Grammar
 {
+    /// <summary>
+    /// A <see cref="SymbolRef"/> represents a reference to a production.
+    /// </summary>
     public class SymbolRef: ISymbolExpression
     {
         public string ProductionSymbol { get; }
 
         public Cardinality Cardinality { get; }
 
-        public int RecognitionThreshold { get; }
-
         public SymbolRef(string productionSymbol, Cardinality cardinality)
-            :this(productionSymbol, 1, cardinality)
-        { }
-
-        public SymbolRef(
-            string productionSymbol,
-            int recognitionThreshold,
-            Cardinality cardinality)
         {
-            RecognitionThreshold = recognitionThreshold;
             Cardinality = cardinality;
             ProductionSymbol = !string.IsNullOrWhiteSpace(productionSymbol)
                 ? productionSymbol

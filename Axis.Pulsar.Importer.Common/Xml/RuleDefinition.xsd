@@ -40,6 +40,7 @@
     </xs:choice>
 
     <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="threshold" type="xs:int" use="optional"/>
   </xs:complexType>
 
   <xs:complexType name="GroupType">

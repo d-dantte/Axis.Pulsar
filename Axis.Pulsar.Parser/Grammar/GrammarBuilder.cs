@@ -72,7 +72,7 @@ namespace Axis.Pulsar.Parser.Grammar
                 productions[production.Symbol] = production.Rule;
 
             else if (!productions.TryAdd(production.Symbol, production.Rule))
-                throw new ArgumentException("Rules overwriting is not allowed for this call");
+                throw new ArgumentException("Rule overwriting is not allowed for this call");
 
             return this;
         }
