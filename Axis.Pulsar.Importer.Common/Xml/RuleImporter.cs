@@ -120,7 +120,7 @@ namespace Axis.Pulsar.Importer.Common.Xml
                     ExtractCardinality(element),
                     element.Elements().Select(ToExpression).ToArray()),
 
-                "symbol" => new SymbolRef(
+                "symbol" => new ProductionRef(
                     element.Attribute(Legend.Enumerations.SymbolElement_Name).Value,
                     ExtractCardinality(element)),
 

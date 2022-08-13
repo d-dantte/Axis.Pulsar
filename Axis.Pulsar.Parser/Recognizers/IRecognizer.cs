@@ -1,8 +1,5 @@
 ﻿using Axis.Pulsar.Parser.Input;
 using Axis.Pulsar.Parser.Utils;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Axis.Pulsar.Parser.Recognizers
 {
@@ -12,7 +9,7 @@ namespace Axis.Pulsar.Parser.Recognizers
     public interface IRecognizer
     {
         /// <summary>
-        /// 
+        /// Cardinality of this recognizer
         /// </summary>
         Cardinality Cardinality { get; }
 
@@ -22,7 +19,7 @@ namespace Axis.Pulsar.Parser.Recognizers
         /// <param name="tokenReader"></param>
         /// <param name="result"></param>
         /// <returns></returns>
-        bool TryRecognize(BufferedTokenReader tokenReader, out RecognizerResult result);
+        bool TryRecognize(BufferedTokenReader tokenReader, out IResult result);
 
         /// <summary>
         /// 

@@ -138,7 +138,7 @@ namespace Axis.Pulsar.Importer.Common.BNF
             var list = new List<string>();
             new Dictionary<string, string>()
 
-            return new SymbolRef(
+            return new ProductionRef(
                 symbolRefExpression
                     .Children[0].Value
                     .TrimStart('$'),

@@ -135,7 +135,7 @@ namespace Axis.Pulsar.Parser.Grammar
                 ITerminal terminal => Enumerable.Empty<string>(),
                 SymbolExpressionRule groupingRule => groupingRule.Value switch
                 {
-                    SymbolRef sr => new[] { sr.ProductionSymbol },
+                    ProductionRef sr => new[] { sr.ProductionSymbol },
                     SymbolGroup sg => sg.SymbolRefs.Select(@ref => @ref.ProductionSymbol),
                     _ => throw new Exception($"Invalid SymbolExpression type: {groupingRule.GetType()}")
                 },

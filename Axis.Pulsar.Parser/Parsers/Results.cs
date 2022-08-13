@@ -1,47 +1,37 @@
 ﻿using Axis.Pulsar.Parser.CST;
-using Axis.Pulsar.Parser.Syntax;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 
-namespace Axis.Pulsar.Parser.Recognizers
+namespace Axis.Pulsar.Parser.Parsers
 {
     /// <summary>
-    /// Recognizer result
+    /// Represents a discriminated union of possible results of a parsing process.
+    /// 
+    /// <para>
+    /// Note: consider making the inner types '<c>record struct</c>' types.
+    /// </para>
     /// </summary>
     public interface IResult
     {
         /// <summary>
-        /// Represent a successful recognition of 
+        /// Represents a successful recognition.
         /// </summary>
         public record Success : IResult
         {
-            public ICSTNode[] Symbols { get; }
+            public ICSTNode Symbol { get; }
 
-            public Success(params ICSTNode[] symbols)
-                :this((IEnumerable<ICSTNode>)symbols)
-            { }
-
-            public Success(IEnumerable<ICSTNode> symbols)
+            public Success(ICSTNode node)
             {
-                Symbols = symbols?
-                    .ToArray()
-                    .ThrowIf(
-                        Extensions.IsNull,
-                        new ArgumentNullException(nameof(symbols)))
-                    .ThrowIf(
-                        Extensions.ContainsNull,
-                        new ArgumentException("CSTNode list cannot contain null"));
+                Symbol = node ?? throw new ArgumentNullException(nameof(node));
             }
         }
 
         /// <summary>
-        /// Represents fialed recognition of symbols
+        /// Represents partial recognition of symbols
         /// </summary>
-        public record FailedRecognition : IResult
+        public record PartialRecognition: IResult
         {
             /// <summary>
-            /// The partially recognized symbols
+            /// A count of the recognized symbols.
             /// </summary>
             public int RecognitionCount { get; }
 
@@ -55,16 +45,46 @@ namespace Axis.Pulsar.Parser.Recognizers
             /// </summary>
             public int InputPosition { get; }
 
-            public FailedRecognition(
-                string expectedSymbolName,
+
+            public PartialRecognition(
                 int recognitionCount,
+                string expectedSymbolName,
                 int inputPosition)
             {
                 RecognitionCount = recognitionCount.ThrowIf(
                     Extensions.IsNegative,
-                    new ArgumentException($"Invalid {nameof(recognitionCount)}"));
+                    new ArgumentException($"{nameof(recognitionCount)} cannot be < 0"));
 
-                ExpectedSymbolName = expectedSymbolName ?? throw new ArgumentNullException(nameof(expectedSymbolName));
+                ExpectedSymbolName = expectedSymbolName.ThrowIf(
+                    string.IsNullOrWhiteSpace,
+                    new ArgumentException($"Invalid {nameof(expectedSymbolName)}"));
+
+                InputPosition = inputPosition.ThrowIf(
+                    Extensions.IsNegative,
+                    new ArgumentException($"{nameof(InputPosition)} must be >= 0"));
+            }
+        }
+
+        /// <summary>
+        /// Represents failed recognition.
+        /// </summary>
+        public record FailedRecognition: IResult
+        {
+            /// <summary>
+            /// Name of the symbol whose recognition failed
+            /// </summary>
+            public string ExpectedSymbolName { get; }
+
+            /// <summary>
+            /// Position at which the symbol was expected to be
+            /// </summary>
+            public int InputPosition { get; }
+
+            public FailedRecognition(string symbolName, int inputPosition)
+            {
+                symbolName = symbolName.ThrowIf(
+                    string.IsNullOrWhiteSpace,
+                    _ => new ArgumentException($"Invalid {nameof(symbolName)}"));
 
                 InputPosition = inputPosition.ThrowIf(
                     Extensions.IsNegative,

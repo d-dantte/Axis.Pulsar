@@ -17,7 +17,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
                     "language",
                     new SymbolExpressionRule(
                         SymbolGroup.Choice(
-                            SymbolRef.Create(
+                            ProductionRef.Create(
                                 "public",
                                 "private",
                                 "package",
@@ -55,7 +55,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
         {
             var choice = SymbolGroup.Choice(
                     cardinality ?? Cardinality.OccursOnlyOnce(),
-                    SymbolRef.Create(
+                    ProductionRef.Create(
                         "public",
                         "private",
                         "package",

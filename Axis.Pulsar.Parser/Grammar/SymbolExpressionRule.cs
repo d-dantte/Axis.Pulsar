@@ -4,13 +4,15 @@ namespace Axis.Pulsar.Parser.Grammar
 {
 
     /// <summary>
-    /// 
+    /// Represents a grouping of other symbols.
     /// </summary>
     public class SymbolExpressionRule : INonTerminal
     {
+        /// <inheritdoc/>
         public ISymbolExpression Value { get; }
 
-        public int RecognitionThreshold { get; }
+        /// <inheritdoc/>
+        public int? RecognitionThreshold { get; }
 
         public SymbolExpressionRule(
             int recognitionThreshold,
@@ -18,8 +20,8 @@ namespace Axis.Pulsar.Parser.Grammar
         {
             Value = expression;
             RecognitionThreshold = recognitionThreshold.ThrowIf(
-                value => value <= 0,
-                _ => new ArgumentException($"{nameof(recognitionThreshold)} must be >= 1"));
+                v => v <= 0,
+                new ArgumentException($"{nameof(recognitionThreshold)} cannot be <= 0"));
         }
     }
 }

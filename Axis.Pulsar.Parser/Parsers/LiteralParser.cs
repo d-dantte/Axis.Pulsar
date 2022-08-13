@@ -1,37 +1,46 @@
 ﻿using Axis.Pulsar.Parser.Input;
 using Axis.Pulsar.Parser.Grammar;
 using System;
+using Axis.Pulsar.Parser.CST;
 
 namespace Axis.Pulsar.Parser.Parsers
 {
+    /// <summary>
+    /// Parser for <see cref="LiteralRule"/>
+    /// </summary>
     public class LiteralParser: IParser
     {
-        private readonly LiteralRule _terminal;
+        private readonly LiteralRule _literalRule;
 
+        /// <inheritdoc/>
         public string SymbolName { get; }
 
-        public LiteralParser(string symbolName, LiteralRule terminal)
+        /// <inheritdoc/>
+        public int? RecognitionThreshold => _literalRule.RecognitionThreshold;
+
+        public LiteralParser(string symbolName, LiteralRule literalRule)
         {
-            _terminal = terminal ?? throw new ArgumentNullException(nameof(terminal));
+            _literalRule = literalRule ?? throw new ArgumentNullException(nameof(literalRule));
             SymbolName = symbolName.ThrowIf(
                 string.IsNullOrWhiteSpace,
                 _ => new ArgumentException("Invalid symbol name"));
         }
 
-        public bool TryParse(BufferedTokenReader tokenReader, out ParseResult result)
+        /// <inheritdoc/>
+        public bool TryParse(BufferedTokenReader tokenReader, out IResult result)
         {
             var position = tokenReader.Position;
             try
             {
-                if(tokenReader.TryNextTokens(_terminal.Value.Length, out var tokens)
-                    && _terminal.Value.Equals(
+                if(tokenReader.TryNextTokens(_literalRule.Value.Length, out var tokens)
+                    && _literalRule.Value.Equals(
                         new string(tokens),
-                        _terminal.IsCaseSensitive
+                        _literalRule.IsCaseSensitive
                             ? StringComparison.InvariantCulture
                             : StringComparison.InvariantCultureIgnoreCase))
                 {
-                    result = new ParseResult(
-                        new Syntax.Symbol(
+                    result = new IResult.Success(
+                        ICSTNode.Of(
                             SymbolName,
                             new string(tokens)));
 
@@ -39,49 +48,28 @@ namespace Axis.Pulsar.Parser.Parsers
                 }
 
                 //add relevant information into the parse error
-                result = new ParseResult(new ParseError(SymbolName, position + 1));
+                result = new IResult.FailedRecognition(
+                    SymbolName,
+                    position + 1);
                 tokenReader.Reset(position);
                 return false;
             }
-            catch
+            catch(Exception ex)
             {
                 //add relevant information into the parse error
-                result = new ParseResult(new ParseError(SymbolName, position + 1));
+                result = new IResult.Exception(ex, position + 1);
                 tokenReader.Reset(position);
                 return false;
             }
         }
-
+        
+        /// <inheritdoc/>
         public IResult Parse(BufferedTokenReader tokenReader)
         {
-            var position = tokenReader.Position;
-            try
-            {
-                if (tokenReader.TryNextTokens(_terminal.Value.Length, out var tokens)
-                    && _terminal.Value.Equals(
-                        new string(tokens),
-                        _terminal.IsCaseSensitive
-                            ? StringComparison.InvariantCulture
-                            : StringComparison.InvariantCultureIgnoreCase))
-                {
-                    return new IResult.Success(
-                        new Syntax.Symbol(
-                            SymbolName,
-                            new string(tokens)));
-                }
-
-                //add relevant information into the parse error
-                tokenReader.Reset(position);
-                return new IResult.FailedRecognition(SymbolName, position + 1);
-            }
-            catch (Exception e)
-            {
-                //add relevant information into the parse error
-                tokenReader.Reset(position);
-                return new IResult.Exception(e, position + 1);
-            }
+            _ = TryParse(tokenReader, out var result);
+            return result;
         }
 
-        public override string ToString() => $"'{_terminal.Value}'";
+        public override string ToString() => $"'{_literalRule.Value}'";
     }
 }

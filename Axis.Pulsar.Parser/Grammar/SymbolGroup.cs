@@ -41,12 +41,12 @@ namespace Axis.Pulsar.Parser.Grammar
         /// <summary>
         /// Returns all refs that are "leaf-nodes" for the tree starting at the current <see cref="ISymbolExpression"/>
         /// </summary>
-        public IReadOnlyCollection<SymbolRef> SymbolRefs => Expressions
+        public IReadOnlyCollection<ProductionRef> SymbolRefs => Expressions
             .SelectMany(expression => expression switch
             {
-                SymbolRef sr => new [] {sr},
+                ProductionRef sr => new [] {sr},
                 SymbolGroup sg => sg.SymbolRefs,
-                _ => Enumerable.Empty<SymbolRef>()
+                _ => Enumerable.Empty<ProductionRef>()
             })
             .ToList()
             .AsReadOnly();
@@ -83,7 +83,7 @@ namespace Axis.Pulsar.Parser.Grammar
         }
 
         /// <summary>
-        /// Returns true if the given expression has all it's branches terminating in <see cref="SymbolRef"/> instances.
+        /// Returns true if the given expression has all it's branches terminating in <see cref="ProductionRef"/> instances.
         /// </summary>
         /// <param name="expression">The expression to evaluate.</param>
         private bool TerminatesAtSymbolRef(ISymbolExpression expression)
@@ -91,7 +91,7 @@ namespace Axis.Pulsar.Parser.Grammar
             return expression switch
             {
                 SymbolGroup group => group.Expressions.ExactlyAll(TerminatesAtSymbolRef),
-                SymbolRef @ref => true,
+                ProductionRef @ref => true,
                 _ => false
             };
         }

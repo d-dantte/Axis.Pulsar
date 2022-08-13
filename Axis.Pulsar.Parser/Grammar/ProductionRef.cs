@@ -5,15 +5,15 @@ using System.Linq;
 namespace Axis.Pulsar.Parser.Grammar
 {
     /// <summary>
-    /// A <see cref="SymbolRef"/> represents a reference to a production.
+    /// A <see cref="ProductionRef"/> represents a reference to a production.
     /// </summary>
-    public class SymbolRef: ISymbolExpression
+    public class ProductionRef: ISymbolExpression
     {
         public string ProductionSymbol { get; }
 
         public Cardinality Cardinality { get; }
 
-        public SymbolRef(string productionSymbol, Cardinality cardinality)
+        public ProductionRef(string productionSymbol, Cardinality cardinality)
         {
             Cardinality = cardinality;
             ProductionSymbol = !string.IsNullOrWhiteSpace(productionSymbol)
@@ -25,14 +25,14 @@ namespace Axis.Pulsar.Parser.Grammar
 
         public override bool Equals(object obj)
         {
-            return obj is SymbolRef other
+            return obj is ProductionRef other
                 && ProductionSymbol.Equals(other.ProductionSymbol);
         }
 
         public override int GetHashCode() => ProductionSymbol.GetHashCode();
 
-        public static SymbolRef[] Create(params string[] refs) => refs.Select(@ref => (SymbolRef)@ref).ToArray();
+        public static ProductionRef[] Create(params string[] refs) => refs.Select(@ref => (ProductionRef)@ref).ToArray();
 
-        public static implicit operator SymbolRef(string symbolName) => new(symbolName, Cardinality.OccursOnlyOnce());
+        public static implicit operator ProductionRef(string symbolName) => new(symbolName, Cardinality.OccursOnlyOnce());
     }
 }

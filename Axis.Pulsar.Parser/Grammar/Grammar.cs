@@ -83,7 +83,7 @@ namespace Axis.Pulsar.Parser.Grammar
             var expression = rule.Value;
             return expression switch
             {
-                SymbolRef @ref => new SymbolRefRecognizer(
+                ProductionRef @ref => new ProductionRefRecognizer(
                     @ref.ProductionSymbol,
                     @ref.Cardinality,
                     this),

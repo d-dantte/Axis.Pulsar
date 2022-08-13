@@ -14,7 +14,7 @@ namespace Axis.Pulsar.Parser.Recognizers
             _ => throw new System.ArgumentException($"Invalid grouping mode: {mode}")
         };
 
-        public static string AsString(
+        public static string AsString(this
             Grammar.SymbolGroup.GroupingMode mode,
             Cardinality cardinality,
             params IRecognizer[] recognizers)

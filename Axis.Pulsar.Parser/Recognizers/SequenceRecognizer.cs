@@ -6,100 +6,41 @@ using System.Linq;
 
 namespace Axis.Pulsar.Parser.Recognizers
 {
+    /// <summary>
+    /// Recognizes tokens for a given <see cref="Grammar.SymbolGroup"/> that is configured with <see cref="Grammar.SymbolGroup.GroupingMode.Sequence"/>.
+    /// </summary>
     public class SequenceRecognizer : IRecognizer
     {
+        /// <summary>
+        /// The name given to this node in the Concrete Syntax Tree node. (<see  cref="CST.CSTNode"/>)
+        /// </summary>
         public static readonly string PSEUDO_NAME = "#Sequence";
 
         private readonly IRecognizer[] _recognizers;
 
+        ///<inheritdoc/>
         public Cardinality Cardinality { get; }
 
-        public int RecognitionThreshold { get; }
-
-        public SequenceRecognizer(int recognitionThreshold, Cardinality cardinality, params IRecognizer[] recognizers)
+        public SequenceRecognizer(Cardinality cardinality, params IRecognizer[] recognizers)
         {
-            RecognitionThreshold = recognitionThreshold;
             Cardinality = cardinality;
             _recognizers = recognizers
                 .ThrowIf(Extensions.IsNull, _ => new ArgumentNullException(nameof(recognizers)))
-                .ThrowIf(Extensions.IsEmpty, _ => new ArgumentException("empty recognizer array supplied"));
+                .ThrowIf(Extensions.IsEmpty, _ => new ArgumentException("Empty recognizer array supplied"))
+                .ThrowIf(Extensions.ContainsNull, new ArgumentException("Recognizer array must not contain nulls"));
         }
 
-        public SequenceRecognizer(
-            Cardinality cardinality,
-            params IRecognizer[] recognizers)
-            : this(1, cardinality, recognizers)
-        { }
-
-        public bool TryRecognize(BufferedTokenReader tokenReader, out RecognizerResult result)
-        {
-            var position = tokenReader.Position;
-            try
-            {
-                var results = new List<RecognizerResult>();
-                RecognizerResult current = null;
-                int cycleCount = 0;
-                do
-                {
-                    int tempPosition = tokenReader.Position;
-                    var cycleResults = new List<RecognizerResult>();
-                    foreach(var recognizer in _recognizers)
-                    {
-                        if (recognizer.TryRecognize(tokenReader, out current))
-                            cycleResults.Add(current);
-
-                        else
-                        {
-                            tokenReader.Reset(tempPosition);
-                            break;
-                        }
-                    }
-
-                    if (current.Succeeded)
-                        results.AddRange(cycleResults);
-                }
-                while (current.Succeeded && Cardinality.CanRepeat(++cycleCount));
-
-                var cycles = results.Count / _recognizers.Length;
-                if (cycles == 0 && Cardinality.MinOccurence == 0)
-                {
-                    result = new RecognizerResult(new Syntax.Symbol(PSEUDO_NAME, ""));
-                    return true;
-                }
-                else if (cycles >= Cardinality.MinOccurence && (Cardinality.MaxOccurence == null || cycles <= Cardinality.MaxOccurence))
-                {
-                    result = results
-                        .SelectMany(result => result.Symbols)
-                        .ToArray()
-                        .Map(symbols => new RecognizerResult(symbols));
-
-                    return true;
-                }
-                else
-                {
-                    tokenReader.Reset(position);
-                    result = new(new ParseError(PSEUDO_NAME, position + 1, current.Error));
-                    return false;
-                }
-            }
-            catch
-            {
-                tokenReader.Reset(position);
-                result = new(new ParseError(PSEUDO_NAME, position + 1));
-                return false;
-            }
-        }
-
-        public IResult Recognize(BufferedTokenReader tokenReader)
+        ///<inheritdoc/>
+        public bool TryRecognize(BufferedTokenReader tokenReader, out IResult result)
         {
             var position = tokenReader.Position;
             try
             {
                 IResult currentResult = null;
-                List<IResult.Success> 
+                List<IResult.Success>
                     results = new(),
                     cycleResults = null;
-                int 
+                int
                     cycleCount = 0,
                     tempPosition = 0;
                 do
@@ -128,67 +69,53 @@ namespace Axis.Pulsar.Parser.Recognizers
 
                 #region success
                 var cycles = results.Count / _recognizers.Length;
-                if (Cardinality.MinOccurence == 0
-                    && results.Count == 0
-                    && cycleResults.Count < RecognitionThreshold)
-                    return new IResult.Success();
-
-                else if (Cardinality.IsValidRange(cycles)
-                    && cycleResults.Count < RecognitionThreshold)
+                if (Cardinality.IsValidRange(cycles))
                 {
-                    return results
+                    result = results
                         .SelectMany(result => result.Symbols)
                         .Map(symbols => new IResult.Success(symbols));
-                }
-                #endregion
-
-                #region Partial
-                else if(Helper.SymbolCount(results.AsEnumerable().Concat(cycleResults)) >= RecognitionThreshold)
-                {
-                    _ = tokenReader.Reset(position);
-                    return currentResult switch
-                    {
-                        IResult.PartialRecognition partial => new IResult.PartialRecognition(
-                            expectedSymbol: partial.ExpectedSymbol,
-                            inputPosition: partial.InputPosition,
-                                recognizedSymbols: results
-                                .AsEnumerable()
-                                .Concat(cycleResults)
-                                .SelectMany(result => result.Symbols)
-                                .Concat(partial.RecognizedSymbols)),
-
-                        IResult.FailedRecognition failed => new IResult.PartialRecognition(
-                            expectedSymbol: failed.SymbolName,
-                            inputPosition: failed.InputPosition,
-                            recognizedSymbols: results
-                                .AsEnumerable()
-                                .Concat(cycleResults)
-                                .SelectMany(result => result.Symbols)),
-
-                        IResult.Exception exception => exception,
-
-                        _ => new IResult.Exception(
-                            new Exception($"invaid result type: {currentResult.GetType()}"),
-                            position)
-                    };
+                    return true;
                 }
                 #endregion
 
                 #region Failed
-                // Not enough symbols were recognized; this was a failed attempt
+                // else - Not enough symbols were recognized; this was a failed attempt
                 var currentPosition = tokenReader.Position + 1;
                 _ = tokenReader.Reset(position);
+                result = currentResult switch
+                {
+                    IResult.FailedRecognition failed => new IResult.FailedRecognition(
+                        failed.ExpectedSymbolName, // or should the SymbolRef of the current recognizer be used?
+                        results.Count,
+                        currentPosition),
 
-                return new IResult.FailedRecognition(PSEUDO_NAME, currentPosition);
+                    IResult.Exception exception => exception,
+
+                    _ => new IResult.Exception(
+                        new InvalidOperationException($"Invalid result type: {currentResult?.GetType()}"),
+                        currentPosition)
+                };
+                return false;
                 #endregion
             }
             catch (Exception e)
             {
+                #region Fatal
                 _ = tokenReader.Reset(position);
-                return new IResult.Exception(e, position + 1);
+                result = new IResult.Exception(e, position + 1);
+                return false;
+                #endregion
             }
         }
 
+        ///<inheritdoc/>
+        public IResult Recognize(BufferedTokenReader tokenReader)
+        {
+            _ = TryRecognize(tokenReader, out var result);
+            return result;
+        }
+
+        ///<inheritdoc/>
         public override string ToString() => Helper.AsString(Grammar.SymbolGroup.GroupingMode.Sequence, Cardinality, _recognizers);
     }
 }

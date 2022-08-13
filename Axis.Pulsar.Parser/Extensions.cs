@@ -7,7 +7,7 @@ namespace Axis.Pulsar.Parser
 {
     internal static class Extensions
     {
-        public static bool IsNull(this object obj) => obj == null;
+        public static bool IsNull<T>(this T obj) => obj == null;
         public static bool IsEmpty<T>(this ICollection<T> collection) => collection.Count == 0;
         public static bool IsNullOrEmpty<T>(this T[] array) => array == null || array.IsEmpty();
 
@@ -56,8 +56,9 @@ namespace Axis.Pulsar.Parser
 
         public static IEnumerable<T> Enumerate<T>(this T value) => new[] { value };
 
-        public static T ThrowIf<T>(this 
-            T value, Func<T, bool> predicate,
+        public static T ThrowIf<T>(this
+            T value,
+            Func<T, bool> predicate,
             Func<T, Exception> exception = null)
         {
             if (predicate == null)
@@ -67,10 +68,31 @@ namespace Axis.Pulsar.Parser
             {
                 var ex = exception?.Invoke(value) ?? new Exception("An exception occured");
 
-                if (ex.StackTrace == null) 
+                if (ex.StackTrace == null)
                     throw ex;
-                
-                else 
+
+                else
+                    ExceptionDispatchInfo.Capture(ex).Throw();
+            }
+            return value;
+        }
+
+        public static T ThrowIf<T>(this
+            T value,
+            Func<T, bool> predicate,
+            Exception exception)
+        {
+            if (predicate == null)
+                throw new ArgumentNullException(nameof(predicate));
+
+            else if (predicate.Invoke(value))
+            {
+                var ex = exception ?? new Exception("An exception occured");
+
+                if (ex.StackTrace == null)
+                    throw ex;
+
+                else
                     ExceptionDispatchInfo.Capture(ex).Throw();
             }
             return value;
@@ -81,6 +103,12 @@ namespace Axis.Pulsar.Parser
         public static bool IsNegative(this int value) => value < 0;
 
         public static bool IsNegative(this int? value) => value < 0;
+
+        public static bool IsPositive(this int? value) => value > 0;
+
+        public static bool IsZeroOrMore(this int? value) => value >= 0;
+
+        public static bool IsZeroOrLess(this int? value) => value <= 0;
 
         public static Syntax.Symbol[] FlattenProduction(this Syntax.Symbol symbol)
         {

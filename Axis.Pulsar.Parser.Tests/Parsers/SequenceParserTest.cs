@@ -18,7 +18,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
                     "language",
                     new SymbolExpressionRule(
                         SymbolGroup.Sequence(
-                            SymbolRef.Create(
+                            ProductionRef.Create(
                                 "open-brace",
                                 "white-space",
                                 "variable",
@@ -47,7 +47,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
         {
             var sequence = SymbolGroup.Sequence(
                             cardinality ?? Cardinality.OccursOnlyOnce(),
-                            SymbolRef.Create(
+                            ProductionRef.Create(
                                 "open-brace",
                                 "white-space",
                                 "variable",

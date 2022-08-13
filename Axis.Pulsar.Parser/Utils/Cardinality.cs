@@ -18,7 +18,7 @@ namespace Axis.Pulsar.Parser.Utils
         public int MinOccurence { get; }
 
 
-        public Cardinality(int min, int? max = null)
+        private Cardinality(int min, int? max = null)
         {
             MaxOccurence = max.ThrowIf(
                 Extensions.IsNegative,
@@ -94,13 +94,13 @@ namespace Axis.Pulsar.Parser.Utils
 
         public static Cardinality OccursAtLeast(int leastOccurences) => new(leastOccurences);
 
-        public static Cardinality OccursOptionally() => OccursNeverOrAtMost(1);
-
         public static Cardinality OccursAtMost(int maximumOccurences) => new(1, maximumOccurences);
 
-        public static Cardinality OccursNeverOrAtMost(int maximumOccurences) => new(0, maximumOccurences);
+        //public static Cardinality OccursNeverOrAtMost(int maximumOccurences) => new(0, maximumOccurences);
 
-        public static Cardinality OccursNeverOrMore() => new(0);
+        //public static Cardinality OccursNeverOrMore() => new(0);
+
+        //public static Cardinality OccursOptionally() => OccursNeverOrAtMost(1);
 
         public static bool operator ==(Cardinality left, Cardinality right) => left.Equals(right);
 

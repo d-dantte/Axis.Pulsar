@@ -72,7 +72,7 @@ namespace Axis.Pulsar.Importer.Common.Json
         {
             return expression switch
             {
-                Ref r => new SymbolRef(
+                Ref r => new ProductionRef(
                     r.Symbol,
                     new Cardinality(r.MinOccurs, r.MaxOCcurs)),
 
