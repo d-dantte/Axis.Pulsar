@@ -1,0 +1,37 @@
+﻿# A subset of the Antlr gammar.
+# 
+# Pattern: recognizes the escape sequences: &amp; = &, &sol; = /
+# Sensitive-value: recognizes the escape sequences: &amp; = &, &quot; = "
+# Insensitive-value: recognizes the escape sequences: &amp; = &, &apos; = '
+#
+$antlr -> +[$production +[?[$line-space $comment].1, $production].0,]
+$production -> +[$symbol-name $line-indent-space $colon $white-space $rule-list +[$line-indent-space $v-bar $white-space $rule-list].0, $rule-end]
+$rule-list -> +[$rule-item +[$white-space $rule-item].0,]
+$rule-item -> +[?[$rule-group $ref $terminal] $cardinality.0,1]
+$rule-group -> +[$l-bracket $white-space.0, $rule-list $white-space.0, $r-bracket]
+$terminal -> ?[$pattern $sensitive-literal $insensitive-literal]
+$ref -> $symbol-name
+$pattern -> +[$f-slash $pattern-value $f-slash]
+$sensitive-literal -> +[$d-quote $sensitive-value $d-quote]
+$insensitive-literal -> +[$s-quote $insensitive-value $s-quote]
+$line-indent-space -> +[$line-space ?[$space.1, $tab.1,]]
+$line-space -> +[$white-space.0, $new-line]
+$rule-end -> +[$line-indent-space $semi-colon]
+$symbol-name -> /^[a-zA-Z][\w\-]*$/
+$cardinality -> /^[\?\*\+]/
+$space -> /^ $/
+$tab -> /^\t$/
+$white-space -> /^[ \t]+$/
+$sensitive-value -> /^[^"]+$/
+$insensitive-value -> /^[^']+$/
+$pattern-value -> /^[^&sol;]+$/
+$new-line -> /^(\r\n|\r|\n)$/
+$comment -> /^\#[^\n\r]*/
+$colon -> ":"
+$semi-colon -> ";"
+$v-bar -> "|"
+$l-bracket -> "("
+$r-bracket -> ")"
+$f-slash -> "/"
+$s-quote -> "'"
+$d-quote -> '"'

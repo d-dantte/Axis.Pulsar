@@ -4,13 +4,19 @@
   
   <!--Non-Terminals-->
   <non-terminal name="bnf">
-    <sequence>
-      <symbol name="production"/>
-      <sequence min-occurs="0" max-occurs="unbounded">
-        <symbol name="new-line" max-occurs="unbounded"/>
-        <symbol name="production"/>
+      <sequence>
+        <choice>
+          <symbol name="production"/>
+          <symbol name="comment"/>
+        </choice>
+        <sequence min-occurs="0" max-occurs="unbounded">
+          <symbol name="new-line" max-occurs="unbounded"/>
+          <choice min-occurs="0" max-occurs="1">
+            <symbol name="production"/>
+            <symbol name="comment"/>
+          </choice>
+        </sequence>
       </sequence>
-    </sequence>
   </non-terminal>
 
   <non-terminal name="production">
@@ -24,14 +30,15 @@
   </non-terminal>
 
   <non-terminal name="rule">
-    <sequence>
-      <choice>
-        <symbol name="literal"/>
-        <symbol name="pattern"/>
+    <choice>
+      <symbol name="literal"/>
+      <symbol name="pattern"/>
+      <sequence>
         <symbol name="symbol-expression"/>
-      </choice>
-      <symbol name="recognition-threshold"/>
-    </sequence>
+        <symbol name="recognition-threshold"/>
+      </sequence>
+    </choice>
+      
   </non-terminal>
 
   <non-terminal name="symbol-expression">
@@ -113,8 +120,8 @@
   <non-terminal name="case-sensitive">
     <sequence>
       <symbol name="quote"/>
-      <!--this is a non-terminal regex that describes escapable strings that lie between the " symbol. -->
-      <symbol name="case-literal"/>
+      <!--this is a terminal regex that describes escapable strings that lie between the " symbol. -->
+      <symbol name="case-literal" min-occurs="0"/>
       <symbol name="quote"/>
     </sequence>
   </non-terminal>
@@ -122,8 +129,8 @@
   <non-terminal name="case-insensitive">
     <sequence>
       <symbol name="squote"/>
-      <!--this is a non-terminal regex that describes escapable strings that lie between the ' symbol. -->
-      <symbol name="non-case-literal"/>
+      <!--this is a terminal regex that describes escapable strings that lie between the ' symbol. -->
+      <symbol name="non-case-literal" min-occurs="0"/>
       <symbol name="squote"/>
     </sequence>
   </non-terminal>
@@ -131,14 +138,20 @@
   <non-terminal name="pattern">
     <sequence>
       <symbol name="fslash"/>
-      <!--this is a non-terminal regex that describes escapable strings that lie between the / symbol. -->
-      <symbol name="pattern-literal"/>
+      <!--this is a terminal regex that describes escapable strings that lie between the / symbol. -->
+      <symbol name="pattern-literal" min-occurs="0"/>
       <symbol name="fslash"/>
+      <symbol name="match-cardinality"/>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="match-cardinality">
+    <sequence>
       <symbol name="cardinality"/>
     </sequence>
   </non-terminal>
 
-  <non-terminal name="cardinality">
+  <non-terminal name="cardinality"> <!-- this is a good place to set a threshold of 1, can also be used to test the feature-->
     <sequence min-occurs="0" max-occurs="1">
       <symbol name="dot"/>
       <symbol name="digits"/>
@@ -151,7 +164,7 @@
 
   <non-terminal name="recognition-threshold">
     <sequence min-occurs="0" max-occurs="1">
-      <symbol name="s-colon"/>
+      <symbol name="r-chevron"/>
       <symbol name="digits"/>
     </sequence>
   </non-terminal>
@@ -166,7 +179,7 @@
   <!-- Terminals-->
   <pattern
     name="symbol"
-    regex="^\$[0-9a-zA-Z_](\w|-)*$"
+    regex="^\$[0-9a-zA-Z_][\w-]*$"
     min-match="2"
     max-match="unbounded"/>
 
@@ -176,22 +189,25 @@
     min-match="1"
     max-match="unbounded"/>
 
+  <!-- Recognizes the escape &quot; = ", &amp; = &-->
   <pattern
     name="case-literal"
-    regex="^([^&quot;]|&quot;&quot;)*$"
-    min-match="0"
+    regex="^[^&quot;]*$"
+    min-match="1"
     max-match="unbounded"/>
 
+  <!-- Recognizes the escape &apos; = ', &amp; = &-->
   <pattern
     name="non-case-literal"
-    regex="^([^']|'')*$"
-    min-match="0"
+    regex="^[^']*$"
+    min-match="1"
     max-match="unbounded"/>
-
+  
+  <!-- Recognizes the escape &sol; = /, &amp; = &-->
   <pattern
     name="pattern-literal"
-    regex="^([^/]|//)*$"
-    min-match="0"
+    regex="^[^/]*$"
+    min-match="1"
     max-match="unbounded"/>
 
   <pattern
@@ -206,6 +222,12 @@
     min-match="1"
     max-match="2"/>
 
+  <pattern
+    name="comment"
+    regex="^\#[^\n\r]*$"
+    min-match="1"
+    max-match="unbounded"/>
+
   <literal
     name="comma"
     value=","/>
@@ -217,10 +239,6 @@
   <literal
     name="arrow"
     value="->"/>
-
-  <literal
-    name="s-colon"
-    value=";"/>
 
   <literal
     name="q-mark"
@@ -245,6 +263,10 @@
   <literal
     name="quote"
     value="&quot;"/>
+
+  <literal
+    name="r-chevron"
+    value="&gt;"/>
 
   <literal
     name="ls-brace"

@@ -4,12 +4,12 @@ namespace Axis.Pulsar.Parser.Exceptions
 {
     public class ParseException: Exception
     {
-        public ParseError ParseError { get; }
+        public Parsers.IResult Result { get; }
 
-        public ParseException(ParseError error, string message = null)
-            : base(message ?? "Parse Error(s) were encountered")
+        public ParseException(Parsers.IResult result)
+        : base("An exception occured. See the result for more details")
         {
-            ParseError = error;
+            Result = result;
         }
     }
 }

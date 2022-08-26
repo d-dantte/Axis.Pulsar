@@ -10,7 +10,7 @@ namespace Axis.Pulsar.Parser.Tests.Utils
         [TestMethod]
         public void Constructor_ReturnsValidObject()
         {
-            var c = new Cardinality(0, 1);
+            var c = Cardinality.Occurs(0, 1);
             Assert.AreEqual(0, c.MinOccurence);
             Assert.AreEqual(1, c.MaxOccurence);
         }
@@ -18,13 +18,13 @@ namespace Axis.Pulsar.Parser.Tests.Utils
         [TestMethod]
         public void FactoryMethods_ReturnValidObjects()
         {
-            var d = Cardinality.OccursNeverOrMore();
-            var c = Cardinality.OccursAtLeast(1);
+            var d = Cardinality.OccursAtLeastOnce();
+            var c = Cardinality.OccursAtLeast(3);
 
-            Assert.AreEqual(1, c.MinOccurence);
+            Assert.AreEqual(3, c.MinOccurence);
             Assert.IsNull(c.MaxOccurence);
 
-            Assert.AreEqual(0, d.MinOccurence);
+            Assert.AreEqual(1, d.MinOccurence);
             Assert.IsNull(d.MaxOccurence);
         }
     }

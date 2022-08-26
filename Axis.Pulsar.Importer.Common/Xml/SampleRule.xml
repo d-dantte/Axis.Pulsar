@@ -126,13 +126,13 @@
   <pattern
     name="string-literal"
     regex="^([^&quot;]|&quot;&quot;)*$"
-    min-match="0"
+    min-match="1"
     max-match="unbounded"/>
 
   <pattern
     name="pattern-literal"
     regex="^([^']|'')*$"
-    min-match="0"
+    min-match="1"
     max-match="unbounded"/>
 
   <pattern 

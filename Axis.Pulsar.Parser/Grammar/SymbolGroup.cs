@@ -31,15 +31,21 @@ namespace Axis.Pulsar.Parser.Grammar
             Sequence
         }
 
-
+        /// <summary>
+        /// The grouping mode for this instance.
+        /// </summary>
         public GroupingMode Mode { get; }
 
+        /// <inheritdoc />
         public Cardinality Cardinality { get; }
 
+        /// <summary>
+        /// The expressions this instance encapsulates.
+        /// </summary>
         public IReadOnlyCollection<ISymbolExpression> Expressions { get; }
 
         /// <summary>
-        /// Returns all refs that are "leaf-nodes" for the tree starting at the current <see cref="ISymbolExpression"/>
+        /// Returns all refs that are "leaf-nodes" for the tree starting at the current <see cref="ISymbolExpression"/> instance.
         /// </summary>
         public IReadOnlyCollection<ProductionRef> SymbolRefs => Expressions
             .SelectMany(expression => expression switch
@@ -77,9 +83,9 @@ namespace Axis.Pulsar.Parser.Grammar
             else
                 Expressions = Array.AsReadOnly(expressions);
 
-            //ensure that the expressions all terminate in SymbolRefs
+            //ensure that the expressions all terminate in Proeuction-Refs
             if (!Expressions.ExactlyAll(TerminatesAtSymbolRef))
-                throw new SymbolRefResolutionException();
+                throw new ArgumentException($"Some expressions do not terminate in {nameof(ProductionRef)}");
         }
 
         /// <summary>

@@ -41,10 +41,13 @@ namespace Axis.Pulsar.Parser.Recognizers
 
                 do
                 {
-                    choice = _recognizers
-                        .Select(recognizer => recognizer.Recognize(tokenReader))
-                        .Where(result => result is IResult.Success)
-                        .FirstOrDefault();
+                    foreach (var recognizer in _recognizers)
+                    {
+                        choice = recognizer.Recognize(tokenReader);
+
+                        if (choice is not IResult.FailedRecognition failure)
+                            break; // break for Exception or Success or null
+                    }
 
                     if (choice is IResult.Success success)
                         results.Add(success);
@@ -70,9 +73,9 @@ namespace Axis.Pulsar.Parser.Recognizers
                 result = choice switch
                 {
                     IResult.FailedRecognition failed => new IResult.FailedRecognition(
-                        failed.ExpectedSymbolName, // or should the SymbolRef of the current recognizer be used?
                         results.Count,
-                        currentPosition),
+                        currentPosition,
+                        failed.Reason),
 
                     IResult.Exception exception => exception,
 

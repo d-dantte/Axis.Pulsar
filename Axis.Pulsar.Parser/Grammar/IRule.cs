@@ -20,7 +20,6 @@ namespace Axis.Pulsar.Parser.Grammar
 
     /// <summary>
     /// Production rule
-    /// 
     /// <para>
     /// NOTE: flirting with the idea of adding a Func delegate that represents semantic validation of the symbol that a rule parses. 
     /// This will be given the symbol, which should have access to ancestors; the validation logic can then use the entire syntax tree to do
@@ -38,7 +37,7 @@ namespace Axis.Pulsar.Parser.Grammar
     /// <summary>
     /// Represents rules that produce terminals
     /// </summary>
-    public interface ITerminal: IRule<string>
+    public interface ITerminal<T>: IRule<T>
     {
     }
 

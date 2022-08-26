@@ -9,9 +9,6 @@ namespace Axis.Pulsar.Parser.Grammar
     /// <para>
     /// A <see cref="ISymbolExpression"/> represents the discriminated union of either a <see cref="Parser.Grammar.SymbolGroup"/> or a <see cref="Parser.Grammar.ProductionRef"/>.
     /// </para>
-    /// <para>
-    /// Ps: This is a poor man's discriminated union. :D
-    /// </para>
     /// </summary>
     public interface ISymbolExpression
     {

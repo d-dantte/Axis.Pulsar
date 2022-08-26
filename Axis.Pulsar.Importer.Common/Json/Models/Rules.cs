@@ -2,15 +2,16 @@
 
 namespace Axis.Pulsar.Importer.Common.Json.Models
 {
-    public class Literal : IRule
+    public record Literal : IRule
     {
         public RuleType Type => RuleType.Literal;
 
         public string Value { get; set; }
+
         public bool IsCaseSensitive { get; set; }
     }
 
-    public class Pattern : IRule
+    public record Pattern : IRule
     {
         public RuleType Type => RuleType.Pattern;
 
@@ -20,7 +21,7 @@ namespace Axis.Pulsar.Importer.Common.Json.Models
         public int MinMatch { get; set; } = 1;
     }
 
-    public class Ref : IRule
+    public record Ref : IRule
     {
         public RuleType Type => RuleType.Ref;
 
@@ -29,7 +30,6 @@ namespace Axis.Pulsar.Importer.Common.Json.Models
         public int MinOccurs { get; set; } = 1;
     }
 
-
     public enum GroupMode
     {
         Set,
@@ -37,7 +37,7 @@ namespace Axis.Pulsar.Importer.Common.Json.Models
         Choice
     }
 
-    public class Grouping : IRule
+    public record Grouping: IRule
     {
         private IRule[] _rules = Array.Empty<IRule>();
 
@@ -52,5 +52,14 @@ namespace Axis.Pulsar.Importer.Common.Json.Models
             get => _rules;
             set => _rules = value ?? Array.Empty<IRule>();
         }
+    }
+
+    public record Expression : IRule
+    {
+        public RuleType Type => RuleType.Expression;
+
+        public int? RecognitionThreshold { get; set; }
+
+        public Grouping Grouping { get; set; }
     }
 }

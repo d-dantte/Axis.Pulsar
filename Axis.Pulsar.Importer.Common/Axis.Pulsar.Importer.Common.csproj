@@ -1,7 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1;net5.0</TargetFrameworks>
+    <TargetFrameworks>netcoreapp3.1;net5.0;net6.0</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
@@ -17,13 +17,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="BNF\BNFRule.xml" />
+    <None Remove="Antlr\Antlr.xbnf" />
+    <None Remove="xBNF\BNFRule.xml" />
     <None Remove="Xml\RuleDefinition.xsd" />
     <None Remove="Xml\SampleRule.xml" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="BNF\BNFRule.xml" />
+    <EmbeddedResource Include="Antlr\Antlr.xbnf" />
+    <EmbeddedResource Include="xBNF\BNFRule.xml" />
     <EmbeddedResource Include="Xml\RuleDefinition.xsd" />
     <EmbeddedResource Include="Xml\SampleRule.xml" />
   </ItemGroup>

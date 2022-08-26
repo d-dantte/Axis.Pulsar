@@ -20,6 +20,7 @@ namespace Axis.Pulsar.Importer.Common.Xml.Legend
 
         #region NonTerminal Element
         public static readonly string NonTerminalElement_Name = "name";
+        public static readonly string NonTerminalElement_Threshold = "threshold";
         #endregion
 
         #region Symbol Element

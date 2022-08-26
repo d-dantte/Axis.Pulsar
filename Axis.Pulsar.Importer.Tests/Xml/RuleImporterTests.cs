@@ -37,7 +37,6 @@ namespace Axis.Pulsar.Importer.Tests.Xml
             //occurs once
             element = new XElement(
                 "symbol",
-
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MinOccurs, 1),
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MaxOccurs, 1));
             cardinality = XmlBuilder.ExtractCardinality(element);
@@ -50,7 +49,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MinOccurs, 0));
             cardinality = XmlBuilder.ExtractCardinality(element);
             Assert.AreEqual(0, cardinality.MinOccurence);
-            Assert.IsNull(cardinality.MaxOccurence);
+            Assert.AreEqual(1, cardinality.MaxOccurence);
 
             //zero or more
             element = new XElement(
@@ -76,7 +75,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
                 new XAttribute(Common.Xml.Legend.Enumerations.ProductionElement_MinOccurs, 1));
             cardinality = XmlBuilder.ExtractCardinality(element);
             Assert.AreEqual(1, cardinality.MinOccurence);
-            Assert.IsNull(cardinality.MaxOccurence);
+            Assert.AreEqual(1, cardinality.MaxOccurence);
 
             //between 1 and 5 times
             element = new XElement(
@@ -320,7 +319,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
 
             var grammar = ruleImporter.ImportGrammar(sampleStream);
 
-            //run all sorts of tests on the rule map.youtube
+            //run all sorts of tests on the rule map.
             var nonterminalCount = grammar
                 .Productions
                 .Where(production => production.Rule is SymbolExpressionRule)
@@ -328,7 +327,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
 
             var terminalCount = grammar
                 .Productions
-                .Where(rule => rule.Rule is ITerminal)
+                .Where(IsTerminal)
                 .Count();
 
             Assert.AreEqual(10, nonterminalCount);
@@ -338,5 +337,15 @@ namespace Axis.Pulsar.Importer.Tests.Xml
 
         }
         #endregion
+
+        private bool IsTerminal(Production production)
+        {
+            return production.Rule switch
+            {
+                LiteralRule => true,
+                PatternRule => true,
+                _ => false
+            };
+        }
     }
 }

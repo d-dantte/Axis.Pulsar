@@ -11,12 +11,6 @@
     <xs:attribute name="root" type="xs:string" use="required"/>
   </xs:complexType>
 
-  <xs:complexType name="SymbolType">
-    <xs:attribute name="name" type="xs:string" use="required"/>
-    <xs:attribute name="min-occurs" type="xs:string" use="optional" />
-    <xs:attribute name="max-occurs" type="xs:string" use="optional" />
-  </xs:complexType>
-
   <xs:complexType name="LiteralType">
     <xs:attribute name="name" type="xs:string" use="required"/>
     <xs:attribute name="value" type="xs:string" use="required"/>
@@ -55,6 +49,22 @@
     <xs:attribute name="max-occurs" type="xs:string" use="optional" />
   </xs:complexType>
 
+  <xs:complexType name="SymbolType">
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="min-occurs" type="xs:string" use="optional" />
+    <xs:attribute name="max-occurs" type="xs:string" use="optional" />
+  </xs:complexType>
+
   <xs:element name="language" type="LanguageRule"/>
 
+  <!--
+  NOTES:
+  1. Min/Max-occurs Rules
+    1. Where any attribute is absent, it assumes the value of null.
+    2. When min-occurs is null, it is interpreted as 1
+    3. When max-occurs is null, it is also interpreted as 11
+    4. When max-occurs is 'unbounded', it's value has no upper bound.
+  
+  -->
+  
 </xs:schema>

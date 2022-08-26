@@ -3,19 +3,35 @@ using System.Collections.Generic;
 
 namespace Axis.Pulsar.Parser.Input
 {
+    /// <summary>
+    /// Represents the entity that all parsers read tokens from.
+    /// </summary>
     public class BufferedTokenReader
     {
         private readonly List<char> _buffer = new();
         private int _position = -1;
         private readonly IEnumerator<char> _source;
 
+        /// <summary>
+        /// The current position of the token reader
+        /// </summary>
         public int Position => _position;
 
+        /// <summary>
+        /// Creates a new instance of this class
+        /// </summary>
+        /// <param name="source">The original source of individual characters (tokens)</param>
+        /// <exception cref="ArgumentNullException"></exception>
         public BufferedTokenReader(IEnumerable<char> source)
         {
             _source = source?.GetEnumerator() ?? throw new ArgumentNullException(nameof(source));
         }
 
+        /// <summary>
+        /// Try retrieving the next token from the current position.
+        /// </summary>
+        /// <param name="nextToken">the next token is set to this variable if it was successfully read</param>
+        /// <returns>true if a token was read, false if not.</returns>
         public bool TryNextToken(out char nextToken)
         {
             if (TryNextTokens(1, out var nextChars))
@@ -29,6 +45,12 @@ namespace Axis.Pulsar.Parser.Input
             return false;
         }
 
+        /// <summary>
+        /// Reads a number of tokens from the current position.
+        /// </summary>
+        /// <param name="tokenCount">the number of tokens to read</param>
+        /// <param name="tokens">The successfully read tokens</param>
+        /// <returns>true if a token was read, false if not. Note that partial reads are not supported - it's an all or nothing process.</returns>
         public bool TryNextTokens(int tokenCount, out char[] tokens)
         {
             try
@@ -80,12 +102,22 @@ namespace Axis.Pulsar.Parser.Input
             }
         }
 
+        /// <summary>
+        /// Resets the position to -1, the starting position.
+        /// </summary>
+        /// <returns>The current token reader</returns>
         public BufferedTokenReader Reset()
         {
             _position = -1;
             return this;
         }
 
+        /// <summary>
+        /// Resets the position to the value indicated, if it is valid.
+        /// </summary>
+        /// <param name="position">the value to reset the position to.</param>
+        /// <returns>The current token reader</returns>
+        /// <exception cref="ArgumentException"></exception>
         public BufferedTokenReader Reset(int position)
         {
             if (position < -1
@@ -104,7 +136,7 @@ namespace Axis.Pulsar.Parser.Input
         /// </summary>
         /// <param name="offset">The offset. This should be a positive number - if it is negative, an exception is thrown</param>
         public BufferedTokenReader Back(int offset)
-            => Reset(Position - offset.ThrowIf(Extensions.IsNegative, n => new ArgumentException("Negative offsets are invalid")));
+            => Reset(Position - offset.ThrowIf(Extensions.IsNegative, new ArgumentException("Negative offsets are invalid")));
 
         /// <summary>
         /// Moves the position backwards by one space

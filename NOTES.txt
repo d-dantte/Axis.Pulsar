@@ -9,14 +9,44 @@
 
 
 2022-04-17 ======================================================
-1. Combine contents of the Recognizers and Parsers namespaces back together.
-2. 2 successful result variants should exist:
+1. Combine contents of the Recognizers and Parsers namespaces back together. [ditched]
+2. 2 successful result variants should exist: [ditched]
 	a. SymbolSuccess, that represents the successful parsing of a single symbol.
 	b. SymbolGroupSuccess, that represetns the successful parsing of a group of symbols
 	c. All parse methods will now consider the recognition threshold.
-3. Make sure that the Grammar rules and SymbolExpressions all validate Cardinality against RecognitionThreshold.
+3. Make sure that the Grammar rules and SymbolExpressions all validate Cardinality against RecognitionThreshold. [ditched]
    This ensures that we will never have a scenario where the cardinality passes and the threshold doesn't.
 
    After much rumination, this seems to be a bad idea. I'm going to look at videos on how to implement parsers,
    I should get better ideas about implementing that partial parsing feature from those.
    ps: get rid of the "RecognitionThreshold" feature.
+
+
+2022-07-15 ======================================================
+1. RecognitionThreshold birthed the concept of Partial recognitions - a failure state that one can use in reporting that
+   a symbol was definitely what was expected. Useful in Choice/Set recognizers. 
+2. Recognizers are now used for SymbolExpressions, while parsers are used for actual symbols.
+3. Results are designed as discriminated unions now:
+	a. Success: the parse/recognition operation was successful
+	b. Failure: The parse/recognition operation failed
+	c. PartialFailure: The parse operation failed, but successfully maatched a 'RecognitionThreshold' minimum symbols.
+	   Expression parsers are the true source of this result
+	e. Exception: Something exceptional occured, outside of the scope of the algorithm. E.g arithmetic error, null 
+	   exceptions, array out of bounds exception, class cast exception, etc...
+
+
+TODO
+1. Add support to Choice/Set recognizers for acknowledging, and stopping on partial failures - i.e treat them as HARD failures.
+2. Find a more complex grammar, translate it into xBNF or Xml, build the grammar, and test out the performance and correctness
+   of Pulsar.
+3. Incrementally add language validation for edge cases - e.g, when symbols with 0 min cardinality being placed in a row of at least 2, 
+   there tends to be infinite loop when these are "children" of a symbol with unbounded max-cardinality.
+4. Add and refine the code comments/documentations.
+5. Publish to nuget.
+6. Patterns such as '^(//|[^/])*$', with a min-match of 1, will fail if given strings like this '//stuff', which are meant to be correct.
+   The reason is that the min-match forces the parser to pull in a single character first, which is the terminating character. How do we
+   work around this? 
+
+7. Validation Rules
+	1. rules shouldn't refer to themselves unless there is some choice that terminates the recursion within the rule.
+	2. 

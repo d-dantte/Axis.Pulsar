@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Axis.Pulsar.Parser.CST;
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
@@ -17,6 +18,41 @@ namespace Axis.Pulsar.Importer.Common
         public static TOut Map<TIn, TOut>(this TIn @in, Func<TIn, TOut> func)
         {
             return func.Invoke(@in);
+        }
+        public static T As<T>(this object value)
+        {
+            try
+            {
+                if (value is IConvertible
+                    && typeof(IConvertible).IsAssignableFrom(typeof(T)))
+                    return (T)Convert.ChangeType(value, typeof(T));
+
+                else return (T)value;
+            }
+            catch
+            {
+                return default;
+            }
+        }
+
+        public static string TokenValue(this ICSTNode node) => node switch
+        {
+            ICSTNode.LeafNode leaf => leaf.Tokens,
+
+            ICSTNode.BranchNode branch => branch.AggregateTokens,
+
+            _ => throw new ArgumentException($"Invalid node type: {node?.GetType()}")
+        };
+
+        public static TValue GetOrAdd<TKey, TValue>(this
+            Dictionary<TKey, TValue> dictionary,
+            TKey key,
+            Func<TKey, TValue> mapper)
+        {
+            if (dictionary.TryGetValue(key, out TValue value))
+                return value;
+
+            else return dictionary[key] = mapper.Invoke(key);
         }
     }
 }

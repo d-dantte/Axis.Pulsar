@@ -1,5 +1,4 @@
 ﻿using Axis.Pulsar.Parser.CST;
-using Axis.Pulsar.Parser.Syntax;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,6 +34,8 @@ namespace Axis.Pulsar.Parser.Recognizers
             }
         }
 
+        public static Success Of(params ICSTNode[] nodes) => new Success(nodes);
+
         /// <summary>
         /// Represents fialed recognition of symbols
         /// </summary>
@@ -46,31 +47,39 @@ namespace Axis.Pulsar.Parser.Recognizers
             public int RecognitionCount { get; }
 
             /// <summary>
-            /// The expected symbol name
-            /// </summary>
-            public string ExpectedSymbolName { get; }
-
-            /// <summary>
             /// The position where the expected symbol was expected to appear
             /// </summary>
             public int InputPosition { get; }
 
+            /// <summary>
+            /// An inner Failed recognition result, if the failure originated from a symbol ref
+            /// </summary>
+            public Parsers.IResult Reason { get; }
+
             public FailedRecognition(
-                string expectedSymbolName,
                 int recognitionCount,
-                int inputPosition)
+                int inputPosition,
+                Parsers.IResult reason = null)
             {
                 RecognitionCount = recognitionCount.ThrowIf(
                     Extensions.IsNegative,
                     new ArgumentException($"Invalid {nameof(recognitionCount)}"));
 
-                ExpectedSymbolName = expectedSymbolName ?? throw new ArgumentNullException(nameof(expectedSymbolName));
-
                 InputPosition = inputPosition.ThrowIf(
                     Extensions.IsNegative,
                     new ArgumentException($"{nameof(InputPosition)} must be >= 0"));
+
+                Reason = reason.ThrowIf(
+                    r => r is Parsers.IResult.Success || r is Parsers.IResult.Exception,
+                    new ArgumentException($"Invalid reason type: {reason?.GetType()}"));
             }
         }
+
+        public static FailedRecognition Of(
+            int recognitionCount,
+            int inputPosition,
+            Parsers.IResult reason = null)
+            => new(recognitionCount, inputPosition, reason);
 
         /// <summary>
         /// Represents a fatally faulted recognition - a situation not accounted for by algorithm.
@@ -96,5 +105,7 @@ namespace Axis.Pulsar.Parser.Recognizers
                     new ArgumentException($"{nameof(InputPosition)} must be >= 0"));
             }
         }
+
+        public static Exception Of(System.Exception error, int inputPosition) => new(error, inputPosition);
     }
 }

@@ -85,9 +85,9 @@ namespace Axis.Pulsar.Parser.Recognizers
                 result = currentResult switch
                 {
                     IResult.FailedRecognition failed => new IResult.FailedRecognition(
-                        failed.ExpectedSymbolName, // or should the SymbolRef of the current recognizer be used?
-                        results.Count,
-                        currentPosition),
+                        results.Count + cycleResults?.Count ?? 0,
+                        currentPosition,
+                        failed.Reason),
 
                     IResult.Exception exception => exception,
 

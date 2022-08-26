@@ -23,34 +23,32 @@ namespace Axis.Pulsar.Importer.Common.Json
             }
         };
 
-        public Parser.Grammar.Grammar ImportGrammar(Stream inputStream)
+        public IGrammar ImportGrammar(Stream inputStream)
         {
             using var reader = new StreamReader(inputStream);
             var json = reader.ReadToEnd();
-
             var grammar = JsonConvert.DeserializeObject<Models.Grammar>(json, SerializerSettings);
 
             return ToGrammar(grammar);
         }
 
-        public async Task<Parser.Grammar.Grammar> ImportGrammarAsync(Stream inputStream)
+        public async Task<IGrammar> ImportGrammarAsync(Stream inputStream)
         {
             using var reader = new StreamReader(inputStream);
             var json = await reader.ReadToEndAsync();
-
             var grammar = JsonConvert.DeserializeObject<Models.Grammar>(json, SerializerSettings);
 
             return ToGrammar(grammar);
         }
 
-        public static Parser.Grammar.Grammar ToGrammar(Models.Grammar grammar)
+        public static Parser.Grammar.IGrammar ToGrammar(Models.Grammar grammar)
         {
+            // Assume that the root production will always appear first in the production collection
             return grammar.Productions
                 .Aggregate(
                     GrammarBuilder.NewBuilder(),
-                    (builder, production) => builder.HasRoot
-                        ? builder.WithProduction(production.Name, ToRule(production.Rule))
-                        : builder.WithRootProduction(production.Name, ToRule(production.Rule)))
+                    (builder, production) => builder.WithProduction(production.Name, ToRule(production.Rule)))
+                .WithRoot(grammar.Productions[0].Name)
                 .Build();
         }
 
@@ -62,9 +60,11 @@ namespace Axis.Pulsar.Importer.Common.Json
 
                 Pattern p => new PatternRule(
                     new Regex(p.Regex, p.IsCaseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase),
-                    new Cardinality(p.MinMatch, p.MaxMatch)),
+                    Cardinality.Occurs(p.MinMatch, p.MaxMatch)),
 
-                _ => new SymbolExpressionRule(ToExpression(rule))
+                Expression e => new SymbolExpressionRule(ToExpression(e.Grouping), e.RecognitionThreshold),
+
+                _ => throw new Exception($"Invalid base rule: {rule.GetType()}")
             };
         }
 
@@ -74,18 +74,18 @@ namespace Axis.Pulsar.Importer.Common.Json
             {
                 Ref r => new ProductionRef(
                     r.Symbol,
-                    new Cardinality(r.MinOccurs, r.MaxOCcurs)),
+                    Cardinality.Occurs(r.MinOccurs, r.MaxOCcurs)),
 
                 Grouping g when g.Mode == GroupMode.Sequence => SymbolGroup.Sequence(
-                    new Cardinality(g.MinOccurs, g.MaxOccurs),
+                    Cardinality.Occurs(g.MinOccurs, g.MaxOccurs),
                     g.Rules.Select(ToExpression).ToArray()),
 
                 Grouping g when g.Mode == GroupMode.Set => SymbolGroup.Set(
-                    new Cardinality(g.MinOccurs, g.MaxOccurs),
+                    Cardinality.Occurs(g.MinOccurs, g.MaxOccurs),
                     g.Rules.Select(ToExpression).ToArray()),
 
                 Grouping g when g.Mode == GroupMode.Choice => SymbolGroup.Choice(
-                    new Cardinality(g.MinOccurs, g.MaxOccurs),
+                    Cardinality.Occurs(g.MinOccurs, g.MaxOccurs),
                     g.Rules.Select(ToExpression).ToArray()),
 
                 _ => throw new Exception($"Invalid Expression: {expression}")

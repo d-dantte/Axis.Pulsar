@@ -6,7 +6,7 @@ namespace Axis.Pulsar.Parser.Grammar
     /// <summary>
     /// Represents a grouping of other symbols.
     /// </summary>
-    public class SymbolExpressionRule : INonTerminal
+    public record SymbolExpressionRule : INonTerminal
     {
         /// <inheritdoc/>
         public ISymbolExpression Value { get; }
@@ -15,8 +15,8 @@ namespace Axis.Pulsar.Parser.Grammar
         public int? RecognitionThreshold { get; }
 
         public SymbolExpressionRule(
-            int recognitionThreshold,
-            ISymbolExpression expression)
+            ISymbolExpression expression,
+            int? recognitionThreshold = null)
         {
             Value = expression;
             RecognitionThreshold = recognitionThreshold.ThrowIf(

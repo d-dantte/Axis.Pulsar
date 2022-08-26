@@ -6,11 +6,16 @@ namespace Axis.Pulsar.Parser.Grammar
 {
     /// <summary>
     /// A <see cref="ProductionRef"/> represents a reference to a production.
+    /// This should be a struct
     /// </summary>
-    public class ProductionRef: ISymbolExpression
+    public record ProductionRef: ISymbolExpression
     {
+        /// <summary>
+        /// The symbol for the production this instance refers to.
+        /// </summary>
         public string ProductionSymbol { get; }
 
+        /// <inheritdoc />
         public Cardinality Cardinality { get; }
 
         public ProductionRef(string productionSymbol, Cardinality cardinality)
@@ -21,15 +26,8 @@ namespace Axis.Pulsar.Parser.Grammar
                 : throw new ArgumentException($"Invalid argument: {nameof(productionSymbol)}");
         }
 
+        /// <inheritdoc />
         public override string ToString() => ProductionSymbol;
-
-        public override bool Equals(object obj)
-        {
-            return obj is ProductionRef other
-                && ProductionSymbol.Equals(other.ProductionSymbol);
-        }
-
-        public override int GetHashCode() => ProductionSymbol.GetHashCode();
 
         public static ProductionRef[] Create(params string[] refs) => refs.Select(@ref => (ProductionRef)@ref).ToArray();
 

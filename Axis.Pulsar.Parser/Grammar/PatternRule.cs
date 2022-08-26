@@ -4,11 +4,10 @@ using System.Text.RegularExpressions;
 
 namespace Axis.Pulsar.Parser.Grammar
 {
-
     /// <summary>
     /// Terminal symbol representing regular-expression patterns of strings
     /// </summary>
-    public class PatternRule : ITerminal
+    public record PatternRule : ITerminal<Regex>
     {
         /// <summary>
         /// The regular expression pattern.
@@ -17,39 +16,46 @@ namespace Axis.Pulsar.Parser.Grammar
         public string Pattern { get; }
 
         /// <summary>
-        /// The <see cref="Regex"/> instance built using the <see cref="PatternRule.Pattern"/> string
-        /// </summary>
-        public Regex Regex { get; }
-
-        /// <summary>
         /// The regex pattern that defines this rule. This regex must recognize at least 1 token.
         /// </summary>
-        public string Value => Pattern;
+        public Regex Value { get; }
 
         /// <summary>
         /// Defines how the regular expression will be interpreted.
         /// <para>
-        /// Note: Cardinalities for the <see cref="PatternRule"/> further constrain the <see cref="Cardinality.MinOccurence"/> property to only accept values <c> >= 1</c>.
+        /// Match cardinality specifies the boundaries of the number of CHARACTERS this pattern is expecting to match, starting from a count of 1.
+        /// </para>
+        /// <para>
+        /// Essentially, the rule continues to match characters until the upper limit is reached, at which point it stops trying to match characters.
+        /// This places a restriction on the <see cref="System.Text.RegularExpressions.Regex"/> being used for the underlying matching operation.
+        /// </para>
+        /// <para>
+        /// Note: Cardinalities for the <see cref="PatternRule"/> further constrains the <see cref="Cardinality.MinOccurence"/> property to only accept values <c> >= 1</c>.
         /// </para>
         /// </summary>
         public Cardinality MatchCardinality { get; }
 
         /// <inheritdoc/>
-        public int? RecognitionThreshold { get; }
+        public int? RecognitionThreshold => null;
 
+        /// <summary>
+        /// Creates a new Pattern rule instance
+        /// </summary>
+        /// <param name="regex">The regex to use in matching characters</param>
+        /// <param name="matchCardinality">The <see cref="PatternRule.MatchCardinality"/> instance</param>
         public PatternRule(
             Regex regex,
-            int? recognitionThreshold,
-            Cardinality matchCardinality = default)
+            Cardinality matchCardinality)
         {
-            Regex = regex ?? throw new ArgumentNullException(nameof(regex));
+            Value = regex ?? throw new ArgumentNullException(nameof(regex));
             Pattern = regex.ToString();
             MatchCardinality = matchCardinality.ThrowIf(
                 v => v.MinOccurence <= 0,
                 new ArgumentException($"cardinality {nameof(Cardinality.MinOccurence)} must be >= 1"));
-            RecognitionThreshold = recognitionThreshold.ThrowIf(
-                Extensions.IsZeroOrLess,
-                new ArgumentException($"{nameof(recognitionThreshold)} cannot be <= 0"));
         }
+
+        public PatternRule(Regex regex) 
+            : this(regex, Cardinality.Occurs(1, null))
+        { }
     }
 }

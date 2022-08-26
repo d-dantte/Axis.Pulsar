@@ -16,23 +16,30 @@ namespace Axis.Pulsar.Parser.Recognizers
         /// </summary>
         public static readonly string PSEUDO_NAME = "#Ref";
 
-        private readonly Grammar.Grammar _grammar;
+        private readonly Grammar.IGrammar _grammar;
 
         ///<inheritdoc/>
         public Cardinality Cardinality { get; }
 
+        /// <summary>
+        /// The symbol name for the production that this instance refers to.
+        /// </summary>
         public string SymbolRef { get; }
 
         public ProductionRefRecognizer(
             string symbolRef,
             Cardinality cardinality,
-            Grammar.Grammar grammar)
+            Grammar.IGrammar grammar)
         {
             Cardinality = cardinality;
             _grammar = grammar ?? throw new ArgumentNullException(nameof(grammar));
-            SymbolRef = symbolRef.ThrowIf(
-                string.IsNullOrWhiteSpace,
-                _ => new ArgumentNullException(nameof(symbolRef)));
+            SymbolRef = symbolRef
+                .ThrowIf(
+                    string.IsNullOrWhiteSpace,
+                    new ArgumentNullException(nameof(symbolRef)))
+                .ThrowIf(
+                    v => !grammar.HasProduction(v),
+                    new ArgumentException($"Invalid {nameof(symbolRef)}: {symbolRef}"));
         }
 
         ///<inheritdoc/>
@@ -73,14 +80,14 @@ namespace Axis.Pulsar.Parser.Recognizers
                 result = currentResult switch
                 {
                     Parsers.IResult.PartialRecognition @partial => new IResult.FailedRecognition(
-                        partial.ExpectedSymbolName,
                         results.Count,
-                        currentPosition),
+                        currentPosition,
+                        @partial),
 
                     Parsers.IResult.FailedRecognition failed => new IResult.FailedRecognition(
-                        failed.ExpectedSymbolName, // or should the SymbolRef of the current recognizer be used?
                         results.Count,
-                        currentPosition),
+                        currentPosition,
+                        failed),
 
                     Parsers.IResult.Exception exception => new IResult.Exception(
                         exception.Error,
@@ -112,6 +119,6 @@ namespace Axis.Pulsar.Parser.Recognizers
         }
 
         ///<inheritdoc/>
-        public override string ToString() => $"${SymbolRef}";
+        public override string ToString() => $"${SymbolRef}.Ref";
     }
 }

@@ -144,8 +144,11 @@ namespace Axis.Pulsar.Importer.Tests.Json
                 as Grouping;
             Assert.AreEqual(RuleType.Grouping, obj.Type);
             Assert.AreEqual(GroupMode.Sequence, obj.Mode);
-        }
 
+            Assert.AreEqual(RuleType.Literal, obj.Rules[0].Type);
+            Assert.AreEqual(RuleType.Ref, obj.Rules[1].Type);
+            Assert.AreEqual(RuleType.Grouping, obj.Rules[2].Type);
+        }
 
         public static readonly string GroupRule1 = @"
 {
@@ -171,6 +174,41 @@ namespace Axis.Pulsar.Importer.Tests.Json
             ]
         }
     ]
+}
+";
+        #endregion
+
+        #region Expression
+        [TestMethod]
+        public  void Convert_WithValidExpression_ReturnsValidExpression()
+        {
+            var obj = JsonConvert
+                .DeserializeObject<IRule>(Expression1, Settings)
+                as Expression;
+            Assert.AreEqual(RuleType.Expression, obj.Type);
+            Assert.AreEqual(2, obj.RecognitionThreshold);
+
+            Assert.IsNotNull(obj.Grouping);
+            Assert.AreEqual(RuleType.Grouping, obj.Grouping.Type);
+            Assert.AreEqual(GroupMode.Set, obj.Grouping.Mode);
+            Assert.IsNotNull(obj.Grouping.Rules);
+            Assert.AreEqual(RuleType.Literal, obj.Grouping.Rules[0].Type);
+            Assert.AreEqual("Outer", (obj.Grouping.Rules[0] as Literal).Value);
+        }
+
+        public static readonly string Expression1 = @" {
+    ""Type"": ""Expression"",
+    ""RecognitionThreshold"": 2,
+    ""Grouping"": {
+        ""Type"": ""Grouping"",
+        ""Mode"": ""Set"",
+        ""Rules"": [
+            {
+                ""Type"": ""Literal"",
+                ""Value"": ""Outer""
+            }
+        ]
+    }
 }
 ";
         #endregion

@@ -5,15 +5,20 @@ using System;
 
 namespace Axis.Pulsar.Parser.Parsers
 {
+    /// <summary>
+    /// Parser for <see cref="Grammar.ISymbolExpression"/>
+    /// </summary>
     public class ExpressionParser : IParser
     {
         private readonly IRecognizer _recognizer;
 
+        /// <inheritdoc/>
         public string SymbolName { get; }
 
+        /// <inheritdoc/>
         public int? RecognitionThreshold { get; }
 
-        public ExpressionParser(int? recognitionThreshold, string symbolName, IRecognizer recognizer)
+        public ExpressionParser(string symbolName, int? recognitionThreshold, IRecognizer recognizer)
         {
             RecognitionThreshold = recognitionThreshold;
             _recognizer = recognizer ?? throw new ArgumentNullException(nameof(recognizer));
@@ -22,6 +27,7 @@ namespace Axis.Pulsar.Parser.Parsers
                 _ => new ArgumentException("Invalid name"));
         }
 
+        /// <inheritdoc/>
         public bool TryParse(BufferedTokenReader tokenReader, out IResult result)
         {
             var position = tokenReader.Position;
@@ -43,12 +49,14 @@ namespace Axis.Pulsar.Parser.Parsers
                         failed.RecognitionCount >= RecognitionThreshold
                             ? new IResult.PartialRecognition(
                                 failed.RecognitionCount,
-                                failed.ExpectedSymbolName,
-                                failed.InputPosition)
+                                SymbolName,
+                                failed.InputPosition,
+                                failed.Reason)
 
                             : new IResult.FailedRecognition(
-                                failed.ExpectedSymbolName,
-                                failed.InputPosition),
+                                SymbolName,
+                                failed.InputPosition,
+                                failed.Reason),
 
                     _ => tokenReader
                         .Reset(position)
@@ -58,11 +66,7 @@ namespace Axis.Pulsar.Parser.Parsers
                                 error: new InvalidOperationException($"Invalid result type: {recognizerResult?.GetType()}")))
                 };
 
-                return result switch
-                {
-                    IResult.Success => true,
-                    _ => false
-                };
+                return result is IResult.Success;
             }
             catch(Exception ex)
             {
@@ -72,6 +76,7 @@ namespace Axis.Pulsar.Parser.Parsers
             }
         }
 
+        /// <inheritdoc/>
         public IResult Parse(BufferedTokenReader tokenReader)
         {
             _ = TryParse(tokenReader, out var result);

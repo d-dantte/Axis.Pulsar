@@ -1,4 +1,6 @@
 ﻿using Axis.Pulsar.Parser.Exceptions;
+using Axis.Pulsar.Parser.Parsers;
+using Axis.Pulsar.Parser.Recognizers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,61 +16,47 @@ namespace Axis.Pulsar.Parser.Grammar
 
         private string _rootSymbol;
 
+        /// <summary>
+        /// Indicates if the root symbol has been set.
+        /// </summary>
         public bool HasRoot => !string.IsNullOrEmpty(_rootSymbol);
 
+        /// <summary>
+        /// Creates a new instance of the <see cref="GrammarBuilder"/> class.
+        /// </summary>
         public static GrammarBuilder NewBuilder() => new();
 
         /// <summary>
-        /// Adds the root production. This method can be called only once, subsequent calls throw <see cref="ArgumentException"/>.
-        /// <para>
-        /// Note: This method should be called before adding productions with the <see cref="WithRootProduction(string, IRule)"/> method.
-        /// </para>
-        /// </summary>
-        /// <param name="rootSymbol">The root symbol name</param>
-        /// <param name="rule">The rule for the root production</param>
-        public GrammarBuilder WithRootProduction(string rootSymbol, IRule rule) => WithRootProduction(new Production(rootSymbol, rule));
-
-        /// <summary>
-        /// Adds the root production. This method can be called only once, subsequent calls throw <see cref="ArgumentException"/>.
-        /// <para>
-        /// Note: This method should be called before adding productions with the <see cref="WithRootProduction(string, IRule)"/> method.
-        /// </summary>
-        /// <param name="production">The production</param>
-        public GrammarBuilder WithRootProduction(Production production)
-        {
-            if (!string.IsNullOrEmpty(_rootSymbol))
-                throw new ArgumentException($"Root Production already exists: {_rootSymbol}");
-
-            _rootSymbol = production.Symbol;
-            productions[production.Symbol] = production.Rule;
-
-            return this;
-        }
-
-        /// <summary>
-        /// Adds subsequent productions for this grammer
+        /// Adds subsequent productions for this grammer.
         /// </summary>
         /// <param name="symbol">The symbol name</param>
         /// <param name="rule">The production rule</param>
-        /// <param name="overwriteRule">Indicate what happens if symbolName-collision happens</param>
-        public GrammarBuilder WithProduction(string symbol, IRule rule, bool overwriteRule = false) => WithProduction(new Production(symbol, rule), overwriteRule);
+        /// <param name="overwriteDuplicate">Indicate what happens if symbolName-collision happens</param>
+        /// <returns>This builder instance</returns>
+        public GrammarBuilder WithProduction(
+            string symbol,
+            IRule rule,
+            bool overwriteDuplicate = false) 
+            => WithProduction(new Production(symbol, rule), overwriteDuplicate);
 
-
+        /// <summary>
+        /// Adds a list of productions to this builder. Collissions (duplicates) throw <see cref="ArgumentException"/>.
+        /// </summary>
+        /// <param name="productions">An array of production instances</param>
+        /// <returns>This builder instance</returns>
         public GrammarBuilder WithProductions(params Production[] productions)
             => productions.Aggregate(this, (builder, production) => builder.WithProduction(production));
 
         /// <summary>
-        /// 
+        /// Adds a single production to the builder.
         /// </summary>
-        /// <param name="production"></param>
-        /// <param name="overwriteRule"></param>
-        /// <returns></returns>
-        public GrammarBuilder WithProduction(Production production, bool overwriteRule = false)
+        /// <param name="production">The production</param>
+        /// <param name="overwriteDuplicate">Indicates if duplicates should be overwritten, or exceptions should be thrown</param>
+        /// <returns>This builder instance</returns>
+        /// <exception cref="ArgumentException"></exception>
+        public GrammarBuilder WithProduction(Production production, bool overwriteDuplicate = false)
         {
-            if (string.IsNullOrWhiteSpace(_rootSymbol))
-                throw new InvalidOperationException("A root production must be specified before adding other Productions");
-
-            if (overwriteRule)
+            if (overwriteDuplicate)
                 productions[production.Symbol] = production.Rule;
 
             else if (!productions.TryAdd(production.Symbol, production.Rule))
@@ -78,9 +66,24 @@ namespace Axis.Pulsar.Parser.Grammar
         }
 
         /// <summary>
+        /// Updates the root symbol for the grammar being built. The root symbol must already exist in the internal list of productions for this method to be successful.
+        /// </summary>
+        /// <param name="rootSymbol"></param>
+        /// <returns>This builder instance</returns>
+        /// <exception cref="ArgumentException"></exception>
+        public GrammarBuilder WithRoot(string rootSymbol)
+        {
+            if (!productions.ContainsKey(rootSymbol))
+                throw new ArgumentException($"{nameof(rootSymbol)}: {rootSymbol} does not exist in the list of productions");
+
+            _rootSymbol = rootSymbol;
+            return this;
+        }
+
+        /// <summary>
         /// Validates and builds a grammar from the encapsulated productions.
         /// </summary>
-        public Grammar Build()
+        public IGrammar Build()
         {
             ValidateGrammar();
             return new Grammar(
@@ -119,7 +122,12 @@ namespace Axis.Pulsar.Parser.Grammar
                 .ToArray();
 
             //has non-terminal
-            var hasTerminal = productions.Any(production => production.Value is ITerminal);
+            var hasTerminal = productions.Any(production => production.Value switch
+            {
+                LiteralRule => true,
+                PatternRule => true,
+                _ => false
+            });
 
             if (unreferencedProductions.Length > 0 || orphanedSymbols.Length > 0 || !hasTerminal)
                 throw new GrammarValidatoinException(
@@ -132,7 +140,8 @@ namespace Axis.Pulsar.Parser.Grammar
         {
             return rule switch
             {
-                ITerminal terminal => Enumerable.Empty<string>(),
+                LiteralRule => Enumerable.Empty<string>(),
+                PatternRule => Enumerable.Empty<string>(),
                 SymbolExpressionRule groupingRule => groupingRule.Value switch
                 {
                     ProductionRef sr => new[] { sr.ProductionSymbol },
@@ -141,6 +150,118 @@ namespace Axis.Pulsar.Parser.Grammar
                 },
                 _ => throw new Exception($"Invalid rule type: {rule?.GetType()}")
             };
+        }
+
+
+
+        /// <summary>
+        /// Default implementation for the <see cref="IGrammar"/> interface.
+        /// </summary>
+        public class Grammar : IGrammar
+        {
+            private readonly Dictionary<string, IRule> _ruleMap;
+            private readonly Dictionary<string, IParser> _parsers;
+
+            #region Properties
+            /// <inheritdoc/>
+            public string RootSymbol { get; }
+
+            /// <inheritdoc/>
+            public IEnumerable<Production> Productions => _ruleMap.Select(kvp => new Production(kvp.Key, kvp.Value));
+
+            /// <inheritdoc/>
+            public IEnumerable<IParser> Parsers => _parsers.Values.ToArray();
+            #endregion
+
+            internal Grammar(string rootSymbolName, params Production[] productions)
+            {
+                RootSymbol = rootSymbolName;
+
+                _ruleMap = productions
+                    .ThrowIf(
+                        Extensions.IsNullOrEmpty,
+                        new ArgumentException("Invalid production array"))
+                    .ToDictionary(
+                        production => production.Symbol,
+                        production => production.Rule);
+
+                _parsers = productions
+                    .Select(CreateParser)
+                    .ToDictionary(
+                        parser => parser.SymbolName,
+                        parser => parser);
+            }
+
+            /// <inheritdoc/>
+            public IParser RootParser() => _parsers[RootSymbol];
+
+            /// <inheritdoc/>
+            public IParser GetParser(string symbolName)
+            {
+                return _parsers.TryGetValue(symbolName, out var parser)
+                    ? parser
+                    : throw new SymbolNotFoundException(symbolName);
+            }
+
+            /// <inheritdoc/>
+            public Production RootProduction() => new(RootSymbol, _ruleMap[RootSymbol]);
+
+            /// <inheritdoc/>
+            public Production GetProduction(string symbolName)
+            {
+                return _ruleMap.TryGetValue(symbolName, out var rule)
+                    ? new(symbolName, rule)
+                    : throw new SymbolNotFoundException(symbolName);
+            }
+
+            /// <inheritdoc/>
+            public bool HasProduction(string symbolName) => _ruleMap.ContainsKey(symbolName);
+
+            internal IParser CreateParser(Production production)
+            {
+                return production.Rule switch
+                {
+                    LiteralRule literal => new LiteralParser(production.Symbol, literal),
+                    PatternRule pattern => new PatternMatcherParser(production.Symbol, pattern),
+                    SymbolExpressionRule expression => new ExpressionParser(
+                        production.Symbol,
+                        expression.RecognitionThreshold,
+                        CreateRecognizer(expression.Value)),
+                    _ => throw new ArgumentException("Invalid rule type: {production.Rule.GetType()}")
+                };
+            }
+
+            internal IRecognizer CreateRecognizer(ISymbolExpression expression)
+            {
+                return expression switch
+                {
+                    ProductionRef @ref => new ProductionRefRecognizer(
+                        @ref.ProductionSymbol,
+                        @ref.Cardinality,
+                        this),
+
+                    SymbolGroup group => group.Expressions
+                        .Select(CreateRecognizer)
+                        .Map(recogniers => group.Mode switch
+                        {
+                            SymbolGroup.GroupingMode.Choice => new ChoiceRecognizer(
+                                group.Cardinality,
+                                recogniers.ToArray()),
+
+                            SymbolGroup.GroupingMode.Sequence => new SequenceRecognizer(
+                                group.Cardinality,
+                                recogniers.ToArray()),
+
+                            SymbolGroup.GroupingMode.Set => (IRecognizer)new SetRecognizer(
+                                group.Cardinality,
+                                recogniers.ToArray()),
+
+                            _ => throw new ArgumentException($"Invalid {typeof(SymbolGroup.GroupingMode)}: {group.Mode}")
+                        }),
+
+                    _ => throw new ArgumentException("Invalid expression")
+                };
+            }
         }
     }
 }

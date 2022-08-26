@@ -5,6 +5,7 @@
         Literal,
         Pattern,
         Ref,
+        Expression,
         Grouping
     }
 

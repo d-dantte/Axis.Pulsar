@@ -21,7 +21,7 @@ namespace Axis.Pulsar.Parser.Grammar
         {
             Symbol = symbolName.ThrowIf(
                 string.IsNullOrWhiteSpace,
-                _ => new ArgumentNullException(nameof(symbolName)));
+                new ArgumentNullException(nameof(symbolName)));
             Rule = productionRule ?? throw new ArgumentNullException(nameof(productionRule));
         }
 

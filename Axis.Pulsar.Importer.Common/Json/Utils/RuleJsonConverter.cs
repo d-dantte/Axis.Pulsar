@@ -34,6 +34,8 @@ namespace Axis.Pulsar.Importer.Common.Json.Utils
 
                 RuleType.Ref => jobj.ToObject<Ref>(),
 
+                RuleType.Expression => jobj.ToObject<Expression>(serializer),
+
                 RuleType.Grouping => jobj.ToObject<Grouping>(serializer),
 
                 _ => throw new Exception($"Invalid rule type: {ruleType}")

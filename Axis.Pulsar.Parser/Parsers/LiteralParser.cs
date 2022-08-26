@@ -32,7 +32,7 @@ namespace Axis.Pulsar.Parser.Parsers
             var position = tokenReader.Position;
             try
             {
-                if(tokenReader.TryNextTokens(_literalRule.Value.Length, out var tokens)
+                if (tokenReader.TryNextTokens(_literalRule.Value.Length, out var tokens)
                     && _literalRule.Value.Equals(
                         new string(tokens),
                         _literalRule.IsCaseSensitive
@@ -54,7 +54,7 @@ namespace Axis.Pulsar.Parser.Parsers
                 tokenReader.Reset(position);
                 return false;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 //add relevant information into the parse error
                 result = new IResult.Exception(ex, position + 1);

@@ -14,7 +14,7 @@ namespace Axis.Pulsar.Parser.Parsers
         public string SymbolName { get; }
 
         /// <inheritdoc/>
-        public int? RecognitionThreshold => _terminal.RecognitionThreshold;
+        public int? RecognitionThreshold => null;
 
         /// <summary>
         /// Constructor
@@ -30,6 +30,7 @@ namespace Axis.Pulsar.Parser.Parsers
                 _ => new ArgumentException("Invalid symbol name"));
         }
 
+        /// <inheritdoc/>
         public bool TryParse(BufferedTokenReader tokenReader, out IResult result)
         {
             var position = tokenReader.Position;
@@ -42,7 +43,7 @@ namespace Axis.Pulsar.Parser.Parsers
                     if (!tokenReader.TryNextTokens(_terminal.MatchCardinality.MinOccurence, out var tokens))
                         throw new System.IO.EndOfStreamException();
 
-                    else if (!_terminal.Regex.IsMatch(new string(tokens)))
+                    else if (!_terminal.Value.IsMatch(new string(tokens)))
                     {
                         result = new IResult.FailedRecognition(SymbolName, position + 1);
                         tokenReader.Reset(position);
@@ -52,7 +53,7 @@ namespace Axis.Pulsar.Parser.Parsers
                     var sbuffer = new StringBuilder(new string(tokens));
                     while (tokenReader.TryNextToken(out var token))
                     {
-                        if(!_terminal.Regex.IsMatch(sbuffer.Append(token).ToString()))
+                        if(!_terminal.Value.IsMatch(sbuffer.Append(token).ToString()))
                         {
                             tokenReader.Back();
                             sbuffer.Remove(sbuffer.Length - 1, 1);
@@ -72,7 +73,7 @@ namespace Axis.Pulsar.Parser.Parsers
                         if (!tokenReader.TryNextTokens(charCount, out var tokens))
                             continue;
 
-                        else if (!_terminal.Regex.IsMatch(new string(tokens)))
+                        else if (!_terminal.Value.IsMatch(new string(tokens)))
                         {
                             tokenReader.Reset(position);
                             continue;
@@ -110,7 +111,7 @@ namespace Axis.Pulsar.Parser.Parsers
             return result;
         }
 
-        public override string ToString() => $"/{_terminal.Regex}/";
+        public override string ToString() => $"/{_terminal.Value}/";
 
     }
 }

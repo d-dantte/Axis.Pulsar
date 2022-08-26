@@ -1,5 +1,4 @@
 ﻿using Axis.Pulsar.Parser.Utils;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace Axis.Pulsar.Parser.Recognizers
@@ -26,11 +25,5 @@ namespace Axis.Pulsar.Parser.Recognizers
                 .Map(@string => $"{mode.ToChar()}[{@string}]")
                 .Map(@string => $"{@string}{cardinality}");
         }
-
-        public static int SymbolCount(params IResult.Success[] successes)
-            => SymbolCount(successes.AsEnumerable());
-
-        public static int SymbolCount(IEnumerable<IResult.Success> successes)
-            => successes.SelectMany(success => success.Symbols).Count();
     }
 }

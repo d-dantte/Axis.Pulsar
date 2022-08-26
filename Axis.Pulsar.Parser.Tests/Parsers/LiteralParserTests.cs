@@ -23,18 +23,18 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
         [TestMethod]
         public void TryParse_WithValidInput_Should_ReturnValidParseResult()
         {
-            var terminal =
-                new LiteralRule("catch");
+            var terminal = new LiteralRule("catch");
             var parser = new LiteralParser("catch", terminal);
 
             var reader = new BufferedTokenReader("catch (Exception e){}");
             var succeeded = parser.TryParse(reader, out var result);
+            var success = result as IResult.Success;
 
             Assert.IsTrue(succeeded);
             Assert.IsNotNull(result);
-            Assert.IsNull(result.Error);
-            Assert.IsNotNull(result.Symbol);
-            Assert.AreEqual(terminal.Value, result.Symbol.Value);
+            Assert.IsTrue(result is IResult.Success);
+            Assert.IsNotNull(success.Symbol);
+            Assert.AreEqual(terminal.Value, success.Symbol.TokenValue());
             Assert.AreEqual(4, reader.Position);
 
             //case insensitivity test
@@ -46,46 +46,68 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
 
             reader = new BufferedTokenReader("CATCH (Exception e){}");
             succeeded = parser.TryParse(reader, out result);
+            success = result as IResult.Success;
 
             Assert.IsTrue(succeeded);
             Assert.IsNotNull(result);
-            Assert.IsNull(result.Error);
-            Assert.IsNotNull(result.Symbol);
-            Assert.AreEqual("CATCH", result.Symbol.Value);
+            Assert.IsTrue(result is IResult.Success);
+            Assert.IsNotNull(success.Symbol);
+            Assert.AreEqual("CATCH", success.Symbol.TokenValue());
             Assert.AreEqual(4, reader.Position);
         }
 
         [TestMethod]
         public void TryParse_WithInvalidInput_Should_ReturnErroredResult()
         {
-            var terminal =
-                new LiteralRule(
-                    "catch");
-            var parser = new LiteralParser("catch", terminal);
+            var symbolName = "_catch";
+            var terminal = new LiteralRule("catch");
+            var parser = new LiteralParser(symbolName, terminal);
 
             var reader = new BufferedTokenReader("}\n\tcatch (Exception e){}");
             var succeeded = parser.TryParse(reader, out var result);
+            var failure = result as IResult.FailedRecognition;
 
             Assert.IsFalse(succeeded);
             Assert.IsNotNull(result);
-            Assert.IsNotNull(result.Error);
-            Assert.IsNull(result.Symbol);
-            Assert.AreEqual(0, result.Error.CharacterIndex);
+            Assert.IsTrue(result is IResult.FailedRecognition);
+            Assert.AreEqual(symbolName, failure.ExpectedSymbolName);
+            Assert.AreEqual(0, failure.InputPosition);
+        }
 
-            //case insensitivity test
-            terminal =
-                new LiteralRule(
-                    "catch");
-            parser = new LiteralParser("catch", terminal);
+        [TestMethod]
+        public void TryParse_WithInsufficientBuffer_Should_ReturnErroredResult()
+        {
+            var symbolName = "_catch";
+            var terminal = new LiteralRule("catch");
+            var parser = new LiteralParser(symbolName, terminal);
 
-            reader = new BufferedTokenReader("CATCH (Exception e){}");
-            succeeded = parser.TryParse(reader, out result);
+            var reader = new BufferedTokenReader("}");
+            var succeeded = parser.TryParse(reader, out var result);
+            var failure = result as IResult.FailedRecognition;
 
             Assert.IsFalse(succeeded);
             Assert.IsNotNull(result);
-            Assert.IsNotNull(result.Error);
-            Assert.IsNull(result.Symbol);
-            Assert.AreEqual(0, result.Error.CharacterIndex);
+            Assert.IsTrue(result is IResult.FailedRecognition);
+            Assert.AreEqual(symbolName, failure.ExpectedSymbolName);
+            Assert.AreEqual(0, failure.InputPosition);
+        }
+
+        [TestMethod]
+        public void TryParse_WithInvalidMethodInput_Should_ReturnErroredResult()
+        {
+            var symbolName = "_catch";
+            var terminal = new LiteralRule("catch");
+            var parser = new LiteralParser(symbolName, terminal);
+
+            var reader = new BufferedTokenReader("}");
+            var succeeded = parser.TryParse(reader, out var result);
+            var failure = result as IResult.FailedRecognition;
+
+            Assert.IsFalse(succeeded);
+            Assert.IsNotNull(result);
+            Assert.IsTrue(result is IResult.FailedRecognition);
+            Assert.AreEqual(symbolName, failure.ExpectedSymbolName);
+            Assert.AreEqual(0, failure.InputPosition);
         }
     }
 }

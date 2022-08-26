@@ -6,8 +6,9 @@ namespace Axis.Pulsar.Parser.Grammar
     /// Terminal rule representing literal string values. Literals MUST recognize at least 1 token/character
     /// <para>Why is this not a struct?</para>
     /// </summary>
-    public class LiteralRule : ITerminal
+    public record LiteralRule : ITerminal<string>
     {
+        /// <inheritdoc/>
         public string Value { get; }
 
         /// <summary>

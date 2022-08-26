@@ -17,14 +17,14 @@ namespace Axis.Pulsar.Importer.Common.Xml
 {
     public class GrammarImporter : IGrammarImporter
     {
-        public Grammar ImportGrammar(Stream inputStream)
+        public IGrammar ImportGrammar(Stream inputStream)
         {
             var xml = XDocument.Load(inputStream);
 
             return XmlBuilder.CreateGrammar(xml);
         }
 
-        public async Task<Grammar> ImportGrammarAsync(Stream inputStream)
+        public async Task<IGrammar> ImportGrammarAsync(Stream inputStream)
         {
             var xml = await XDocument.LoadAsync(
                 inputStream,
@@ -37,8 +37,7 @@ namespace Axis.Pulsar.Importer.Common.Xml
 
     internal static class XmlBuilder
     {
-
-        public static Grammar CreateGrammar(XDocument document)
+        public static IGrammar CreateGrammar(XDocument document)
         {
             ValidateDocument(document);
             return ImportLanguage(document.Root);
@@ -59,18 +58,15 @@ namespace Axis.Pulsar.Importer.Common.Xml
                 throw new XmlImporterException(errors.ToArray());
         }
 
-        internal static Grammar ImportLanguage(XElement rootElement)
+        internal static IGrammar ImportLanguage(XElement rootElement)
         {
-            var rootSymbol = rootElement.Attribute("root").Value;
-
             return rootElement
                 .Elements()
                 .Select(ToProduction)
                 .Aggregate(
                     GrammarBuilder.NewBuilder(),
-                    (builder, production) => builder.HasRoot
-                        ? builder.WithProduction(production.Symbol, production.Rule)
-                        : builder.WithRootProduction(production.Symbol, production.Rule))
+                    (builder, production) => builder.WithProduction(production.Symbol, production.Rule))
+                .WithRoot(rootElement.Attribute("root").Value)
                 .Build();
         }
 
@@ -79,7 +75,7 @@ namespace Axis.Pulsar.Importer.Common.Xml
             var name = element.Attribute("name").Value;
             var rule = element.Name.LocalName switch
             {
-                "non-terminal" => ToRule(element.FirstChild()),
+                "non-terminal" => ToRule(element),
                 "literal" => ToRule(element),
                 "pattern" => ToRule(element),
                 _ => throw new Exception($"Invalid element: {element.Name}")
@@ -100,7 +96,9 @@ namespace Axis.Pulsar.Importer.Common.Xml
                     element.Attribute(Legend.Enumerations.LiteralElement_Value).Value,
                     ExtractCaseSensitivity(element)),
 
-                _ => new SymbolExpressionRule(ToExpression(element))
+                _ => new SymbolExpressionRule(
+                    ToExpression(element.FirstChild()),
+                    ExtractThreshold(element))
             };
         }
 
@@ -129,7 +127,7 @@ namespace Axis.Pulsar.Importer.Common.Xml
         }
 
 
-        public static Cardinality ExtractMatchCardinality(XElement patternElement)
+        internal static Cardinality ExtractMatchCardinality(XElement patternElement)
         {
             var minOccurs = patternElement.Attribute(Legend.Enumerations.PatternElement_MinMatch)?.Value;
             var maxOccurs = patternElement.Attribute(Legend.Enumerations.PatternElement_MaxMatch)?.Value;
@@ -139,7 +137,7 @@ namespace Axis.Pulsar.Importer.Common.Xml
 
             else
             {
-                return new Cardinality(
+                return Cardinality.Occurs(
                     int.Parse(minOccurs ?? "1"),
                     maxOccurs == null ? null :
                     maxOccurs.Equals("unbounded") ? null :
@@ -147,7 +145,7 @@ namespace Axis.Pulsar.Importer.Common.Xml
             }
         }
 
-        public static Cardinality ExtractCardinality(XElement element)
+        internal static Cardinality ExtractCardinality(XElement element)
         {
             var minOccurs = element.Attribute(Legend.Enumerations.ProductionElement_MinOccurs)?.Value;
             var maxOccurs = element.Attribute(Legend.Enumerations.ProductionElement_MaxOccurs)?.Value;
@@ -157,15 +155,15 @@ namespace Axis.Pulsar.Importer.Common.Xml
 
             else
             {
-                return new Cardinality(
+                return Cardinality.Occurs(
                     int.Parse(minOccurs ?? "1"),
-                    maxOccurs == null ? null :
+                    maxOccurs == null ? 1 :
                     maxOccurs.Equals("unbounded") ? null :
                     int.Parse(maxOccurs));
             }
         }
 
-        public static Regex ExtractPatternRegex(XElement patternElement)
+        internal static Regex ExtractPatternRegex(XElement patternElement)
         {
             var regexPattern = patternElement.Attribute(Legend.Enumerations.PatternElement_Regex).Value;
             var options =
@@ -176,12 +174,18 @@ namespace Axis.Pulsar.Importer.Common.Xml
             return new Regex(regexPattern, options);
         }
 
-        public static bool ExtractCaseSensitivity(XElement element)
+        internal static bool ExtractCaseSensitivity(XElement element)
         {
             return element.TryAttribute(Legend.Enumerations.LiteralElement_CaseSensitive, out var att)
                 && bool.Parse(att.Value?.ToLower());
         }
 
+        internal static int? ExtractThreshold(XElement nonTerminal)
+        {
+            return nonTerminal.TryAttribute(Legend.Enumerations.NonTerminalElement_Threshold, out var attribute)
+                ? int.Parse(attribute.Value)
+                : null;
+        }
 
 
         private static Stream GetXsdResourceStream()

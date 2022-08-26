@@ -1,6 +1,6 @@
 ﻿namespace Axis.Pulsar.Importer.Common.Json.Models
 {
-    public class Production
+    public record Production
     {
         public string Name { get; set; }
 

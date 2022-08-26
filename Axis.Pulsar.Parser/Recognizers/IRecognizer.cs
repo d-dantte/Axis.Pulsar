@@ -4,7 +4,7 @@ using Axis.Pulsar.Parser.Utils;
 namespace Axis.Pulsar.Parser.Recognizers
 {
     /// <summary>
-    /// 
+    /// Recognizes tokens fitting the <see cref="Grammar.ISymbolExpression"/> configuration.
     /// </summary>
     public interface IRecognizer
     {

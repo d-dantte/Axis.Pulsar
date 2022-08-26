@@ -31,19 +31,21 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
         public void TryParse_WithValidInput_Should_ReturnValidParseResult()
         {
             var regex = new Regex("^[a-z_]\\w*$", RegexOptions.IgnoreCase);
+            var symbolName = "variableName";
             var terminal = new PatternRule(
                     regex,
                     Cardinality.OccursOnlyOnce());
-            var parser = new PatternMatcherParser("stuff", terminal);
+            var parser = new PatternMatcherParser(symbolName, terminal);
 
             var reader = new BufferedTokenReader("variable = 5;");
             var succeeded = parser.TryParse(reader, out var result);
+            var trueResult = result as IResult.Success;
 
             Assert.IsTrue(succeeded);
             Assert.IsNotNull(result);
-            Assert.IsNull(result.Error);
-            Assert.IsNotNull(result.Symbol);
-            Assert.IsTrue(terminal.Regex.IsMatch(result.Symbol.Value));
+            Assert.IsNotNull(trueResult.Symbol);
+            Assert.AreEqual(symbolName, trueResult.Symbol.SymbolName);
+            Assert.AreEqual("v", trueResult.Symbol.TokenValue());
 
 
             //test 2
@@ -52,63 +54,53 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             terminal = new PatternRule(
                 regex,
                 Cardinality.OccursOnly(2));
-            parser = new PatternMatcherParser("stuff", terminal);
+            parser = new PatternMatcherParser(symbolName, terminal);
 
-            reader = new BufferedTokenReader("$variable = 5;");
+            reader = new BufferedTokenReader("$VariaBle = 5;");
             succeeded = parser.TryParse(reader, out result);
+            trueResult = result as IResult.Success;
 
             Assert.IsTrue(succeeded);
             Assert.IsNotNull(result);
-            Assert.IsNull(result.Error);
-            Assert.IsNotNull(result.Symbol);
-            Assert.IsTrue(terminal.Regex.IsMatch(result.Symbol.Value));
+            Assert.IsNotNull(trueResult.Symbol);
+            Assert.AreEqual(symbolName, trueResult.Symbol.SymbolName);
+            Assert.AreEqual("$V", trueResult.Symbol.TokenValue());
 
 
             //test 3
-            regex = new Regex("^\\$[a-z_]\\w*$", RegexOptions.IgnoreCase);
-
-            terminal = new PatternRule(
-                regex,
-                Cardinality.OccursOnly(2));
-            parser = new PatternMatcherParser("stuff", terminal);
-
-            reader = new BufferedTokenReader("$variable = 5;");
-            succeeded = parser.TryParse(reader, out result);
-
-            Assert.IsTrue(succeeded);
-            Assert.IsNotNull(result);
-            Assert.IsNull(result.Error);
-            Assert.IsNotNull(result.Symbol);
-            Assert.IsTrue(terminal.Regex.IsMatch(result.Symbol.Value));
-
-
-            //test 4
             regex = new Regex("^\\d{4}([-/]\\d{2})?$", RegexOptions.IgnoreCase);
 
             terminal = new PatternRule(
                 regex,
-                new Cardinality(4, 7));
-            parser = new PatternMatcherParser("stuff", terminal);
+                Cardinality.Occurs(4, 7));
+            parser = new PatternMatcherParser(symbolName, terminal);
 
             reader = new BufferedTokenReader("2021- and other stuff");
             succeeded = parser.TryParse(reader, out result);
+            trueResult = result as IResult.Success;
 
             Assert.IsTrue(succeeded);
             Assert.IsNotNull(result);
-            Assert.IsNull(result.Error);
-            Assert.IsNotNull(result.Symbol);
-            Assert.IsTrue(terminal.Regex.IsMatch(result.Symbol.Value));
+            Assert.IsNotNull(trueResult.Symbol);
+            Assert.AreEqual(symbolName, trueResult.Symbol.SymbolName);
+            Assert.AreEqual("2021", trueResult.Symbol.TokenValue());
 
 
-            //test 5
-            reader = new BufferedTokenReader("2021-05 bleh");
+            //test 4
+            terminal = new PatternRule(
+                regex,
+                Cardinality.Occurs(4, 7));
+            parser = new PatternMatcherParser(symbolName, terminal);
+
+            reader = new BufferedTokenReader("2021/22 and other stuff");
             succeeded = parser.TryParse(reader, out result);
+            trueResult = result as IResult.Success;
 
             Assert.IsTrue(succeeded);
             Assert.IsNotNull(result);
-            Assert.IsNull(result.Error);
-            Assert.IsNotNull(result.Symbol);
-            Assert.IsTrue(terminal.Regex.IsMatch(result.Symbol.Value));
+            Assert.IsNotNull(trueResult.Symbol);
+            Assert.AreEqual(symbolName, trueResult.Symbol.SymbolName);
+            Assert.AreEqual("2021/22", trueResult.Symbol.TokenValue());
         }
 
 
@@ -116,34 +108,37 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
         public void TryParse_WithInvalidInput_Should_ReturnErroredParseResult()
         {
             //test 1
+            var symbolName = "variable";
             var regex = new Regex("^[a-z_]\\w*$", RegexOptions.IgnoreCase);
             var terminal = new PatternRule(
                     regex,
-                    Cardinality.OccursOnlyOnce());
-            var parser = new PatternMatcherParser("stuff", terminal);
+                    Cardinality.OccursAtLeastOnce());
+            var parser = new PatternMatcherParser(symbolName, terminal);
 
             var reader = new BufferedTokenReader(" variable = 5;");
             var succeeded = parser.TryParse(reader, out var result);
+            var trueResult = result as IResult.FailedRecognition;
 
             Assert.IsFalse(succeeded);
             Assert.IsNotNull(result);
-            Assert.IsNull(result.Symbol);
-            Assert.IsNotNull(result.Error);
+            Assert.AreEqual(0, trueResult.InputPosition);
+            Assert.AreEqual(symbolName, trueResult.ExpectedSymbolName);
 
             //test 2
             regex = new Regex("^[a-z_]\\w*$", RegexOptions.IgnoreCase);
             terminal = new PatternRule(
                 regex,
-                Cardinality.OccursOnlyOnce());
-            parser = new PatternMatcherParser("stuff", terminal);
+                Cardinality.OccursAtLeastOnce());
+            parser = new PatternMatcherParser(symbolName, terminal);
 
             reader = new BufferedTokenReader("1_something");
-            succeeded = parser.TryParse(reader, out result);
+            succeeded = parser.TryParse(reader, out result); 
+            trueResult = result as IResult.FailedRecognition;
 
             Assert.IsFalse(succeeded);
             Assert.IsNotNull(result);
-            Assert.IsNull(result.Symbol);
-            Assert.IsNotNull(result.Error);
+            Assert.AreEqual(0, trueResult.InputPosition);
+            Assert.AreEqual(symbolName, trueResult.ExpectedSymbolName);
         }
     }
 }

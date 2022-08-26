@@ -26,6 +26,11 @@ namespace Axis.Pulsar.Parser.Parsers
         }
 
         /// <summary>
+        /// Creates an instance of the <see cref="Success"/> class.
+        /// </summary>
+        public static Success Of(ICSTNode node) => new(node);
+
+        /// <summary>
         /// Represents partial recognition of symbols
         /// </summary>
         public record PartialRecognition: IResult
@@ -45,11 +50,16 @@ namespace Axis.Pulsar.Parser.Parsers
             /// </summary>
             public int InputPosition { get; }
 
+            /// <summary>
+            /// An inner Failed recognition result, if the failure originated from a symbol ref
+            /// </summary>
+            public Parsers.IResult Reason { get; }
 
             public PartialRecognition(
                 int recognitionCount,
                 string expectedSymbolName,
-                int inputPosition)
+                int inputPosition,
+                IResult reason = null)
             {
                 RecognitionCount = recognitionCount.ThrowIf(
                     Extensions.IsNegative,
@@ -62,8 +72,22 @@ namespace Axis.Pulsar.Parser.Parsers
                 InputPosition = inputPosition.ThrowIf(
                     Extensions.IsNegative,
                     new ArgumentException($"{nameof(InputPosition)} must be >= 0"));
+
+                Reason = reason.ThrowIf(
+                    r => r is Success || r is IResult.Exception,
+                    new ArgumentException($"Invalid reason type: {reason?.GetType()}"));
             }
         }
+
+        /// <summary>
+        /// Creates an instance of the <see cref="PartialRecognition"/> class.
+        /// </summary>
+        public static PartialRecognition Of(
+                int recognitionCount,
+                string expectedSymbolName,
+                int inputPosition,
+                IResult reason = null)
+            => new(recognitionCount, expectedSymbolName, inputPosition, reason);
 
         /// <summary>
         /// Represents failed recognition.
@@ -80,17 +104,38 @@ namespace Axis.Pulsar.Parser.Parsers
             /// </summary>
             public int InputPosition { get; }
 
-            public FailedRecognition(string symbolName, int inputPosition)
+            /// <summary>
+            /// An inner Failed recognition result, if the failure originated from a symbol ref
+            /// </summary>
+            public Parsers.IResult Reason { get; }
+
+            public FailedRecognition(
+                string symbolName,
+                int inputPosition,
+                IResult reason = null)
             {
-                symbolName = symbolName.ThrowIf(
+                ExpectedSymbolName = symbolName.ThrowIf(
                     string.IsNullOrWhiteSpace,
                     _ => new ArgumentException($"Invalid {nameof(symbolName)}"));
 
                 InputPosition = inputPosition.ThrowIf(
                     Extensions.IsNegative,
                     new ArgumentException($"{nameof(InputPosition)} must be >= 0"));
+
+                Reason = reason.ThrowIf(
+                    r => r is IResult.Success || r is IResult.Exception,
+                    new ArgumentException($"Invalid reason type: {reason?.GetType()}"));
             }
         }
+
+        /// <summary>
+        /// Creates an instance of the <see cref="FailedRecognition"/> class.
+        /// </summary>
+        public static FailedRecognition Of(
+                string symbolName,
+                int inputPosition,
+                IResult reason = null)
+            => new(symbolName, inputPosition, reason);
 
         /// <summary>
         /// Represents a fatally faulted recognition - a situation not accounted for by algorithm.
@@ -116,5 +161,13 @@ namespace Axis.Pulsar.Parser.Parsers
                     new ArgumentException($"{nameof(InputPosition)} must be >= 0"));
             }
         }
+
+        /// <summary>
+        /// Creates an instance of the <see cref="Exception"/> class.
+        /// </summary>
+        public static Exception Of(
+            System.Exception error,
+            int inputPosition)
+            => new(error, inputPosition);
     }
 }

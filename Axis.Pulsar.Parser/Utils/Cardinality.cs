@@ -96,11 +96,18 @@ namespace Axis.Pulsar.Parser.Utils
 
         public static Cardinality OccursAtMost(int maximumOccurences) => new(1, maximumOccurences);
 
-        //public static Cardinality OccursNeverOrAtMost(int maximumOccurences) => new(0, maximumOccurences);
+        public static Cardinality Occurs(int minOccurences, int? maxOccurences)
+        {
+            return new(
+                minOccurences, //.ThrowIf(Extensions.IsZeroOrLess, new ArgumentException($"Invalid {nameof(minOccurences)}")),
+                maxOccurences);
+        }
 
-        //public static Cardinality OccursNeverOrMore() => new(0);
+        public static Cardinality OccursNeverOrAtMost(int maximumOccurences) => new(0, maximumOccurences);
 
-        //public static Cardinality OccursOptionally() => OccursNeverOrAtMost(1);
+        public static Cardinality OccursNeverOrMore() => new(0);
+
+        public static Cardinality OccursOptionally() => OccursNeverOrAtMost(1);
 
         public static bool operator ==(Cardinality left, Cardinality right) => left.Equals(right);
 

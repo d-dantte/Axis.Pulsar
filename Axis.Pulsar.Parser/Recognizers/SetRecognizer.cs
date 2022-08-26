@@ -26,11 +26,12 @@ namespace Axis.Pulsar.Parser.Recognizers
             Cardinality = cardinality;
 
             _recognizers = recognizers
-                .ThrowIf(Extensions.IsNull, _ => new ArgumentNullException(nameof(recognizers)))
-                .ThrowIf(Extensions.IsEmpty, _ => new ArgumentException("Empty recognizer array supplied"))
+                .ThrowIf(Extensions.IsNull, new ArgumentNullException(nameof(recognizers)))
+                .ThrowIf(Extensions.IsEmpty, new ArgumentException("Empty recognizer array supplied"))
                 .ThrowIf(Extensions.ContainsNull, new ArgumentException("Recognizer array must not contain nulls"));
         }
 
+        ///<inheritdoc/>
         public bool TryRecognize(BufferedTokenReader tokenReader, out IResult result)
         {
             var position = tokenReader.Position;
@@ -47,15 +48,17 @@ namespace Axis.Pulsar.Parser.Recognizers
                 do
                 {
                     setPosition = tokenReader.Position;
-                    var tempChildren = _recognizers.ToList();
+                    var tempList = _recognizers.ToList();
                     var index = -1;
                     setResults = new List<IResult.Success>();
-                    while (tempChildren.Count > 0)
+                    while (tempList.Count > 0)
                     {
-                        (setResult, index) = tempChildren
-                            .Select((recognizer, index) => (Result: recognizer.Recognize(tokenReader), Index: index))
-                            .Where(result => result.Result is IResult.Success)
-                            .FirstOrDefault();
+                        foreach(var tuple in tempList.Select((recognizer, index) => (recognizer.Recognize(tokenReader), index)))
+                        {
+                            (setResult, index) = tuple;
+                            if (setResult is not IResult.FailedRecognition)
+                                break;
+                        }
 
                         if (setResult is not IResult.Success)
                         {
@@ -64,7 +67,7 @@ namespace Axis.Pulsar.Parser.Recognizers
                         }
 
                         setResults.Add(setResult as IResult.Success);
-                        tempChildren.RemoveAt(index);
+                        tempList.RemoveAt(index);
                     }
 
                     if (setResult is IResult.Success)
@@ -91,10 +94,11 @@ namespace Axis.Pulsar.Parser.Recognizers
                 _ = tokenReader.Reset(position);
                 result = setResult switch
                 {
+                    // null because we previously filered out only Success and Exception results.
                     IResult.FailedRecognition failed => new IResult.FailedRecognition(
-                        failed.ExpectedSymbolName, // or should the SymbolRef of the current recognizer be used?
-                        results.Count,
-                        currentPosition),
+                        results.Count + setResults?.Count ?? 0,
+                        currentPosition,
+                        failed.Reason),
 
                     IResult.Exception exception => exception,
 
