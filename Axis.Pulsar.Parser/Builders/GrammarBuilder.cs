@@ -1,11 +1,12 @@
 ﻿using Axis.Pulsar.Parser.Exceptions;
+using Axis.Pulsar.Parser.Grammar;
 using Axis.Pulsar.Parser.Parsers;
 using Axis.Pulsar.Parser.Recognizers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Axis.Pulsar.Parser.Grammar
+namespace Axis.Pulsar.Parser.Builders
 {
     /// <summary>
     /// Builder for creating new <see cref="Grammar"/> instances
@@ -64,6 +65,14 @@ namespace Axis.Pulsar.Parser.Grammar
 
             return this;
         }
+
+        public GrammarBuilder WithProduction(
+            string productionName,
+            Action<ProductionBuilder> productionBuilder)
+            => new ProductionBuilder(productionName)
+                .Use(productionBuilder.Invoke)
+                .Build()
+                .Map(production => WithProduction(production));
 
         /// <summary>
         /// Updates the root symbol for the grammar being built. The root symbol must already exist in the internal list of productions for this method to be successful.
@@ -151,7 +160,6 @@ namespace Axis.Pulsar.Parser.Grammar
                 _ => throw new Exception($"Invalid rule type: {rule?.GetType()}")
             };
         }
-
 
 
         /// <summary>

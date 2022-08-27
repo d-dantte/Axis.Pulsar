@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.Schema;
+using Axis.Pulsar.Parser.Builders;
 
 namespace Axis.Pulsar.Importer.Common.Xml
 {

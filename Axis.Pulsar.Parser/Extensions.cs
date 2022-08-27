@@ -11,8 +11,6 @@ namespace Axis.Pulsar.Parser
         public static bool IsEmpty<T>(this ICollection<T> collection) => collection.Count == 0;
         public static bool IsNullOrEmpty<T>(this T[] array) => array == null || array.IsEmpty();
 
-        public static bool IsDefault<T>(this T value) => EqualityComparer<T>.Default.Equals(value, default);
-
         public static IEnumerable<T> Concat<T>(
             this IEnumerable<T> initialValues,
             IEnumerable<T> otherValue)
@@ -113,6 +111,14 @@ namespace Axis.Pulsar.Parser
 
             else return failureProducer.Invoke();
         }
+
+        public static TIn Use<TIn>(this TIn @in, Action<TIn> action)
+        {
+            action.Invoke(@in);
+            return @in;
+        }
+
+        public static void Consume<TIn>(this TIn @in, Action<TIn> consumer) => consumer.Invoke(@in);
 
         public static bool ExactlyAll<T>(this IEnumerable<T> enumerable, Func<T, bool> predicate)
         {

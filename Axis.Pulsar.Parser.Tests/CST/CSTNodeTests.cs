@@ -90,6 +90,12 @@ namespace Axis.Pulsar.Parser.Tests.CST
             Assert.ThrowsException<ArgumentException>(() => ICSTNode.Of(symbolName, innerNodes.Append(new FakeICSTNode()).ToArray()));
         }
 
+        [TestMethod]
+        public void FindNodes_UsingPath_ShouldReturnValidResults()
+        {
+
+        }
+
         public class FakeICSTNode : ICSTNode
         {
             public string SymbolName { get; set; }

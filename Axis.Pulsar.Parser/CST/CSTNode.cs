@@ -122,6 +122,7 @@ namespace Axis.Pulsar.Parser.CST
             /// The effective tokens this node consists of.
             /// </summary>
             public string Tokens { get; }
+
             internal LeafNode(string symbolName, string tokens)
             {
                 SymbolName = symbolName.ThrowIf(

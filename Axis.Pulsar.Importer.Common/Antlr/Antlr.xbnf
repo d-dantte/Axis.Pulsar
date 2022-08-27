@@ -4,7 +4,7 @@
 # Sensitive-value: recognizes the escape sequences: &amp; = &, &quot; = "
 # Insensitive-value: recognizes the escape sequences: &amp; = &, &apos; = '
 #
-$antlr -> +[$production +[?[$line-space $comment].1, $production].0,]
+$antlr -> +[?[$line-space $comment].0, $production +[?[$line-space $comment].1, $production].0,]
 $production -> +[$symbol-name $line-indent-space $colon $white-space $rule-list +[$line-indent-space $v-bar $white-space $rule-list].0, $rule-end]
 $rule-list -> +[$rule-item +[$white-space $rule-item].0,]
 $rule-item -> +[?[$rule-group $ref $terminal] $cardinality.0,1]
@@ -26,7 +26,7 @@ $sensitive-value -> /^[^"]+$/
 $insensitive-value -> /^[^']+$/
 $pattern-value -> /^[^&sol;]+$/
 $new-line -> /^(\r\n|\r|\n)$/
-$comment -> /^\#[^\n\r]*/
+$comment -> /^\#[^\n\r]*$/
 $colon -> ":"
 $semi-colon -> ";"
 $v-bar -> "|"

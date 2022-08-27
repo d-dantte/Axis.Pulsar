@@ -24,22 +24,21 @@ namespace Axis.Pulsar.Importer.Tests.Antlr
 
         public static readonly string SampleAntlr =
 @"
-# my vague grammar described using antlr
+# some comment
+# some other comment
 grammar
     : more-stuff
     | other-stuff
     | 'meh'
     ;
 
-# second production
-# bleh
-#
+#    comment placed in between
+
+# again
 
 other-stuff
     : /bleh/
     ;
-
-
 
 more-stuff
     : stuff
