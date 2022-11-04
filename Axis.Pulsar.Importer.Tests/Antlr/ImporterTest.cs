@@ -41,11 +41,15 @@ other-stuff
     ;
 
 more-stuff
-    : stuff
+    : (stuff xstuff)+
     ;
 
 stuff
     : '.'
+    ;
+
+xstuff
+    : '+'
     ;
 ";
 

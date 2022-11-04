@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Axis.Pulsar.Parser.Builders
+﻿namespace Axis.Pulsar.Parser.Builders
 {
     /// <summary>
     /// Represents the contract for a builder

@@ -36,51 +36,55 @@ namespace Axis.Pulsar.Parser.Parsers
             var position = tokenReader.Position;
             try
             {
-                string symbolValue = null;
-                if(_terminal.MatchCardinality.MaxOccurence == null) //open ended
+                if(_terminal.MatchType is IPatternMatchType.Open open)
                 {
-                    //pull the min number of characters from the source, then keep pulling and matching till a false match is encountered
-                    if (!tokenReader.TryNextTokens(_terminal.MatchCardinality.MinOccurence, out var tokens))
-                        throw new System.IO.EndOfStreamException();
+                    // match each pulled character, and only fail when the number of non-matches is equal to MatchCardinality.MinOccurences
+                    var sbuffer = new StringBuilder();
+                    var mismatchCount = 0;
+                    while (tokenReader.TryNextToken(out var token))
+                    {
+                        if (!_terminal.Value.IsMatch(sbuffer.Append(token).ToString()))
+                        {
+                            if (++mismatchCount == open.MaxMismatch)
+                                break;
+                        }
+                        else mismatchCount = 0;
+                    }
 
-                    else if (!_terminal.Value.IsMatch(new string(tokens)))
+                    // walk back any mis-matches
+                    tokenReader.Back(mismatchCount);
+                    sbuffer.RemoveLast(mismatchCount);
+
+                    if (sbuffer.Length == 0 && !open.MatchesEmptyTokens)
                     {
                         result = new IResult.FailedRecognition(SymbolName, position + 1);
                         tokenReader.Reset(position);
                         return false;
                     }
 
-                    var sbuffer = new StringBuilder(new string(tokens));
-                    while (tokenReader.TryNextToken(out var token))
+                    var node = ICSTNode.Of(SymbolName, sbuffer.ToString());
+                    if(_terminal.RuleValidator?.IsValidCSTNode(_terminal, node) == false)
                     {
-                        if(!_terminal.Value.IsMatch(sbuffer.Append(token).ToString()))
-                        {
-                            tokenReader.Back();
-                            sbuffer.Remove(sbuffer.Length - 1, 1);
-                            break;
-                        }
+                        result = new IResult.FailedRecognition(SymbolName, position + 1);
+                        tokenReader.Reset(position);
+                        return false;
                     }
 
-                    symbolValue = sbuffer.ToString();
+                    result = new IResult.Success(node);
+                    return true;
                 }
-                else //close ended
+                else if(_terminal.MatchType is IPatternMatchType.Closed closed) //close ended
                 {
-                    //pull the max number of characters from the source, then keep removing from the end till a positive match is encountered
-                    for (int charCount = _terminal.MatchCardinality.MaxOccurence.Value;
-                        charCount >= _terminal.MatchCardinality.MinOccurence;
-                        charCount--)
+                    _ = tokenReader.TryNextTokens(closed.MaxMatch, false, out var tokens);
+                                        
+                    var lim = tokens?.Length ?? 0 - closed.MinMatch;
+                    string symbolValue = null;
+                    for (int index = 0; index < lim; index++)
                     {
-                        if (!tokenReader.TryNextTokens(charCount, out var tokens))
-                            continue;
-
-                        else if (!_terminal.Value.IsMatch(new string(tokens)))
+                        var subtokens = tokens[..^index];
+                        if (_terminal.Value.IsMatch(new string(subtokens)))
                         {
-                            tokenReader.Reset(position);
-                            continue;
-                        }
-                        else
-                        {
-                            symbolValue = new(tokens);
+                            symbolValue = new(subtokens);
                             break;
                         }
                     }
@@ -92,10 +96,27 @@ namespace Axis.Pulsar.Parser.Parsers
                         tokenReader.Reset(position);
                         return false;
                     }
-                }
 
-                result = new IResult.Success(ICSTNode.Of(SymbolName, symbolValue));
-                return true;
+                    var node = ICSTNode.Of(SymbolName, symbolValue);
+                    if(_terminal.RuleValidator?.IsValidCSTNode(_terminal, node) == false)
+                    {
+                        result = new IResult.FailedRecognition(SymbolName, position + 1);
+                        tokenReader.Reset(position);
+                        return false;
+                    }
+
+                    result = new IResult.Success(node);
+                    return true;
+                }
+                else
+                {
+                    // error
+                    result = new IResult.Exception(
+                        new InvalidCastException($"Invaid match-type: {_terminal.MatchType}"),
+                        position + 1);
+                    tokenReader.Reset(position);
+                    return false;
+                }
             }
             catch(Exception ex)
             {

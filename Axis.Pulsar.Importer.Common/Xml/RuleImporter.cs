@@ -18,30 +18,30 @@ namespace Axis.Pulsar.Importer.Common.Xml
 {
     public class GrammarImporter : IGrammarImporter
     {
-        public IGrammar ImportGrammar(Stream inputStream)
+        public IGrammar ImportGrammar(Stream inputStream, Dictionary<string, IRuleValidator<IRule>> validators = null)
         {
             var xml = XDocument.Load(inputStream);
 
-            return XmlBuilder.CreateGrammar(xml);
+            return XmlBuilder.CreateGrammar(xml, validators);
         }
 
-        public async Task<IGrammar> ImportGrammarAsync(Stream inputStream)
+        public async Task<IGrammar> ImportGrammarAsync(Stream inputStream, Dictionary<string, IRuleValidator<IRule>> validators = null)
         {
             var xml = await XDocument.LoadAsync(
                 inputStream,
                 LoadOptions.None,
                 CancellationToken.None);
 
-            return XmlBuilder.CreateGrammar(xml);
+            return XmlBuilder.CreateGrammar(xml, validators);
         }
     }
 
     internal static class XmlBuilder
     {
-        public static IGrammar CreateGrammar(XDocument document)
+        public static IGrammar CreateGrammar(XDocument document, Dictionary<string, IRuleValidator<IRule>> validators = null)
         {
             ValidateDocument(document);
-            return ImportLanguage(document.Root);
+            return ImportLanguage(document.Root, validators);
         }
 
         internal static void ValidateDocument(XDocument xml)
@@ -59,11 +59,11 @@ namespace Axis.Pulsar.Importer.Common.Xml
                 throw new XmlImporterException(errors.ToArray());
         }
 
-        internal static IGrammar ImportLanguage(XElement rootElement)
+        internal static IGrammar ImportLanguage(XElement rootElement, Dictionary<string, IRuleValidator<IRule>> validators = null)
         {
             return rootElement
                 .Elements()
-                .Select(ToProduction)
+                .Select(element => ToProduction(element, validators))
                 .Aggregate(
                     GrammarBuilder.NewBuilder(),
                     (builder, production) => builder.WithProduction(production.Symbol, production.Rule))
@@ -71,35 +71,45 @@ namespace Axis.Pulsar.Importer.Common.Xml
                 .Build();
         }
 
-        internal static Production ToProduction(XElement element)
+        internal static Production ToProduction(XElement element, Dictionary<string, IRuleValidator<IRule>> validators = null)
         {
             var name = element.Attribute("name").Value;
             var rule = element.Name.LocalName switch
             {
-                "non-terminal" => ToRule(element),
-                "literal" => ToRule(element),
-                "pattern" => ToRule(element),
+                "non-terminal" => ToRule(element, validators),
+                "literal" => ToRule(element, validators),
+                "open-pattern" => ToRule(element, validators),
+                "closed-pattern" => ToRule(element, validators),
                 _ => throw new Exception($"Invalid element: {element.Name}")
             };
 
             return new(name, rule);
         }
 
-        internal static IRule ToRule(XElement element)
+        internal static IRule ToRule(XElement element, Dictionary<string, IRuleValidator<IRule>> validators = null)
         {
+            var ruleName = element.Attribute("name").Value;
             return element.Name.LocalName switch
             {
-                "pattern" => new PatternRule(
+                "open-pattern" => new PatternRule(
                     ExtractPatternRegex(element),
-                    ExtractMatchCardinality(element)),
+                    ExtractOpenMatchType(element),
+                    validators?.TryGetValue(ruleName, out var validator) == true ? validator : null),
+
+                "closed-pattern" => new PatternRule(
+                    ExtractPatternRegex(element),
+                    ExtractClosedMatchType(element),
+                    validators?.TryGetValue(ruleName, out var validator) == true ? validator : null),
 
                 "literal" => new LiteralRule(
                     element.Attribute(Legend.Enumerations.LiteralElement_Value).Value,
-                    ExtractCaseSensitivity(element)),
+                    ExtractCaseSensitivity(element),
+                    validators?.TryGetValue(ruleName, out var validator) == true ? validator : null),
 
                 _ => new SymbolExpressionRule(
                     ToExpression(element.FirstChild()),
-                    ExtractThreshold(element))
+                    ExtractThreshold(element),
+                    validators?.TryGetValue(ruleName, out var validator) == true ? validator : null)
             };
         }
 
@@ -127,23 +137,24 @@ namespace Axis.Pulsar.Importer.Common.Xml
             };
         }
 
-
-        internal static Cardinality ExtractMatchCardinality(XElement patternElement)
+        internal static IPatternMatchType.Closed ExtractClosedMatchType(XElement patternElement)
         {
-            var minOccurs = patternElement.Attribute(Legend.Enumerations.PatternElement_MinMatch)?.Value;
-            var maxOccurs = patternElement.Attribute(Legend.Enumerations.PatternElement_MaxMatch)?.Value;
+            var minMatch = patternElement.Attribute(Legend.Enumerations.PatternElement_MinMatch)?.Value;
+            var maxMatch = patternElement.Attribute(Legend.Enumerations.PatternElement_MaxMatch)?.Value;
 
-            if (minOccurs == null && maxOccurs == null)
-                return Cardinality.OccursOnlyOnce();
+            return new IPatternMatchType.Closed(
+                int.Parse(minMatch ?? "1"),
+                int.Parse(maxMatch ?? "1"));
+        }
 
-            else
-            {
-                return Cardinality.Occurs(
-                    int.Parse(minOccurs ?? "1"),
-                    maxOccurs == null ? null :
-                    maxOccurs.Equals("unbounded") ? null :
-                    int.Parse(maxOccurs));
-            }
+        internal static IPatternMatchType.Open ExtractOpenMatchType(XElement patternElement)
+        {
+            var allowsEmpty = patternElement.Attribute(Legend.Enumerations.PatternElement_AllowsEmpty)?.Value;
+            var maxMismatch = patternElement.Attribute(Legend.Enumerations.PatternElement_MaxMismatch)?.Value;
+
+            return new IPatternMatchType.Open(
+                int.Parse(maxMismatch ?? "1"),
+                bool.Parse(allowsEmpty ?? "false"));
         }
 
         internal static Cardinality ExtractCardinality(XElement element)

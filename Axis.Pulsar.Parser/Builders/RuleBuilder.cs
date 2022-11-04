@@ -27,11 +27,11 @@ namespace Axis.Pulsar.Parser.Builders
         /// <summary>
         /// Replaces the underlying rule with a pattern rule
         /// </summary>
-        public RuleBuilder HavingPatternRule(string regexPattern, Cardinality? matchCardinality = null)
+        public RuleBuilder HavingPatternRule(string regexPattern, IPatternMatchType matchType = null)
         {
             _rule = new PatternRule(
                 new Regex(regexPattern),
-                matchCardinality ?? Cardinality.OccursAtLeastOnce());
+                matchType ?? new IPatternMatchType.Open(1));
             return this;
         }
 

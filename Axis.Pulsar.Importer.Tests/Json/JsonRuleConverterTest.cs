@@ -65,7 +65,7 @@ namespace Axis.Pulsar.Importer.Tests.Json
                 as Pattern;
             Assert.AreEqual(RuleType.Pattern, obj.Type);
             Assert.AreEqual("\\w+", obj.Regex);
-            Assert.IsFalse(obj.IsCaseSensitive);
+            Assert.IsTrue(obj.IsCaseSensitive);
 
             obj = JsonConvert
                 .DeserializeObject<IRule>(RegexRule2, Settings)
@@ -89,8 +89,10 @@ namespace Axis.Pulsar.Importer.Tests.Json
     ""Type"": ""Pattern"",
     ""Regex"": ""\\w{1, 5}_\\d+"",
     ""IsCaseSensitive"": true,
-    ""MinMatch"": 3,
-    ""MaxMatch"": null
+    ""MatchType"": {
+        ""MinMatch"": 3,
+        ""MaxMatch"": 5
+    }
 }
 ";
         #endregion

@@ -24,6 +24,7 @@ namespace Axis.Pulsar.Importer.Common.Antlr
         public const string SYMBOL_NAME_TERMINAL = "terminal";
         public const string SYMBOL_NAME_REF = "ref";
         public const string SYMBOL_NAME_PATTERN = "pattern";
+        public const string SYMBOL_NAME_PATTERN_VALUE = "pattern-value";
         public const string SYMBOL_NAME_SENSITIVE_LITERAL = "sensitive-literal";
         public const string SYMBOL_NAME_INSENSITIVE_LITERAL = "insensitive-literal";
         public const string SYMBOL_NAME_LINE_INDENT_SPACE = "line-indent-space";
@@ -31,6 +32,7 @@ namespace Axis.Pulsar.Importer.Common.Antlr
         public const string SYMBOL_NAME_RULE_END = "rule-end";
         public const string SYMBOL_NAME_SYMBOL_NAME = "symbol-name";
         public const string SYMBOL_NAME_CARDINALITY = "cardinality";
+        public const string SYMBOL_NAME_MATCH_CARDINALITY = "match-cardinality";
         public const string SYMBOL_NAME_SPACE = "space";
         public const string SYMBOL_NAME_TAB = "tab";
         public const string SYMBOL_NAME_WHITE_SPACE = "white-space";
@@ -60,26 +62,36 @@ namespace Axis.Pulsar.Importer.Common.Antlr
                 .ImportGrammar(antlrxBnfStream);
         }
 
-        public IGrammar ImportGrammar(Stream inputStream)
+        public IGrammar ImportGrammar(
+            Stream inputStream,
+            Dictionary<string, IRuleValidator<IRule>> validators = null)
         {
             using var reader = new StreamReader(inputStream);
             var txt = reader.ReadToEnd();
 
-            return new BnfTreeWalker().ExtractGrammar(txt);
+            return new BnfTreeWalker(validators).ExtractGrammar(txt);
         }
 
-        public async Task<IGrammar> ImportGrammarAsync(Stream inputStream)
+        public async Task<IGrammar> ImportGrammarAsync(
+            Stream inputStream,
+            Dictionary<string, IRuleValidator<IRule>> validators = null)
         {
             using var reader = new StreamReader(inputStream);
             var txt = await reader.ReadToEndAsync();
 
-            return new BnfTreeWalker().ExtractGrammar(txt);
+            return new BnfTreeWalker(validators).ExtractGrammar(txt);
         }
 
 
         internal class BnfTreeWalker
         {
             private readonly Dictionary<string, (string name, IRule terminal)> _terminals = new Dictionary<string, (string name, IRule terminal)>();
+            private readonly Dictionary<string, IRuleValidator<IRule>> _validators;
+
+            internal BnfTreeWalker(Dictionary<string, IRuleValidator<IRule>> validators = null)
+            {
+                _validators = validators ?? new Dictionary<string, IRuleValidator<IRule>>();
+            }
 
             internal IGrammar ExtractGrammar(string text)
             {
@@ -114,10 +126,12 @@ namespace Axis.Pulsar.Importer.Common.Antlr
                 var name = node
                     .FirstNode()
                     .TokenValue();
-                return new Production(name, ToRule(rule));
+                return new Production(name, ToRule(rule, _validators.TryGetValue(name, out var validator) ? validator : null));
             }
 
-            private IRule ToRule(IEnumerable<ICSTNode> ruleAlternatives)
+            private IRule ToRule(
+                IEnumerable<ICSTNode> ruleAlternatives,
+                IRuleValidator<IRule> validator = null)
             {
                 return ruleAlternatives
                     .ToArray()
@@ -127,7 +141,7 @@ namespace Axis.Pulsar.Importer.Common.Antlr
                         1 => ToSequence(array[0]),
                         _ => ToChoice(array)
                     })
-                    .Map(expression => new SymbolExpressionRule(expression));
+                    .Map(expression => new SymbolExpressionRule(expression, null, validator));
             }
 
             private SymbolGroup ToSequence(ICSTNode ruleElement, Cardinality? cardinality = null)
@@ -184,7 +198,9 @@ namespace Axis.Pulsar.Importer.Common.Antlr
                 {
                     SYMBOL_NAME_INSENSITIVE_LITERAL => new LiteralRule(terminal.TokenValue().UnescapeInsensitive(), false),
                     SYMBOL_NAME_SENSITIVE_LITERAL => new LiteralRule(terminal.TokenValue().UnescapeSensitive()),
-                    SYMBOL_NAME_PATTERN => new PatternRule(new Regex(terminal.TokenValue().UnescapePattern())),
+                    SYMBOL_NAME_PATTERN => new PatternRule(
+                        new Regex(terminal.FindNode($"{SYMBOL_NAME_PATTERN}.{SYMBOL_NAME_PATTERN_VALUE}").TokenValue()),
+                        ToMatchType(terminal.FindNode($"{SYMBOL_NAME_PATTERN}.{SYMBOL_NAME_MATCH_CARDINALITY}"))),
                     _ => throw new ArgumentException($"Invalid symbol name: {terminal.FirstNode().SymbolName}")
                 };
             }
@@ -201,6 +217,23 @@ namespace Axis.Pulsar.Importer.Common.Antlr
                         _ => throw new ArgumentException($"Invalid cardinality symbol encountered: {cardinality.TokenValue()}")
                     },
                     _ => Cardinality.OccursOnlyOnce()
+                };
+            }
+
+            private IPatternMatchType ToMatchType(ICSTNode matchCardinality)
+            {
+                if (matchCardinality == null)
+                    return IPatternMatchType.Open.DefaultMatch;
+
+                var first = matchCardinality.NodeAt(1).TokenValue();
+                var second = matchCardinality.NodeAt(3)?.TokenValue();
+
+                return second switch
+                {
+                    null => IPatternMatchType.Open.DefaultMatch,
+                    "*" => new IPatternMatchType.Open(int.Parse(first), true),
+                    "+" => new IPatternMatchType.Open(int.Parse(first), false),
+                    _ => new IPatternMatchType.Closed(int.Parse(first), int.Parse(second))
                 };
             }
         }

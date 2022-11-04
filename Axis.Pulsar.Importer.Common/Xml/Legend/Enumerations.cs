@@ -9,6 +9,8 @@ namespace Axis.Pulsar.Importer.Common.Xml.Legend
         public static readonly string PatternElement_Regex = "regex";
         public static readonly string PatternElement_MinMatch = "min-match";
         public static readonly string PatternElement_MaxMatch = "max-match";
+        public static readonly string PatternElement_MaxMismatch = "max-mismatch";
+        public static readonly string PatternElement_AllowsEmpty = "allows-empty";
         public static readonly string PatternElement_CaseSensitive = "case-sensitive";
         #endregion
 

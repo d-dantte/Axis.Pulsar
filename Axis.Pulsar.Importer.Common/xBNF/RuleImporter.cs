@@ -6,6 +6,7 @@ using Axis.Pulsar.Parser.Input;
 using Axis.Pulsar.Parser.Parsers;
 using Axis.Pulsar.Parser.Utils;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -50,23 +51,29 @@ namespace Axis.Pulsar.Importer.Common.xBNF
             BnfParser = BnfGrammar.RootParser();
         }
 
-        public IGrammar ImportGrammar(Stream inputStream)
+        public IGrammar ImportGrammar(
+            Stream inputStream,
+            Dictionary<string, IRuleValidator<IRule>> validators = null)
         {
             using var reader = new StreamReader(inputStream);
             var txt = reader.ReadToEnd();
 
-            return ImportRuleInternal(txt);
+            return ImportRuleInternal(txt, validators);
         }
 
-        public async Task<IGrammar> ImportGrammarAsync(Stream inputStream)
+        public async Task<IGrammar> ImportGrammarAsync(
+            Stream inputStream,
+            Dictionary<string, IRuleValidator<IRule>> validators = null)
         {
             using var reader = new StreamReader(inputStream);
             var txt = await reader.ReadToEndAsync();
 
-            return ImportRuleInternal(txt);
+            return ImportRuleInternal(txt, validators);
         }
 
-        private IGrammar ImportRuleInternal(string text)
+        private IGrammar ImportRuleInternal(
+            string text,
+            Dictionary<string, IRuleValidator<IRule>> validators = null)
         {
             if (!BnfParser.TryParse(new BufferedTokenReader(text.Trim()), out var result))
                 throw new ParseException(result);
@@ -76,7 +83,7 @@ namespace Axis.Pulsar.Importer.Common.xBNF
             return parseResult.Symbol
                 .AllChildNodes()
                 .Where(node => node.SymbolName.Equals(SYMBOL_NAME_PRODUCTION))
-                .Select(ToProduction)
+                .Select(node => ToProduction(node, validators))
                 .Aggregate(
                     GrammarBuilder.NewBuilder(),
                     (builder, production) => builder.HasRoot
@@ -85,7 +92,9 @@ namespace Axis.Pulsar.Importer.Common.xBNF
                 .Build();
         }
 
-        private Production ToProduction(ICSTNode production)
+        private Production ToProduction(
+            ICSTNode production,
+            Dictionary<string, IRuleValidator<IRule>> validators = null)
         {
             if (production is ICSTNode.BranchNode productionNode)
             {
@@ -94,27 +103,35 @@ namespace Axis.Pulsar.Importer.Common.xBNF
                     .FirstNode()
                     .TokenValue()
                     .TrimStart('$');
-                return new(name, ToRule(ruleSymbol));
+
+                return new(name, ToRule(ruleSymbol, validators?.TryGetValue(name, out var validator) == true ? validator : null));
             }
 
             else throw new ArgumentException($"Supplied node type '{production?.GetType()}' is not a '{nameof(ICSTNode.BranchNode)}'");
         }
 
-        private static IRule ToRule(ICSTNode ruleSymbol) => ruleSymbol.FirstNode().SymbolName switch
-        {
-            SYMBOL_NAME_LITERAL => ToLiteral(ruleSymbol.FirstNode()),
+        private static IRule ToRule(
+            ICSTNode ruleSymbol,
+            IRuleValidator<IRule> validator = null)
+            => ruleSymbol.FirstNode().SymbolName switch
+            {
+                SYMBOL_NAME_LITERAL => ToLiteral(ruleSymbol.FirstNode(), validator),
 
-            SYMBOL_NAME_PATTERN => ToPattern(ruleSymbol.FirstNode()),
+                SYMBOL_NAME_PATTERN => ToPattern(ruleSymbol.FirstNode(), validator),
 
-            SYMBOL_NAME_SYMBOL_EXPRESSION => ToSymbolExpression(
-                ruleSymbol.FirstNode(),
-                ExtractRecognitionThreshold(ruleSymbol.LastNode())),
+                SYMBOL_NAME_SYMBOL_EXPRESSION => ToSymbolExpression(
+                    ruleSymbol.FirstNode(),
+                    ExtractRecognitionThreshold(ruleSymbol.LastNode()),
+                    validator),
 
-            _ => throw new System.ArgumentException($"unknown rule type: {ruleSymbol.SymbolName}")
-        };
+                _ => throw new System.ArgumentException($"unknown rule type: {ruleSymbol.SymbolName}")
+            };
 
-        private static SymbolExpressionRule ToSymbolExpression(ICSTNode expression, int? recognitionThreshold)
-            => new SymbolExpressionRule(ToExpression(expression), recognitionThreshold);
+        private static SymbolExpressionRule ToSymbolExpression(
+            ICSTNode expression,
+            int? recognitionThreshold,
+            IRuleValidator<IRule> validator)
+            => new SymbolExpressionRule(ToExpression(expression), recognitionThreshold, validator);
 
         private static ISymbolExpression ToExpression(ICSTNode expressionSymbol) => expressionSymbol.FirstNode().SymbolName switch
         {
@@ -156,24 +173,27 @@ namespace Axis.Pulsar.Importer.Common.xBNF
                 cardinality);
         }
 
-        private static LiteralRule ToLiteral(ICSTNode literal) =>  literal.FirstNode().SymbolName switch
+        private static LiteralRule ToLiteral(ICSTNode literal, IRuleValidator<IRule> validator = null) =>  literal.FirstNode().SymbolName switch
         {
             SYMBOL_NAME_CASE_SENSITIVE => new LiteralRule(
                 literal.FindNode($"{SYMBOL_NAME_CASE_SENSITIVE}.{SYMBOL_NAME_CASE_LITERAL}").TokenValue().UnescapeSensitive(),
-                true),
+                true,
+                validator),
 
             SYMBOL_NAME_CASE_INSENSITIVE => new(
                 literal.FindNode($"{SYMBOL_NAME_CASE_INSENSITIVE}.{SYMBOL_NAME_NON_CASE_LITERAL}").TokenValue().UnescapeInsensitive(),
-                false),
+                false,
+                validator),
 
             _ => throw new System.ArgumentException("Invalid literal-case specifier: "+literal.FirstNode().SymbolName)
         };
 
-        private static PatternRule ToPattern(ICSTNode pattern)
+        private static PatternRule ToPattern(ICSTNode pattern, IRuleValidator<IRule> validator = null)
         {
             return new PatternRule(
                 new System.Text.RegularExpressions.Regex(pattern.FindNode(SYMBOL_NAME_PATTERN_LITERAL).TokenValue().UnescapePattern()),
-                ToMatchCardinality(pattern.FindNode(SYMBOL_NAME_MATCH_CARDINALITY)));
+                ToMatchCardinality(pattern.FindNode(SYMBOL_NAME_MATCH_CARDINALITY)),
+                validator);
         }
 
         private static Cardinality ToCardinality(ICSTNode cardinality)
@@ -181,37 +201,51 @@ namespace Axis.Pulsar.Importer.Common.xBNF
             if (string.IsNullOrEmpty(cardinality.TokenValue()))
                 return Cardinality.OccursOnlyOnce();
 
-            else
+            else if (cardinality.NodeAt(1).SymbolName == "numeric-cardinality")
             {
-                var min = int.Parse(cardinality.NodeAt(1).TokenValue());
+                var ncardinality = cardinality.NodeAt(1);
+                var min = int.Parse(ncardinality.NodeAt(0).TokenValue());
                 var max =
-                    HasOnlyComma(cardinality) ? default(int?) : //null, meaning unbounded
-                    HasCommaAndTrailingCharacter(cardinality) ? int.Parse(cardinality.NodeAt(3).TokenValue()) :
+                    EndsWithComma(ncardinality) ? default(int?) : //null, meaning unbounded
+                    EndsWithCommaAndTrailingCharacter(ncardinality) ? int.Parse(ncardinality.NodeAt(2).TokenValue()) :
                     min;
 
                 return Cardinality.Occurs(min, max);
+            }
+            else //if (cardinality.NodeAt(1).SymbolName == "symbolic-cardinality")
+            {
+                var scardinality = cardinality.NodeAt(1);
+                return scardinality.TokenValue() switch
+                {
+                    "*" => Cardinality.OccursNeverOrMore(),
+                    "?" => Cardinality.OccursOptionally(),
+                    "+" => Cardinality.OccursAtLeastOnce(),
+                    _ => throw new InvalidOperationException($"Invalid cardinality symbol: {scardinality.TokenValue()}")
+                };
             }
         }
 
         /// <summary>
         /// Match-Cardinality defaults to (min=1, max=unbounded).
         /// </summary>
-        private static Cardinality ToMatchCardinality(ICSTNode matchCardinality)
+        private static IPatternMatchType ToMatchCardinality(ICSTNode matchCardinality)
         {
-            var cardinality = matchCardinality.FirstNode();
-            if (string.IsNullOrEmpty(cardinality.TokenValue()))
-                return Cardinality.OccursAtLeastOnce();
+            if (string.IsNullOrEmpty(matchCardinality.TokenValue()))
+                return IPatternMatchType.Open.DefaultMatch;
 
-            else
+            var first = int.Parse(matchCardinality.NodeAt(1).TokenValue());
+            var second =
+                EndsWithComma(matchCardinality) ? default : //null, meaning unbounded
+                EndsWithCommaAndTrailingCharacter(matchCardinality) ? matchCardinality.NodeAt(3).TokenValue() :
+                $"{first}"; // has only initial digits
+
+            return second switch
             {
-                var min = int.Parse(cardinality.NodeAt(1).TokenValue());
-                var max =
-                    HasOnlyComma(cardinality) ? default(int?) : //null, meaning unbounded
-                    HasCommaAndTrailingCharacter(cardinality) ? int.Parse(cardinality.NodeAt(3).TokenValue()) :
-                    min;
-
-                return Cardinality.Occurs(min, max);
-            }
+                "*" => new IPatternMatchType.Open(first, true),
+                "+" => new IPatternMatchType.Open(first),
+                null => new IPatternMatchType.Open(first),
+                _ => new IPatternMatchType.Closed(first, int.Parse(second))
+            };
         }
 
         private static int ToRecognitionThreshold(ICSTNode recognitionThreshold)
@@ -226,16 +260,12 @@ namespace Axis.Pulsar.Importer.Common.xBNF
                     .Map(int.Parse);
         }
 
-        private static bool HasOnlyComma(ICSTNode cardinality)
-        {
-            return ",".Equals(cardinality.NodeAt(2).TokenValue())
-                && cardinality.AllChildNodes().Count() == 3;
-        }
+        private static bool EndsWithComma(ICSTNode cardinality) => cardinality.TokenValue().EndsWith(",");
 
-        private static bool HasCommaAndTrailingCharacter(ICSTNode cardinality)
+        private static bool EndsWithCommaAndTrailingCharacter(ICSTNode cardinality)
         {
-            return ",".Equals(cardinality.NodeAt(2).TokenValue())
-                && !string.IsNullOrEmpty(cardinality.NodeAt(3).TokenValue());
+            var tokens = cardinality.TokenValue();
+            return tokens.Contains(',') && tokens[^1] != ',';
         }
 
         private static int? ExtractRecognitionThreshold(ICSTNode recognitionThreshold)

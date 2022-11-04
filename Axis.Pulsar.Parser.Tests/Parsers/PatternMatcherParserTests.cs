@@ -3,12 +3,9 @@ using Axis.Pulsar.Parser.Input;
 using Axis.Pulsar.Parser.Grammar;
 using Axis.Pulsar.Parser.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using Moq;
+using Axis.Pulsar.Parser.CST;
 
 namespace Axis.Pulsar.Parser.Tests.Parsers
 {
@@ -22,7 +19,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
                 "stuff",
                 new PatternRule(
                     new Regex("[a-z_]\\w*", RegexOptions.IgnoreCase),
-                    Cardinality.OccursOnlyOnce()));
+                    new IPatternMatchType.Open(1)));
 
             Assert.IsNotNull(parser);
         }
@@ -34,7 +31,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             var symbolName = "variableName";
             var terminal = new PatternRule(
                     regex,
-                    Cardinality.OccursOnlyOnce());
+                    new IPatternMatchType.Closed(1, 1));
             var parser = new PatternMatcherParser(symbolName, terminal);
 
             var reader = new BufferedTokenReader("variable = 5;");
@@ -53,7 +50,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
 
             terminal = new PatternRule(
                 regex,
-                Cardinality.OccursOnly(2));
+                new IPatternMatchType.Closed(2, 2));
             parser = new PatternMatcherParser(symbolName, terminal);
 
             reader = new BufferedTokenReader("$VariaBle = 5;");
@@ -68,11 +65,30 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
 
 
             //test 3
+            regex = new Regex("^[a-z_]\\w*$", RegexOptions.IgnoreCase);
+
+            terminal = new PatternRule(
+                regex,
+                new IPatternMatchType.Closed(2, 15));
+            parser = new PatternMatcherParser(symbolName, terminal);
+
+            reader = new BufferedTokenReader("variaBle");
+            succeeded = parser.TryParse(reader, out result);
+            trueResult = result as IResult.Success;
+
+            Assert.IsTrue(succeeded);
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(trueResult.Symbol);
+            Assert.AreEqual(symbolName, trueResult.Symbol.SymbolName);
+            Assert.AreEqual("variaBle", trueResult.Symbol.TokenValue());
+
+
+            //test 4
             regex = new Regex("^\\d{4}([-/]\\d{2})?$", RegexOptions.IgnoreCase);
 
             terminal = new PatternRule(
                 regex,
-                Cardinality.Occurs(4, 7));
+                new IPatternMatchType.Closed(4, 7));
             parser = new PatternMatcherParser(symbolName, terminal);
 
             reader = new BufferedTokenReader("2021- and other stuff");
@@ -86,10 +102,10 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             Assert.AreEqual("2021", trueResult.Symbol.TokenValue());
 
 
-            //test 4
+            //test 5
             terminal = new PatternRule(
                 regex,
-                Cardinality.Occurs(4, 7));
+                new IPatternMatchType.Closed(4, 7));
             parser = new PatternMatcherParser(symbolName, terminal);
 
             reader = new BufferedTokenReader("2021/22 and other stuff");
@@ -101,6 +117,29 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             Assert.IsNotNull(trueResult.Symbol);
             Assert.AreEqual(symbolName, trueResult.Symbol.SymbolName);
             Assert.AreEqual("2021/22", trueResult.Symbol.TokenValue());
+
+
+            //test 6
+            regex = new Regex("^(//|[^/])+$", RegexOptions.IgnoreCase);
+            var mockValidator = new Mock<IRuleValidator<PatternRule>>();
+            mockValidator
+                .Setup(v => v.IsValidCSTNode(It.IsAny<PatternRule>(), It.IsAny<Parser.CST.ICSTNode>()))
+                .Returns(true)
+                .Verifiable();
+
+            terminal = new PatternRule(regex, new IPatternMatchType.Open(2), mockValidator.Object);
+            parser = new PatternMatcherParser(symbolName, terminal);
+
+            reader = new BufferedTokenReader("2021- and other stuff// and other stuffs///");
+            succeeded = parser.TryParse(reader, out result);
+            trueResult = result as IResult.Success;
+
+            Assert.IsTrue(succeeded);
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(trueResult.Symbol);
+            Assert.AreEqual(symbolName, trueResult.Symbol.SymbolName);
+            Assert.AreEqual("2021- and other stuff// and other stuffs//", trueResult.Symbol.TokenValue());
+            mockValidator.Verify();
         }
 
 
@@ -112,7 +151,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             var regex = new Regex("^[a-z_]\\w*$", RegexOptions.IgnoreCase);
             var terminal = new PatternRule(
                     regex,
-                    Cardinality.OccursAtLeastOnce());
+                    new IPatternMatchType.Open(1));
             var parser = new PatternMatcherParser(symbolName, terminal);
 
             var reader = new BufferedTokenReader(" variable = 5;");
@@ -128,7 +167,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             regex = new Regex("^[a-z_]\\w*$", RegexOptions.IgnoreCase);
             terminal = new PatternRule(
                 regex,
-                Cardinality.OccursAtLeastOnce());
+                new IPatternMatchType.Open(1));
             parser = new PatternMatcherParser(symbolName, terminal);
 
             reader = new BufferedTokenReader("1_something");

@@ -146,19 +146,27 @@
   </non-terminal>
 
   <non-terminal name="match-cardinality">
-    <sequence>
-      <symbol name="cardinality"/>
-    </sequence>
-  </non-terminal>
-
-  <non-terminal name="cardinality"> <!-- this is a good place to set a threshold of 1, can also be used to test the feature-->
-    <sequence min-occurs="0" max-occurs="1">
+    <sequence min-occurs="0">
       <symbol name="dot"/>
       <symbol name="digits"/>
       <sequence min-occurs="0" max-occurs="1">
         <symbol name="comma"/>
-        <symbol name="digits" min-occurs="0" max-occurs="1"/>
+        <choice min-occurs="0">
+          <symbol name="digits"/>
+          <symbol name="star"/>
+          <symbol name="plus"/>
+        </choice>
       </sequence>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="cardinality"> <!-- this is a good place to set a threshold of 1, can also be used to test the feature-->
+    <sequence min-occurs="0">
+      <symbol name="dot"/>
+      <choice>
+        <symbol name="numeric-cardinality"/>
+        <symbol name="symbolic-cardinality"/>
+      </choice>
     </sequence>
   </non-terminal>
 
@@ -176,57 +184,69 @@
     </choice>
   </non-terminal>
 
+  <non-terminal name="numeric-cardinality">
+    <sequence>
+      <symbol name="digits"/>
+      <sequence min-occurs="0" max-occurs="1">
+        <symbol name="comma"/>
+        <symbol name="digits" min-occurs="0" max-occurs="1"/>
+      </sequence>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="symbolic-cardinality">
+    <choice>
+      <symbol name="plus"/>
+      <symbol name="star"/>
+      <symbol name="q-mark"/>
+    </choice>
+  </non-terminal>
+
   <!-- Terminals-->
-  <pattern
+  <open-pattern
     name="symbol"
     regex="^\$[0-9a-zA-Z_][\w-]*$"
-    min-match="2"
-    max-match="unbounded"/>
+    max-mismatch="2"/>
 
-  <pattern
+  <open-pattern
     name="whitespace"
     regex="^[ \t]+$"
-    min-match="1"
-    max-match="unbounded"/>
+    max-mismatch="1"/>
 
-  <!-- Recognizes the escape &quot; = ", &amp; = &-->
-  <pattern
+  <!-- Recognizes the escape \", to allow for quotes in the string. All other c# escapes are honored-->
+  <open-pattern
     name="case-literal"
-    regex="^[^&quot;]*$"
-    min-match="1"
-    max-match="unbounded"/>
+    regex="^(\\&quot;|[^&quot;])*$"/>
 
-  <!-- Recognizes the escape &apos; = ', &amp; = &-->
-  <pattern
+  <!-- Recognizes the escape \', to allow for apostrophes in the string. All other c# escapes are honored-->
+  <open-pattern
     name="non-case-literal"
-    regex="^[^']*$"
-    min-match="1"
-    max-match="unbounded"/>
+    regex="^(\\'|[^'])*$"/>
   
-  <!-- Recognizes the escape &sol; = /, &amp; = &-->
-  <pattern
+  <!-- 
+    Recognizes the escape //, to allow for forward-slashes (sol) in the string. All other c# escapes are honored.
+    Note that the this regex must match at least one character
+    -->
+  <open-pattern
     name="pattern-literal"
-    regex="^[^/]*$"
-    min-match="1"
-    max-match="unbounded"/>
+    regex="^(//|[^/])+$"
+    max-mismatch="2"/>
 
-  <pattern
+  <closed-pattern
     name="new-line"
     regex="^(\r\n|\r|\n)$"
     min-match="1"
     max-match="2"/>
 
-  <pattern
+  <open-pattern
     name="digits"
     regex="^\d+$"
-    min-match="1"
-    max-match="2"/>
+    max-mismatch="1"/>
 
-  <pattern
+  <open-pattern
     name="comment"
     regex="^\#[^\n\r]*$"
-    min-match="1"
-    max-match="unbounded"/>
+    max-mismatch="1"/>
 
   <literal
     name="comma"
@@ -279,5 +299,9 @@
   <literal
     name="dot"
     value="."/>
+
+  <literal
+    name="star"
+    value="*"/>
   
 </language>

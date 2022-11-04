@@ -30,7 +30,7 @@ namespace Axis.Pulsar.Importer.Common.Json.Utils
             {
                 RuleType.Literal => jobj.ToObject<Literal>(),
 
-                RuleType.Pattern => jobj.ToObject<Pattern>(),
+                RuleType.Pattern => ReadPattern(jobj),
 
                 RuleType.Ref => jobj.ToObject<Ref>(),
 
@@ -52,6 +52,52 @@ namespace Axis.Pulsar.Importer.Common.Json.Utils
         {
             var jobj = JObject.FromObject(value);
             jobj.WriteTo(writer, serializer.Converters.ToArray()); //what's the impact of omitting the converters?
+        }
+
+        private Pattern ReadPattern(JObject ruleObject)
+        {
+            var matchTypeJobj = ruleObject[nameof(Pattern.MatchType)] as JObject;
+            IMatchType matchType;
+            if (matchTypeJobj == null)
+                matchType = new IMatchType.OpenMatchType();
+
+            else
+            {
+                var maxMisMatchProp = nameof(IMatchType.OpenMatchType.MaxMismatch);
+                var allowsEmptyProp = nameof(IMatchType.OpenMatchType.AllowsEmpty);
+                var maxMatchProp = nameof(IMatchType.ClosedMatchType.MaxMatch);
+                var minMatchProp = nameof(IMatchType.ClosedMatchType.MinMatch);
+                matchType =  matchTypeJobj.ContainsKey(maxMatchProp)
+                    ? new IMatchType.ClosedMatchType
+                    {
+                        MaxMatch = matchTypeJobj[maxMatchProp].Value<int>(),
+                        MinMatch = matchTypeJobj.TryGetValue(minMatchProp, out var value)
+                            ? value.Value<int>()
+                            : 1
+                    }
+                    : new IMatchType.OpenMatchType
+                    {
+                        MaxMismatch = matchTypeJobj.TryGetValue(maxMisMatchProp, out value)
+                            ? value.Value<int>()
+                            : 1,
+                        AllowsEmpty = matchTypeJobj.TryGetValue(allowsEmptyProp, out value)
+                            ? value.Value<bool>()
+                            : false,
+                    };
+            }
+
+            var regexProp = nameof(Pattern.Regex);
+            var caseSensitiveProp = nameof(Pattern.IsCaseSensitive);
+            return new Pattern
+            {
+                MatchType = matchType,
+                Regex = ruleObject.ContainsKey(regexProp)
+                    ? ruleObject[regexProp].Value<string>()
+                    : null,
+                IsCaseSensitive = ruleObject.ContainsKey(caseSensitiveProp)
+                    ? ruleObject[caseSensitiveProp].Value<bool>()
+                    : true
+            };
         }
     }
 }

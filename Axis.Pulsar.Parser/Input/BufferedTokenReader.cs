@@ -102,6 +102,72 @@ namespace Axis.Pulsar.Parser.Input
             }
         }
 
+
+        /// <summary>
+        /// Reads a number of tokens from the current position.
+        /// </summary>
+        /// <param name="tokenCount">the number of tokens to read</param>
+        /// <param name="failOnInsufficientTokens">If the number of tokens read are not equal to <paramref name="tokenCount"/>, fail depending on this value</param>
+        /// <param name="tokens">The successfully read tokens</param>
+        /// <returns>true if a token was read, false if not. Note that partial reads are not supported - it's an all or nothing process.</returns>
+        public bool TryNextTokens(int tokenCount, bool failOnInsufficientTokens, out char[] tokens)
+        {
+            try
+            {
+                tokens = new char[tokenCount];
+
+                if (tokenCount == 0)
+                {
+                    tokens = Array.Empty<char>();
+                    return true;
+                }
+
+                int index = 0;
+
+                //get as many characters as are available in the buffer
+                for (int bufferOffset = _position + 1;
+                    bufferOffset < _buffer.Count && index < tokenCount;
+                    index++, bufferOffset++)
+                {
+                    tokens[index] = _buffer[bufferOffset];
+                }
+
+                //get the remaining characters from the enumerator if possible
+                for (; index < tokenCount && _source.MoveNext(); index++)
+                {
+                    tokens[index] = _source.Current;
+                    _buffer.Add(_source.Current);
+                }
+
+                // If we couldn't read the desired number of characters, exit without updating the position
+                // ps - throwing and catching exceptions is costly, so i use a condition here to decide if we exit
+                // pps - note that 'index' currently holds the number of items read
+                if (failOnInsufficientTokens && index < tokenCount)
+                {
+                    tokens = null;
+                    return false;
+                }
+
+                //else update the position and return the read characters.
+                else
+                {
+                    if (index == 0)
+                        tokens = Array.Empty<char>();
+
+                    else if (index < tokenCount)
+                        tokens = tokens[..index];
+
+                    _position += index;
+                    return true;
+                }
+            }
+            catch
+            {
+                tokens = null;
+                return false;
+            }
+        }
+
         /// <summary>
         /// Resets the position to -1, the starting position.
         /// </summary>

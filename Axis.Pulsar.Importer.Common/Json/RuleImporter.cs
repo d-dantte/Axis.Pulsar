@@ -24,46 +24,63 @@ namespace Axis.Pulsar.Importer.Common.Json
             }
         };
 
-        public IGrammar ImportGrammar(Stream inputStream)
+        public IGrammar ImportGrammar(
+            Stream inputStream,
+            Dictionary<string, IRuleValidator<Parser.Grammar.IRule>> validators = null)
         {
             using var reader = new StreamReader(inputStream);
             var json = reader.ReadToEnd();
             var grammar = JsonConvert.DeserializeObject<Models.Grammar>(json, SerializerSettings);
 
-            return ToGrammar(grammar);
+            return ToGrammar(grammar, validators);
         }
 
-        public async Task<IGrammar> ImportGrammarAsync(Stream inputStream)
+        public async Task<IGrammar> ImportGrammarAsync(
+            Stream inputStream,
+            Dictionary<string, IRuleValidator<Parser.Grammar.IRule>> validators = null)
         {
             using var reader = new StreamReader(inputStream);
             var json = await reader.ReadToEndAsync();
             var grammar = JsonConvert.DeserializeObject<Models.Grammar>(json, SerializerSettings);
 
-            return ToGrammar(grammar);
+            return ToGrammar(grammar, validators);
         }
 
-        public static Parser.Grammar.IGrammar ToGrammar(Models.Grammar grammar)
+        public static IGrammar ToGrammar(
+            Grammar grammar,
+            Dictionary<string, IRuleValidator<Parser.Grammar.IRule>> validators = null)
         {
             // Assume that the root production will always appear first in the production collection
             return grammar.Productions
                 .Aggregate(
                     GrammarBuilder.NewBuilder(),
-                    (builder, production) => builder.WithProduction(production.Name, ToRule(production.Rule)))
+                    (builder, production) => builder.WithProduction(
+                        production.Name,
+                        ToRule(
+                            production.Rule,
+                            validators?.TryGetValue(production.Name, out var validator) == true ? validator: null)))
                 .WithRoot(grammar.Productions[0].Name)
                 .Build();
         }
 
-        public static Parser.Grammar.IRule ToRule(Models.IRule rule)
+        public static Parser.Grammar.IRule ToRule(Models.IRule rule, IRuleValidator<Parser.Grammar.IRule> validator)
         {
             return rule switch
             {
-                Literal l => new LiteralRule(l.Value, l.IsCaseSensitive),
+                Literal l => new LiteralRule(
+                    l.Value,
+                    l.IsCaseSensitive,
+                    validator),
 
                 Pattern p => new PatternRule(
                     new Regex(p.Regex, p.IsCaseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase),
-                    Cardinality.Occurs(p.MinMatch, p.MaxMatch)),
+                    ToMatchType(p.MatchType),
+                    validator),
 
-                Expression e => new SymbolExpressionRule(ToExpression(e.Grouping), e.RecognitionThreshold),
+                Expression e => new SymbolExpressionRule(
+                    ToExpression(e.Grouping),
+                    e.RecognitionThreshold,
+                    validator),
 
                 _ => throw new Exception($"Invalid base rule: {rule.GetType()}")
             };
@@ -90,6 +107,24 @@ namespace Axis.Pulsar.Importer.Common.Json
                     g.Rules.Select(ToExpression).ToArray()),
 
                 _ => throw new Exception($"Invalid Expression: {expression}")
+            };
+        }
+
+        public static IPatternMatchType ToMatchType(IMatchType matchType)
+        {
+            return matchType switch
+            {
+                IMatchType.OpenMatchType open => new IPatternMatchType.Open(
+                    open.MaxMismatch,
+                    open.AllowsEmpty),
+
+                IMatchType.ClosedMatchType closed => new IPatternMatchType.Closed(
+                    closed.MinMatch,
+                    closed.MaxMatch),
+
+                null => IPatternMatchType.Open.DefaultMatch,
+
+                _ => throw new ArgumentException($"Invalid match type: {matchType}")
             };
         }
     }

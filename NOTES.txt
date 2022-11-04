@@ -35,6 +35,8 @@
 	   exceptions, array out of bounds exception, class cast exception, etc...
 
 
+
+
 TODO
 1. Add support to Choice/Set recognizers for acknowledging, and stopping on partial failures - i.e treat them as HARD failures.
 2. Find a more complex grammar, translate it into xBNF or Xml, build the grammar, and test out the performance and correctness
@@ -42,11 +44,30 @@ TODO
 3. Incrementally add language validation for edge cases - e.g, when symbols with 0 min cardinality being placed in a row of at least 2, 
    there tends to be infinite loop when these are "children" of a symbol with unbounded max-cardinality.
 4. Add and refine the code comments/documentations.
-5. Publish to nuget.
+5. Publish to nuget. 
+   [Done]
 6. Patterns such as '^(//|[^/])*$', with a min-match of 1, will fail if given strings like this '//stuff', which are meant to be correct.
    The reason is that the min-match forces the parser to pull in a single character first, which is the terminating character. How do we
-   work around this? 
+   work around this?
+   Solution: min-match also, upon failure, forces the pattern parser to detect at least "min-match" number of characters before reporting a failure.
+   [Done]
 
 7. Validation Rules
 	1. rules shouldn't refer to themselves unless there is some choice that terminates the recursion within the rule.
 	2. 
+
+8. For xBnf, Add suport for short-hand notations for zero-or-more (*), one-or-more (+), zero-or-one (?).
+9. Add symbol validators: these are essentially lambda functions that take a symbol instance, perform some form of validation, and return
+   true or false. If true, the symbol is allowed to be created, else the parsing of that symbol fails. This mechanism should be baked into
+   the TryParse(xxx) methods of the parsers and recognizers where applicable.
+   [Done]
+10. BNFRule.xml should recognize proper escaping for the rules that need them.
+	a. pattern-literal: recognize // as the escape for /
+	b. case-literal: recognizes \" as escape for "
+	c. non-case-literal: recognizes \' as escape for '
+	[Done]
+11. Pattern rules now fall into 2 categories:
+	1. Open-Pattern: where the number of characters to match is potentially infinite, and a 'maximum-mismatch' that specifies how many 
+	   non-matches the parser should try before either reporting success (with the already matched tokens), or failure (if no token was matched).
+	2. Closed-Pattern: where the number of characters to match is fixed and known, having a max and min value. The parser pulls in the max number
+	   of tokens (or as many as can be pulled from the buffer), and counts backwards towards the min value till a match is found.

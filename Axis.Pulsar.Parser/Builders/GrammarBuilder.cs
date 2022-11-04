@@ -233,7 +233,7 @@ namespace Axis.Pulsar.Parser.Builders
                     PatternRule pattern => new PatternMatcherParser(production.Symbol, pattern),
                     SymbolExpressionRule expression => new ExpressionParser(
                         production.Symbol,
-                        expression.RecognitionThreshold,
+                        expression,
                         CreateRecognizer(expression.Value)),
                     _ => throw new ArgumentException("Invalid rule type: {production.Rule.GetType()}")
                 };

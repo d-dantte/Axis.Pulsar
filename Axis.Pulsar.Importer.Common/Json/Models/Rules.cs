@@ -17,8 +17,25 @@ namespace Axis.Pulsar.Importer.Common.Json.Models
 
         public string Regex { get; set; }
         public bool IsCaseSensitive { get; set; }
-        public int? MaxMatch { get; set; }
-        public int MinMatch { get; set; } = 1;
+
+        public IMatchType MatchType { get; set; }
+    }
+
+
+    public interface IMatchType
+    {
+        public record OpenMatchType : IMatchType
+        {
+            public int MaxMismatch { get; set; } = 1;
+
+            public bool AllowsEmpty { get; set; } = false;
+        }
+
+        public record ClosedMatchType : IMatchType
+        {
+            public int MaxMatch { get; set; } = 1;
+            public int MinMatch { get; set; } = 1;
+        }
     }
 
     public record Ref : IRule

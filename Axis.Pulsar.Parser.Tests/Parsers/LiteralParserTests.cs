@@ -2,6 +2,8 @@
 using Axis.Pulsar.Parser.Input;
 using Axis.Pulsar.Parser.Grammar;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Axis.Pulsar.Parser.CST;
+using Moq;
 
 namespace Axis.Pulsar.Parser.Tests.Parsers
 {
@@ -38,10 +40,16 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             Assert.AreEqual(4, reader.Position);
 
             //case insensitivity test
+            var mockValidator = new Mock<IRuleValidator<LiteralRule>>();
+            mockValidator
+                .Setup(v => v.IsValidCSTNode(It.IsAny<LiteralRule>(), It.IsAny<ICSTNode>()))
+                .Returns(true)
+                .Verifiable();
             terminal =
                 new LiteralRule(
                     "catch",
-                    false);
+                    false,
+                    mockValidator.Object);
             parser = new LiteralParser("catch", terminal);
 
             reader = new BufferedTokenReader("CATCH (Exception e){}");
@@ -54,6 +62,7 @@ namespace Axis.Pulsar.Parser.Tests.Parsers
             Assert.IsNotNull(success.Symbol);
             Assert.AreEqual("CATCH", success.Symbol.TokenValue());
             Assert.AreEqual(4, reader.Position);
+            mockValidator.Verify();
         }
 
         [TestMethod]

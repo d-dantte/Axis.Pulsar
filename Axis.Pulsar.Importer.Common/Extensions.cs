@@ -35,15 +35,6 @@ namespace Axis.Pulsar.Importer.Common
             }
         }
 
-        public static string TokenValue(this ICSTNode node) => node switch
-        {
-            ICSTNode.LeafNode leaf => leaf.Tokens,
-
-            ICSTNode.BranchNode branch => branch.AggregateTokens,
-
-            _ => throw new ArgumentException($"Invalid node type: {node?.GetType()}")
-        };
-
         public static TValue GetOrAdd<TKey, TValue>(this
             Dictionary<TKey, TValue> dictionary,
             TKey key,

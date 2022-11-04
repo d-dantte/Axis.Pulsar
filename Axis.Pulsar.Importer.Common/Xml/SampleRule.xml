@@ -111,31 +111,27 @@
 
 
   <!-- Terminals-->
-  <pattern
+  <open-pattern
     name="symbol"
     regex="^\$[0-9a-zA-Z_](\w|-)*$"
-    min-match="2"
-    max-match="unbounded"/>
+    max-mismatch="2"/>
 
-  <pattern
+  <open-pattern
     name="whitespace"
     regex="^[ \t]+$"
-    min-match="1"
-    max-match="unbounded"/>
+    max-mismatch="1"/>
 
-  <pattern
+  <open-pattern
     name="string-literal"
     regex="^([^&quot;]|&quot;&quot;)*$"
-    min-match="1"
-    max-match="unbounded"/>
+    max-mismatch="1"/>
 
-  <pattern
+  <open-pattern
     name="pattern-literal"
     regex="^([^']|'')*$"
-    min-match="1"
-    max-match="unbounded"/>
+    max-mismatch="1"/>
 
-  <pattern 
+  <closed-pattern 
     name="new-line"
     regex="^(\r\n|\r|\n)$"
     min-match="1"

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.ExceptionServices;
+using System.Text;
 
 namespace Axis.Pulsar.Parser
 {
@@ -126,6 +127,17 @@ namespace Axis.Pulsar.Parser
             return enumerable
                 .All(t => called = predicate.Invoke(t))
                 && called;
+        }
+
+        public static StringBuilder RemoveLast(this StringBuilder sb, int count)
+        {
+            if (sb == null)
+                throw new ArgumentNullException(nameof(sb));
+
+            else if (sb.Length < count)
+                throw new IndexOutOfRangeException();
+
+            return sb.Remove(sb.Length - count, count);
         }
     }
 }

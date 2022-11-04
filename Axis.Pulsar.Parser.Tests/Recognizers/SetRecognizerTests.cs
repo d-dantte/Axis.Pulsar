@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using Axis.Pulsar.Parser.Recognizers;
 using System.Linq;
 using System;
+using Axis.Pulsar.Parser.CST;
 
 namespace Axis.Pulsar.Parser.Tests.Recognizers
 {

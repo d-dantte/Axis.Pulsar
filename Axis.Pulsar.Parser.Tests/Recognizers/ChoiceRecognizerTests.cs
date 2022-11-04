@@ -3,6 +3,7 @@ using Axis.Pulsar.Parser.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Axis.Pulsar.Parser.Recognizers;
 using System;
+using Axis.Pulsar.Parser.CST;
 
 namespace Axis.Pulsar.Parser.Tests.Recognizers
 {

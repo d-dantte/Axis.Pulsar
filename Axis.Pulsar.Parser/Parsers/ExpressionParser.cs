@@ -1,4 +1,5 @@
 ﻿using Axis.Pulsar.Parser.CST;
+using Axis.Pulsar.Parser.Grammar;
 using Axis.Pulsar.Parser.Input;
 using Axis.Pulsar.Parser.Recognizers;
 using System;
@@ -10,17 +11,18 @@ namespace Axis.Pulsar.Parser.Parsers
     /// </summary>
     public class ExpressionParser : IParser
     {
+        private readonly SymbolExpressionRule _rule;
         private readonly IRecognizer _recognizer;
 
         /// <inheritdoc/>
         public string SymbolName { get; }
 
         /// <inheritdoc/>
-        public int? RecognitionThreshold { get; }
+        public int? RecognitionThreshold => _rule.RecognitionThreshold;
 
-        public ExpressionParser(string symbolName, int? recognitionThreshold, IRecognizer recognizer)
+        public ExpressionParser(string symbolName, SymbolExpressionRule rule, IRecognizer recognizer)
         {
-            RecognitionThreshold = recognitionThreshold;
+            _rule = rule ?? throw new ArgumentNullException(nameof(rule));
             _recognizer = recognizer ?? throw new ArgumentNullException(nameof(recognizer));
             SymbolName = symbolName.ThrowIf(
                 string.IsNullOrWhiteSpace,
@@ -65,6 +67,16 @@ namespace Axis.Pulsar.Parser.Parsers
                                 inputPosition: position + 1,
                                 error: new InvalidOperationException($"Invalid result type: {recognizerResult?.GetType()}")))
                 };
+
+                if (result is IResult.Success success2
+                    && _rule.RuleValidator?.IsValidCSTNode(_rule, success2.Symbol) == false)
+                {
+                    result = new IResult.PartialRecognition(
+                        success2.Symbol.TokenValue().Length,
+                        success2.Symbol.SymbolName,
+                        position);
+                    return false;
+                }
 
                 return result is IResult.Success;
             }

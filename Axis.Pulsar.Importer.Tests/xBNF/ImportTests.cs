@@ -12,78 +12,82 @@ namespace Axis.Pulsar.Importer.Tests.xBNF
         [TestMethod]
         public void MiscTest()
         {
-            var timer = System.Diagnostics.Stopwatch.StartNew();
-            var ruleImporter = new Common.xBNF.GrammarImporter();
-            timer.Stop();
-            Console.WriteLine("Time to Create Importer: " + timer.Elapsed);
+            try
+            {
+                var timer = System.Diagnostics.Stopwatch.StartNew();
+                var ruleImporter = new Common.xBNF.GrammarImporter();
+                timer.Stop();
+                Console.WriteLine("Time to Create Importer: " + timer.Elapsed);
 
-            timer.Restart();
-            var x = ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF1)));
-            timer.Stop();
-            Console.WriteLine("Time to Import: " + timer.Elapsed);
-
-
-
-            timer.Restart();
-            ruleImporter = new Common.xBNF.GrammarImporter();
-            timer.Stop();
-            Console.WriteLine("Time to Create Importer: " + timer.Elapsed);
-
-            timer.Restart();
-            x = ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF2)));
-            timer.Stop();
-            Console.WriteLine("Time to Import: " + timer.Elapsed);
+                timer.Restart();
+                var x = ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF1)));
+                timer.Stop();
+                Console.WriteLine("Time to Import: " + timer.Elapsed);
 
 
 
+                timer.Restart();
+                ruleImporter = new Common.xBNF.GrammarImporter();
+                timer.Stop();
+                Console.WriteLine("Time to Create Importer: " + timer.Elapsed);
 
-            timer.Restart();
-            ruleImporter = new Common.xBNF.GrammarImporter();
-            timer.Stop();
-            Console.WriteLine("Time to Create Importer: " + timer.Elapsed);
-
-            timer.Restart();
-            x = ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF3)));
-            timer.Stop();
-            Console.WriteLine("Time to Import: " + timer.Elapsed);
-
-
-
-            timer.Restart();
-            ruleImporter = new Common.xBNF.GrammarImporter();
-            timer.Stop();
-            Console.WriteLine("Time to Create Importer: " + timer.Elapsed);
-
-            timer.Restart();
-            x = ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF4)));
-            timer.Stop();
-            Console.WriteLine("Time to Import: " + timer.Elapsed);
+                timer.Restart();
+                x = ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF2)));
+                timer.Stop();
+                Console.WriteLine("Time to Import: " + timer.Elapsed);
 
 
 
 
-            timer.Restart();
-            ruleImporter = new Common.xBNF.GrammarImporter();
-            timer.Stop();
-            Console.WriteLine("Time to Create Importer: " + timer.Elapsed);
+                timer.Restart();
+                ruleImporter = new Common.xBNF.GrammarImporter();
+                timer.Stop();
+                Console.WriteLine("Time to Create Importer: " + timer.Elapsed);
 
-            timer.Restart();
-            x = ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF5)));
-            timer.Stop();
-            Console.WriteLine("Time to Import: " + timer.Elapsed);
-
-
+                timer.Restart();
+                x = ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF3)));
+                timer.Stop();
+                Console.WriteLine("Time to Import: " + timer.Elapsed);
 
 
-            timer.Restart();
-            ruleImporter = new Common.xBNF.GrammarImporter();
-            timer.Stop();
-            Console.WriteLine("Time to Create Importer: " + timer.Elapsed);
 
-            timer.Restart();
-            Assert.ThrowsException<GrammarValidatoinException>(() => ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF6))));
-            timer.Stop();
-            Console.WriteLine("Time to Import: " + timer.Elapsed);
+                timer.Restart();
+                ruleImporter = new Common.xBNF.GrammarImporter();
+                timer.Stop();
+                Console.WriteLine("Time to Create Importer: " + timer.Elapsed);
+
+                timer.Restart();
+                x = ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF4)));
+                timer.Stop();
+                Console.WriteLine("Time to Import: " + timer.Elapsed);
+
+
+
+                timer.Restart();
+                ruleImporter = new Common.xBNF.GrammarImporter();
+                timer.Stop();
+                Console.WriteLine("Time to Create Importer: " + timer.Elapsed);
+
+                timer.Restart();
+                x = ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF5)));
+                timer.Stop();
+                Console.WriteLine("Time to Import: " + timer.Elapsed);
+
+
+                timer.Restart();
+                ruleImporter = new Common.xBNF.GrammarImporter();
+                timer.Stop();
+                Console.WriteLine("Time to Create Importer: " + timer.Elapsed);
+
+                timer.Restart();
+                Assert.ThrowsException<GrammarValidatoinException>(() => ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF6))));
+                timer.Stop();
+                Console.WriteLine("Time to Import: " + timer.Elapsed);
+            }
+            catch(Exception e)
+            {
+                throw;
+            }
         }
 
 
@@ -91,6 +95,7 @@ namespace Axis.Pulsar.Importer.Tests.xBNF
 @"$grama -> ?[$stuff $other-stuff $more-stuff]
 # comments occupy a whole line.
 $more-stuff -> $stuff
+
 $stuff ::= /bleh/
 $other-stuff ::= ""meh""
 ";
@@ -99,18 +104,20 @@ $other-stuff ::= ""meh""
 @"$grama -> ?[#[$other-stuff $main-stuff].1,4 $nothing  $stuff ]>2
 $stuff -> /\w+/
 $other-stuff -> ""meh""
+
 $main-stuff -> '34'
+
 $nothing -> 'moja hiden'
 ";
 
         public static readonly string SampleBNF3 =
-@"$grama ::= ?[$stuff $other-stuff].1,2>3
+@"$grama ::= ?[$stuff $other-stuff].?>3
 $stuff ::= /bleh+/.4,6
 $other-stuff ::= ""meh""
 ";
 
         public static readonly string SampleBNF4 =
-@"$grama ::= ?[$stuff $other-stuff $main-stuff].1,2>1
+@"$grama ::= ?[$stuff $other-stuff $main-stuff].*
 $stuff ::= /bleh+/.4,6
 $other-stuff ::= ""meh""
 $main-stuff ::= ""hem""
@@ -123,7 +130,7 @@ $main-stuff ::= ""hem""
 # to
 # kick start
 # things
-$grama ::= ?[$stuff $other-stuff $main-stuff].1,2>1
+$grama ::= ?[$stuff $other-stuff $main-stuff].+>1
 $stuff ::= /bleh+/.4,6
 $other-stuff ::= ""meh""
 $main-stuff ::= ""hem""

@@ -116,83 +116,62 @@ namespace Axis.Pulsar.Importer.Tests.Xml
         {
             //occurs once
             var element = new XElement("symbol");
-            var cardinality = XmlBuilder.ExtractMatchCardinality(element);
-            Assert.AreEqual(1, cardinality.MinOccurence);
-            Assert.AreEqual(1, cardinality.MaxOccurence);
+            var closedMatch = XmlBuilder.ExtractClosedMatchType(element);
+            Assert.AreEqual(1, closedMatch.MinMatch);
+            Assert.AreEqual(1, closedMatch.MaxMatch);
 
             //occurs once
             element = new XElement(
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MinMatch, 1),
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MaxMatch, 1));
-            cardinality = XmlBuilder.ExtractMatchCardinality(element);
-            Assert.AreEqual(1, cardinality.MinOccurence);
-            Assert.AreEqual(1, cardinality.MaxOccurence);
+            closedMatch = XmlBuilder.ExtractClosedMatchType(element);
+            Assert.AreEqual(1, closedMatch.MinMatch);
+            Assert.AreEqual(1, closedMatch.MaxMatch);
 
-            //zero or more
+            //1 max-mismatch
+            element = new XElement(
+                "symbol");
+            var openMatch = XmlBuilder.ExtractOpenMatchType(element);
+            Assert.AreEqual(1, openMatch.MaxMismatch);
+            Assert.IsFalse(openMatch.MatchesEmptyTokens);
+
+            //1 max-mismatch
             element = new XElement(
                 "symbol",
-                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MinMatch, 0));
-            cardinality = XmlBuilder.ExtractMatchCardinality(element);
-            Assert.AreEqual(0, cardinality.MinOccurence);
-            Assert.IsNull(cardinality.MaxOccurence);
-
-            //zero or more
-            element = new XElement(
-                "symbol",
-                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MinMatch, 0),
-                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MaxMatch, "unbounded"));
-            cardinality = XmlBuilder.ExtractMatchCardinality(element);
-            Assert.AreEqual(0, cardinality.MinOccurence);
-            Assert.IsNull(cardinality.MaxOccurence);
-
-            //At least
-            element = new XElement(
-                "symbol",
-                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MinMatch, 1),
-                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MaxMatch, "unbounded"));
-            cardinality = XmlBuilder.ExtractMatchCardinality(element);
-            Assert.AreEqual(1, cardinality.MinOccurence);
-            Assert.IsNull(cardinality.MaxOccurence);
-
-            //At least
-            element = new XElement(
-                "symbol",
-                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MinMatch, 1));
-            cardinality = XmlBuilder.ExtractMatchCardinality(element);
-            Assert.AreEqual(1, cardinality.MinOccurence);
-            Assert.IsNull(cardinality.MaxOccurence);
-
-            //between 1 and 5 times
-            element = new XElement(
-                "symbol",
-                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MaxMatch, 5));
-            cardinality = XmlBuilder.ExtractMatchCardinality(element);
-            Assert.AreEqual(1, cardinality.MinOccurence);
-            Assert.AreEqual(5, cardinality.MaxOccurence);
+                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MaxMismatch, 1),
+                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_AllowsEmpty, "true"));
+            openMatch = XmlBuilder.ExtractOpenMatchType(element);
+            Assert.AreEqual(1, openMatch.MaxMismatch);
+            Assert.IsTrue(openMatch.MatchesEmptyTokens);
         }
 
         [TestMethod]
         public void ExtractMatchCardinality_WithInvalidElement_ShouldThrowException()
         {
-            //negative max-match
+            //negative max-mismatch
             var element = new XElement(
                 "symbol",
-                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MaxMatch, -1));
-            Assert.ThrowsException<ArgumentException>(() => XmlBuilder.ExtractMatchCardinality(element));
+                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MaxMismatch, -1));
+            Assert.ThrowsException<ArgumentException>(() => XmlBuilder.ExtractOpenMatchType(element));
 
-            //negative min-match
+            //invalid allows-empty
+            element = new XElement(
+                "symbol",
+                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_AllowsEmpty, "non-bool"));
+            Assert.ThrowsException<FormatException>(() => XmlBuilder.ExtractOpenMatchType(element));
+
+            //negative max-match
+            element = new XElement(
+                "symbol",
+                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MaxMatch, -1));
+            Assert.ThrowsException<ArgumentException>(() => XmlBuilder.ExtractClosedMatchType(element));
+
+            //negative mix-match
             element = new XElement(
                 "symbol",
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MinMatch, -1));
-            Assert.ThrowsException<ArgumentException>(() => XmlBuilder.ExtractMatchCardinality(element));
-
-            //both zero
-            element = new XElement(
-                "symbol",
-                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MinMatch, 0),
-                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MaxMatch, 0));
-            Assert.ThrowsException<ArgumentException>(() => XmlBuilder.ExtractMatchCardinality(element));
+            Assert.ThrowsException<ArgumentException>(() => XmlBuilder.ExtractClosedMatchType(element));
         }
         #endregion
 

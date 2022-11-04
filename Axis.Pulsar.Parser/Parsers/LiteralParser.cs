@@ -37,7 +37,8 @@ namespace Axis.Pulsar.Parser.Parsers
                         new string(tokens),
                         _literalRule.IsCaseSensitive
                             ? StringComparison.InvariantCulture
-                            : StringComparison.InvariantCultureIgnoreCase))
+                            : StringComparison.InvariantCultureIgnoreCase)
+                    && (_literalRule.RuleValidator?.IsValidCSTNode(_literalRule, ICSTNode.Of(SymbolName, new string(tokens))) ?? true))
                 {
                     result = new IResult.Success(
                         ICSTNode.Of(

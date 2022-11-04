@@ -4,23 +4,25 @@
 # Sensitive-value: recognizes the escape sequences: &amp; = &, &quot; = "
 # Insensitive-value: recognizes the escape sequences: &amp; = &, &apos; = '
 #
-$antlr -> +[?[$line-space $comment].0, $production +[?[$line-space $comment].1, $production].0,]
-$production -> +[$symbol-name $line-indent-space $colon $white-space $rule-list +[$line-indent-space $v-bar $white-space $rule-list].0, $rule-end]
-$rule-list -> +[$rule-item +[$white-space $rule-item].0,]
-$rule-item -> +[?[$rule-group $ref $terminal] $cardinality.0,1]
-$rule-group -> +[$l-bracket $white-space.0, $rule-list $white-space.0, $r-bracket]
+$antlr -> +[?[$line-space $comment].* $production +[?[$line-space $comment].1, $production].*]
+$production -> +[$symbol-name $line-indent-space $colon $white-space $rule-list +[$line-indent-space $v-bar $white-space $rule-list].* $rule-end]
+$rule-list -> +[$rule-item +[$white-space $rule-item].*]
+$rule-item -> +[?[$rule-group $ref $terminal] $cardinality.?]
+$rule-group -> +[$l-bracket $white-space.0, $rule-list $white-space.* $r-bracket]
 $terminal -> ?[$pattern $sensitive-literal $insensitive-literal]
 $ref -> $symbol-name
-$pattern -> +[$f-slash $pattern-value $f-slash]
+$pattern -> +[$f-slash $pattern-value $f-slash $match-cardinality.?]
+$match-cardinality -> +[$dot $digits +[$comma ?[$digits $plus $star]].?]
 $sensitive-literal -> +[$d-quote $sensitive-value $d-quote]
 $insensitive-literal -> +[$s-quote $insensitive-value $s-quote]
-$line-indent-space -> +[$line-space ?[$space.1, $tab.1,]]
+$line-indent-space -> +[$line-space ?[$space.1, $tab.+]]
 $line-space -> +[$white-space.0, $new-line]
 $rule-end -> +[$line-indent-space $semi-colon]
 $symbol-name -> /^[a-zA-Z][\w\-]*$/
-$cardinality -> /^[\?\*\+]/
+$cardinality -> /^[\?\*\+]$/
 $space -> /^ $/
 $tab -> /^\t$/
+$digits -> /^\d+$/
 $white-space -> /^[ \t]+$/
 $sensitive-value -> /^[^"]+$/
 $insensitive-value -> /^[^']+$/
@@ -35,3 +37,7 @@ $r-bracket -> ")"
 $f-slash -> "/"
 $s-quote -> "'"
 $d-quote -> '"'
+$dot -> '.'
+$comma -> ','
+$plus -> '+'
+$star -> '*'

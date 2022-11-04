@@ -6,6 +6,7 @@ using Axis.Pulsar.Parser.Recognizers;
 using Moq;
 using Axis.Pulsar.Parser.Input;
 using System.Linq;
+using Axis.Pulsar.Parser.CST;
 
 namespace Axis.Pulsar.Parser.Tests.Recognizers
 {
