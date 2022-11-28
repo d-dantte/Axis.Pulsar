@@ -1,4 +1,5 @@
-﻿using Axis.Pulsar.Parser.Builders;
+﻿using Axis.Pulsar.Parser;
+using Axis.Pulsar.Parser.Builders;
 using Axis.Pulsar.Parser.CST;
 using Axis.Pulsar.Parser.Exceptions;
 using Axis.Pulsar.Parser.Grammar;
@@ -9,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Axis.Pulsar.Importer.Common.xBNF
@@ -35,6 +37,10 @@ namespace Axis.Pulsar.Importer.Common.xBNF
         public const string SYMBOL_NAME_PATTERN_LITERAL = "pattern-literal";
         public const string SYMBOL_NAME_CARDINALITY = "cardinality";
         public const string SYMBOL_NAME_MATCH_CARDINALITY = "match-cardinality";
+        public const string SYMBOL_NAME_PATTERN_FLAGS = "pattern-flags";
+        public const string SYMBOL_NAME_IGNORE_CASE_FLAG = "ignore-case-flag";
+        public const string SYMBOL_NAME_DIGITS = "digits";
+        public const string SYMBOL_NAME_EOF = "eof";
         #endregion
 
         private static readonly IGrammar BnfGrammar;
@@ -143,6 +149,8 @@ namespace Axis.Pulsar.Importer.Common.xBNF
                 expressionSymbol.FirstNode(),
                 ToCardinality(expressionSymbol.LastNode())),
 
+            SYMBOL_NAME_EOF => new EOF(),
+
             _ => throw new System.ArgumentException($"Invalid expression-symbol: {expressionSymbol.SymbolName}")
         };
 
@@ -155,12 +163,17 @@ namespace Axis.Pulsar.Importer.Common.xBNF
                 .Select(ToExpression)
                 .ToArray();
 
+            var minSetCount = groupType
+                .FindNode(SYMBOL_NAME_DIGITS)?
+                .Map(node => node.TokenValue())
+                .Map(int.Parse);
+
             return groupType.SymbolName switch
             {
-                SYMBOL_NAME_SET => SymbolGroup.Set(cardinality, expressions),
-                SYMBOL_NAME_CHOICE => SymbolGroup.Choice(cardinality, expressions),
-                SYMBOL_NAME_SEQUENCE => SymbolGroup.Sequence(cardinality, expressions),
-                _ => throw new System.ArgumentException($"unknown group type: {groupType.SymbolName}")
+                SYMBOL_NAME_SET => new SymbolGroup.Set(cardinality, minSetCount, expressions),
+                SYMBOL_NAME_CHOICE => new SymbolGroup.Choice(cardinality, expressions),
+                SYMBOL_NAME_SEQUENCE => new SymbolGroup.Sequence(cardinality, expressions),
+                _ => throw new ArgumentException($"unknown group type: {groupType.SymbolName}")
             };
         }
 
@@ -173,25 +186,28 @@ namespace Axis.Pulsar.Importer.Common.xBNF
                 cardinality);
         }
 
-        private static LiteralRule ToLiteral(ICSTNode literal, IRuleValidator<IRule> validator = null) =>  literal.FirstNode().SymbolName switch
-        {
-            SYMBOL_NAME_CASE_SENSITIVE => new LiteralRule(
-                literal.FindNode($"{SYMBOL_NAME_CASE_SENSITIVE}.{SYMBOL_NAME_CASE_LITERAL}").TokenValue().UnescapeSensitive(),
-                true,
-                validator),
+        private static LiteralRule ToLiteral(ICSTNode literal, IRuleValidator<IRule> validator = null) 
+            =>  literal.FirstNode().SymbolName switch
+            {
+                SYMBOL_NAME_CASE_SENSITIVE => new LiteralRule(
+                    literal.FindNode($"{SYMBOL_NAME_CASE_SENSITIVE}.{SYMBOL_NAME_CASE_LITERAL}").TokenValue().ApplyEscape(),
+                    true,
+                    validator),
 
-            SYMBOL_NAME_CASE_INSENSITIVE => new(
-                literal.FindNode($"{SYMBOL_NAME_CASE_INSENSITIVE}.{SYMBOL_NAME_NON_CASE_LITERAL}").TokenValue().UnescapeInsensitive(),
-                false,
-                validator),
+                SYMBOL_NAME_CASE_INSENSITIVE => new(
+                    literal.FindNode($"{SYMBOL_NAME_CASE_INSENSITIVE}.{SYMBOL_NAME_NON_CASE_LITERAL}").TokenValue().ApplyEscape(),
+                    false,
+                    validator),
 
-            _ => throw new System.ArgumentException("Invalid literal-case specifier: "+literal.FirstNode().SymbolName)
-        };
+                _ => throw new System.ArgumentException("Invalid literal-case specifier: "+literal.FirstNode().SymbolName)
+            };
 
         private static PatternRule ToPattern(ICSTNode pattern, IRuleValidator<IRule> validator = null)
         {
             return new PatternRule(
-                new System.Text.RegularExpressions.Regex(pattern.FindNode(SYMBOL_NAME_PATTERN_LITERAL).TokenValue().UnescapePattern()),
+                new Regex(
+                    pattern.FindNode(SYMBOL_NAME_PATTERN_LITERAL).TokenValue().ApplyPatternEscape(),
+                    ToRegexOptions(pattern.FindNode(SYMBOL_NAME_PATTERN_FLAGS))),
                 ToMatchCardinality(pattern.FindNode(SYMBOL_NAME_MATCH_CARDINALITY)),
                 validator);
         }
@@ -277,6 +293,35 @@ namespace Axis.Pulsar.Importer.Common.xBNF
                 .LastNode()?
                 .TokenValue()
                 .Map(int.Parse);
+        }
+
+        private static RegexOptions ToRegexOptions(ICSTNode patternFlags)
+        {
+            var options = RegexOptions.Compiled;
+            if (patternFlags == null)
+                return options;
+
+            var flags = patternFlags
+                .AllChildNodes()
+                .Select(node => node.SymbolName)
+                .Map(names => new HashSet<string>(names));
+
+            if (flags.Contains("ignore-case-flag"))
+                options |= RegexOptions.IgnoreCase;
+
+            if (flags.Contains("multi-line-flag"))
+                options |= RegexOptions.Multiline;
+
+            if (flags.Contains("single-line-flag"))
+                options |= RegexOptions.Singleline;
+
+            if (flags.Contains("explicit-capture-flag"))
+                options |= RegexOptions.ExplicitCapture;
+
+            if (flags.Contains("ignore-whitespace-flag"))
+                options |= RegexOptions.IgnorePatternWhitespace;
+
+            return options;
         }
     }
 }

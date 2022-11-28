@@ -47,6 +47,11 @@ namespace Axis.Pulsar.Importer.Common.Json.Models
         public int MinOccurs { get; set; } = 1;
     }
 
+    public record EOF : IRule
+    {
+        public RuleType Type => RuleType.EOF;
+    }
+
     public enum GroupMode
     {
         Set,
@@ -64,6 +69,7 @@ namespace Axis.Pulsar.Importer.Common.Json.Models
 
         public int? MaxOccurs { get; set; } = 1;
         public int MinOccurs { get; set; } = 1;
+        public int? MinContentCount { get; set; } = 1;
         public IRule[] Rules
         {
             get => _rules;

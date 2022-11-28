@@ -5,7 +5,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
-    <Version>0.4.0</Version>
+    <Version>0.5.3</Version>
     <Description>Dynamic Parser Builder Library</Description>
     <PackageReleaseNotes></PackageReleaseNotes>
     <RepositoryUrl>https://github.com/d-dantte/Axis.Pulsar</RepositoryUrl>

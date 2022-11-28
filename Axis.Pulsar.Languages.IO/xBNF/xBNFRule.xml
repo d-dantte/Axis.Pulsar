@@ -1,0 +1,360 @@
+﻿<?xml version="1.0"?>
+
+<language root="bnf">
+  
+  <!--Non-Terminals-->
+  <non-terminal name="bnf">
+      <sequence>
+        <choice>
+          <symbol name="production"/>
+          <symbol name="comment"/>
+        </choice>
+        <sequence min-occurs="0" max-occurs="unbounded">
+          <symbol name="new-line" max-occurs="unbounded"/>
+          <choice min-occurs="0" max-occurs="1">
+            <symbol name="production"/>
+            <symbol name="comment"/>
+          </choice>
+        </sequence>
+      </sequence>
+  </non-terminal>
+
+  <non-terminal name="production">
+    <sequence>
+      <symbol name="symbol"/>
+      <symbol name="whitespace"/>
+      <symbol name="rewrite-op"/>
+      <symbol name="whitespace"/>
+      <symbol name="rule"/>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="rule">
+    <choice>
+      <symbol name="literal"/>
+      <symbol name="pattern"/>
+      <symbol name="eof"/>
+      <sequence>
+        <choice>
+          <symbol name="symbol-ref"/>
+          <symbol name="grouping"/>
+        </choice>
+        <symbol name="recognition-threshold"/>
+      </sequence>
+    </choice>      
+  </non-terminal>
+
+  <non-terminal name="symbol-ref">
+    <sequence>
+      <symbol name="symbol"/>
+      <symbol name="cardinality"/>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="grouping">
+    <sequence>
+      <choice>
+        <symbol name="choice"/>
+        <symbol name="set"/>
+        <symbol name="sequence"/>
+      </choice>
+      <symbol name="cardinality"/>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="choice">
+    <sequence>
+      <symbol name="q-mark"/>
+      <symbol name="ls-brace"/>
+      <symbol name="whitespace" min-occurs="0"/>
+      <symbol name="expression-rule"/>
+      <sequence min-occurs="0" max-occurs="unbounded">
+        <symbol name="whitespace"/>
+        <symbol name="expression-rule"/>
+      </sequence>
+      <symbol name="whitespace" min-occurs="0"/>
+      <symbol name="rs-brace"/>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="set">
+    <sequence>
+      <symbol name="hash"/>
+      <symbol name="digits" min-occurs="0"/>
+      <symbol name="ls-brace"/>
+      <symbol name="whitespace" min-occurs="0"/>
+      <symbol name="expression-rule"/>
+      <sequence min-occurs="0" max-occurs="unbounded">
+        <symbol name="whitespace"/>
+        <symbol name="expression-rule"/>
+      </sequence>
+      <symbol name="whitespace" min-occurs="0"/>
+      <symbol name="rs-brace"/>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="sequence">
+    <sequence>
+      <symbol name="plus"/>
+      <symbol name="ls-brace"/>
+      <symbol name="whitespace" min-occurs="0"/>
+      <symbol name="expression-rule"/>
+      <sequence min-occurs="0" max-occurs="unbounded">
+        <symbol name="whitespace"/>
+        <symbol name="expression-rule"/>
+      </sequence>
+      <symbol name="whitespace" min-occurs="0"/>
+      <symbol name="rs-brace"/>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="expression-rule">
+    <choice>
+      <symbol name="literal"/>
+      <symbol name="pattern"/>
+      <symbol name="eof"/>
+      <symbol name="symbol-ref"/>
+      <symbol name="grouping"/>
+    </choice>
+  </non-terminal>
+
+  <non-terminal name="literal">
+    <choice>
+      <symbol name="case-sensitive" />
+      <symbol name="case-insensitive" />
+    </choice>
+  </non-terminal>
+
+  <non-terminal name="case-sensitive">
+    <sequence>
+      <symbol name="quote"/>
+      <!--this is a terminal regex that describes escapable strings that lie between the " symbol. -->
+      <symbol name="case-literal" min-occurs="0"/>
+      <symbol name="quote"/>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="case-insensitive">
+    <sequence>
+      <symbol name="squote"/>
+      <!--this is a terminal regex that describes escapable strings that lie between the ' symbol. -->
+      <symbol name="non-case-literal" min-occurs="0"/>
+      <symbol name="squote"/>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="pattern">
+    <sequence>
+      <symbol name="fslash"/>
+      <!--this is a terminal regex that describes escapable strings that lie between the / symbol. -->
+      <symbol name="pattern-literal" min-occurs="0"/>
+      <symbol name="fslash"/>
+      <symbol name="pattern-flags" min-occurs="0"/>
+      <symbol name="match-cardinality"/>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="pattern-flags">
+    <sequence>
+      <symbol name="dot"/>
+      <set min-recognition-count="1">
+        <symbol name="ignore-case-flag"/>
+        <symbol name="multi-line-flag"/>
+        <symbol name="single-line-flag"/>
+        <symbol name="explicit-capture-flag"/>
+        <symbol name="ignore-whitespace-flag"/>
+        <!-- eventually other flags can come here-->
+      </set>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="match-cardinality">
+    <sequence min-occurs="0">
+      <symbol name="dot"/>
+      <symbol name="digits"/>
+      <sequence min-occurs="0" max-occurs="1">
+        <symbol name="comma"/>
+        <choice min-occurs="0">
+          <symbol name="digits"/>
+          <symbol name="star"/>
+          <symbol name="plus"/>
+        </choice>
+      </sequence>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="cardinality"> <!-- this is a good place to set a threshold of 1, can also be used to test the feature-->
+    <sequence min-occurs="0">
+      <symbol name="dot"/>
+      <choice>
+        <symbol name="numeric-cardinality"/>
+        <symbol name="symbolic-cardinality"/>
+      </choice>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="recognition-threshold">
+    <sequence min-occurs="0" max-occurs="1">
+      <symbol name="r-chevron"/>
+      <symbol name="digits"/>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="rewrite-op">
+    <choice>
+      <symbol name="assign"/>
+      <symbol name="arrow"/>
+    </choice>
+  </non-terminal>
+
+  <non-terminal name="numeric-cardinality">
+    <sequence>
+      <symbol name="digits"/>
+      <sequence min-occurs="0" max-occurs="1">
+        <symbol name="comma"/>
+        <symbol name="digits" min-occurs="0" max-occurs="1"/>
+      </sequence>
+    </sequence>
+  </non-terminal>
+
+  <non-terminal name="symbolic-cardinality">
+    <choice>
+      <symbol name="plus"/>
+      <symbol name="star"/>
+      <symbol name="q-mark"/>
+    </choice>
+  </non-terminal>
+
+  <!-- Terminals-->
+  <open-pattern
+    name="symbol"
+    regex="^\$[0-9a-zA-Z_][\w-]*$"
+    max-mismatch="2"/>
+
+  <open-pattern
+    name="whitespace"
+    regex="^[ \t]+$"
+    max-mismatch="1"/>
+
+  <!-- Recognizes the escape \", to allow for quotes in the string. All other c# escapes are honored-->
+  <open-pattern
+    name="case-literal"
+    regex="^(\\&quot;|[^&quot;])*$"/>
+
+  <!-- Recognizes the escape \', to allow for apostrophes in the string. All other c# escapes are honored-->
+  <open-pattern
+    name="non-case-literal"
+    regex="^(\\'|[^'])*$"/>
+  
+  <!-- 
+    Recognizes the escape //, to allow for forward-slashes (sol) in the string. All other c# escapes are honored.
+    Note that the this regex must match at least one character
+    -->
+  <open-pattern
+    name="pattern-literal"
+    regex="^(//|[^/])+$"
+    max-mismatch="2"/>
+
+  <closed-pattern
+    name="new-line"
+    regex="^(\r\n|\r|\n)$"
+    min-match="1"
+    max-match="2"/>
+
+  <open-pattern
+    name="digits"
+    regex="^\d+$"
+    max-mismatch="1"/>
+
+  <open-pattern
+    name="comment"
+    regex="^\#[^\n\r]*$"
+    max-mismatch="1"/>
+
+  <literal
+    name="ignore-case-flag"
+    value="i"
+    case-sensitive="false"/>
+
+  <literal
+    name="explicit-capture-flag"
+    value="n"
+    case-sensitive="false"/>
+
+  <literal
+    name="multi-line-flag"
+    value="m"
+    case-sensitive="false"/>
+
+  <literal
+    name="single-line-flag"
+    value="s"
+    case-sensitive="false"/>
+
+  <literal
+    name="ignore-whitespace-flag"
+    value="x"
+    case-sensitive="false"/>
+
+  <literal
+    name="comma"
+    value=","/>
+
+  <literal
+    name="assign"
+    value="::="/>
+
+  <literal
+    name="arrow"
+    value="->"/>
+
+  <literal
+    name="q-mark"
+    value="?"/>
+
+  <literal
+    name="fslash"
+    value="/"/>
+
+  <literal
+    name="plus"
+    value="+"/>
+
+  <literal
+    name="hash"
+    value="#"/>
+
+  <literal
+    name="squote"
+    value="'"/>
+
+  <literal
+    name="quote"
+    value="&quot;"/>
+
+  <literal
+    name="r-chevron"
+    value="&gt;"/>
+
+  <literal
+    name="ls-brace"
+    value="["/>
+
+  <literal
+    name="rs-brace"
+    value="]"/>
+
+  <literal
+    name="dot"
+    value="."/>
+
+  <literal
+    name="star"
+    value="*"/>
+
+  <literal
+    name="eof"
+    value="EOF"
+    case-sensitive="true"/>
+  
+</language>

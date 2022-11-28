@@ -3,6 +3,7 @@ using Axis.Pulsar.Parser.Grammar;
 using System;
 using System.Text;
 using Axis.Pulsar.Parser.CST;
+using System.Text.RegularExpressions;
 
 namespace Axis.Pulsar.Parser.Parsers
 {
@@ -132,7 +133,33 @@ namespace Axis.Pulsar.Parser.Parsers
             return result;
         }
 
-        public override string ToString() => $"/{_terminal.Value}/";
+        public override string ToString() => $"/{_terminal.Value}/{Flags()}.{_terminal.MatchType}";
+
+        private string Flags()
+        {
+            var options = _terminal.Value.Options;
+            if (options == RegexOptions.Compiled)
+                return "";
+
+            var sb = new StringBuilder();
+
+            if (options.HasFlag(RegexOptions.IgnoreCase))
+                sb.Append('i');
+
+            if (options.HasFlag(RegexOptions.IgnorePatternWhitespace))
+                sb.Append('x');
+
+            if (options.HasFlag(RegexOptions.Multiline))
+                sb.Append('m');
+
+            if (options.HasFlag(RegexOptions.Singleline))
+                sb.Append('s');
+
+            if (options.HasFlag(RegexOptions.ExplicitCapture))
+                sb.Append('n');
+
+            return $".{sb}";
+        }
 
     }
 }

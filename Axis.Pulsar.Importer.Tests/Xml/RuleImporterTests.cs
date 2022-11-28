@@ -110,7 +110,7 @@ namespace Axis.Pulsar.Importer.Tests.Xml
         }
         #endregion
 
-        #region Extract Match Cardinality
+        #region Extract Match Type
         [TestMethod]
         public void ExtractMatchCardinality_WithValidElement_ShouldReturnValidCardinality()
         {
@@ -259,29 +259,50 @@ namespace Axis.Pulsar.Importer.Tests.Xml
             var pattern = "abc123{2,5}";
             var element = new XElement(
                 "any-name",
-                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_Regex, pattern),
-                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_CaseSensitive, false));
-            var regex = XmlBuilder.ExtractPatternRegex(element);
-            Assert.IsTrue(regex.Options.HasFlag(RegexOptions.IgnoreCase));
-            Assert.AreEqual(pattern, regex.ToString());
-
-
-            pattern = "abc123{2,5}";
-            element = new XElement(
-                "any-name",
-                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_Regex, pattern),
-                new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_CaseSensitive, true));
-            regex = XmlBuilder.ExtractPatternRegex(element);
-            Assert.IsTrue(regex.Options.HasFlag(RegexOptions.None));
-            Assert.AreEqual(pattern, regex.ToString());
-
-
-            pattern = "abc123{2,5}";
-            element = new XElement(
-                "any-name",
                 new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_Regex, pattern));
+            var regex = XmlBuilder.ExtractPatternRegex(element);
+            var expectedOptions = RegexOptions.Compiled;
+            Assert.AreEqual(expectedOptions, regex.Options);
+            Assert.AreEqual(pattern, regex.ToString());
+
+            element.Add(new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_CaseSensitive, true));
             regex = XmlBuilder.ExtractPatternRegex(element);
-            Assert.IsTrue(regex.Options.HasFlag(RegexOptions.IgnoreCase));
+            Assert.AreEqual(expectedOptions, regex.Options);
+            Assert.AreEqual(pattern, regex.ToString());
+
+            pattern = "abc123{2,5}";
+            expectedOptions |= RegexOptions.IgnoreCase;
+            element.Attribute(Common.Xml.Legend.Enumerations.PatternElement_CaseSensitive).Value = false.ToString();
+            regex = XmlBuilder.ExtractPatternRegex(element);
+            Assert.AreEqual(expectedOptions, regex.Options);
+            Assert.AreEqual(pattern, regex.ToString());
+
+            pattern = "abc123{2,5}";
+            expectedOptions |= RegexOptions.ExplicitCapture;
+            element.Add(new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_ExplicitCapture, true));
+            regex = XmlBuilder.ExtractPatternRegex(element);
+            Assert.AreEqual(expectedOptions, regex.Options);
+            Assert.AreEqual(pattern, regex.ToString());
+
+            pattern = "abc123{2,5}";
+            expectedOptions |= RegexOptions.IgnorePatternWhitespace;
+            element.Add(new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_IgnoreWhitespace, true));
+            regex = XmlBuilder.ExtractPatternRegex(element);
+            Assert.AreEqual(expectedOptions, regex.Options);
+            Assert.AreEqual(pattern, regex.ToString());
+
+            pattern = "abc123{2,5}";
+            expectedOptions |= RegexOptions.Multiline;
+            element.Add(new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_MultiLine, true));
+            regex = XmlBuilder.ExtractPatternRegex(element);
+            Assert.AreEqual(expectedOptions, regex.Options);
+            Assert.AreEqual(pattern, regex.ToString());
+
+            pattern = "abc123{2,5}";
+            expectedOptions |= RegexOptions.Singleline;
+            element.Add(new XAttribute(Common.Xml.Legend.Enumerations.PatternElement_SingleLine, true));
+            regex = XmlBuilder.ExtractPatternRegex(element);
+            Assert.AreEqual(expectedOptions, regex.Options);
             Assert.AreEqual(pattern, regex.ToString());
         }
 

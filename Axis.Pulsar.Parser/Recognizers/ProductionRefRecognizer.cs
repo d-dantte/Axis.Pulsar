@@ -17,29 +17,25 @@ namespace Axis.Pulsar.Parser.Recognizers
         public static readonly string PSEUDO_NAME = "#Ref";
 
         private readonly Grammar.IGrammar _grammar;
+        private readonly Grammar.ProductionRef _ref;
 
         ///<inheritdoc/>
-        public Cardinality Cardinality { get; }
+        public Cardinality Cardinality => _ref.Cardinality;
 
         /// <summary>
         /// The symbol name for the production that this instance refers to.
         /// </summary>
-        public string SymbolRef { get; }
+        public string SymbolRef => _ref.ProductionSymbol;
 
         public ProductionRefRecognizer(
-            string symbolRef,
-            Cardinality cardinality,
+            Grammar.ProductionRef @ref,
             Grammar.IGrammar grammar)
         {
-            Cardinality = cardinality;
+            _ref = @ref ?? throw new ArgumentNullException(nameof(@ref));
             _grammar = grammar ?? throw new ArgumentNullException(nameof(grammar));
-            SymbolRef = symbolRef
-                .ThrowIf(
-                    string.IsNullOrWhiteSpace,
-                    new ArgumentNullException(nameof(symbolRef)))
-                .ThrowIf(
-                    v => !grammar.HasProduction(v),
-                    new ArgumentException($"Invalid {nameof(symbolRef)}: {symbolRef}"));
+            _ = SymbolRef.ThrowIf(
+                v => !grammar.HasProduction(v),
+                new ArgumentException($"Invalid {nameof(@ref)}: {@ref.ProductionSymbol}"));
         }
 
         ///<inheritdoc/>

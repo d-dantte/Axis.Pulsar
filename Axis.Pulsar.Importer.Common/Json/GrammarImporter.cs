@@ -94,15 +94,18 @@ namespace Axis.Pulsar.Importer.Common.Json
                     r.Symbol,
                     Cardinality.Occurs(r.MinOccurs, r.MaxOCcurs)),
 
-                Grouping g when g.Mode == GroupMode.Sequence => SymbolGroup.Sequence(
+                Models.EOF => new Parser.Grammar.EOF(),
+
+                Grouping g when g.Mode == GroupMode.Sequence => new SymbolGroup.Sequence(
                     Cardinality.Occurs(g.MinOccurs, g.MaxOccurs),
                     g.Rules.Select(ToExpression).ToArray()),
 
-                Grouping g when g.Mode == GroupMode.Set => SymbolGroup.Set(
+                Grouping g when g.Mode == GroupMode.Set => new SymbolGroup.Set(
                     Cardinality.Occurs(g.MinOccurs, g.MaxOccurs),
+                    g.MinContentCount,
                     g.Rules.Select(ToExpression).ToArray()),
 
-                Grouping g when g.Mode == GroupMode.Choice => SymbolGroup.Choice(
+                Grouping g when g.Mode == GroupMode.Choice => new SymbolGroup.Choice(
                     Cardinality.Occurs(g.MinOccurs, g.MaxOccurs),
                     g.Rules.Select(ToExpression).ToArray()),
 

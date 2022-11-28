@@ -27,9 +27,10 @@ namespace Axis.Pulsar.Importer.Tests.Antlr
 # some comment
 # some other comment
 grammar
-    : more-stuff
-    | other-stuff
-    | 'meh'
+    > -threshold 5 -stuff 'abc' -other true
+    : more-stuff $EOF
+    | other-stuff $EOF
+    | 'meh' $EOF
     ;
 
 #    comment placed in between
@@ -37,7 +38,7 @@ grammar
 # again
 
 other-stuff
-    : /bleh/
+    : /bleh/.simn
     ;
 
 more-stuff

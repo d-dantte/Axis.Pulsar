@@ -99,7 +99,7 @@ namespace Axis.Pulsar.Parser.Grammar
                     && other.MatchesEmptyTokens.Equals(MatchesEmptyTokens);
             }
 
-            public override string ToString() => $"[{MaxMismatch}, {MatchesEmptyTokens}]";
+            public override string ToString() => $"{MaxMismatch},{(MatchesEmptyTokens ? "*" : "+")}";
 
             public static bool operator ==(Open first, Open second) => first.Equals(second);
             public static bool operator !=(Open first, Open second) => !first.Equals(second);
@@ -147,7 +147,7 @@ namespace Axis.Pulsar.Parser.Grammar
                     && other.MaxMatch.Equals(MaxMatch);
             }
 
-            public override string ToString() => $"[{MinMatch}, {MaxMatch}]";
+            public override string ToString() => $"{MinMatch},{MaxMatch}";
 
             public static bool operator ==(Closed first, Closed second) => first.Equals(second);
             public static bool operator !=(Closed first, Closed second) => !first.Equals(second);

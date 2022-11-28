@@ -107,7 +107,7 @@ namespace Axis.Pulsar.Parser.CST
         {
             return source switch
             {
-                ICSTNode.LeafNode => Enumerable.Empty<ICSTNode>(),
+                ICSTNode.LeafNode => null,
 
                 ICSTNode.BranchNode => source.TryFindNodes(path, out var result) ? result : result,
 
@@ -148,7 +148,7 @@ namespace Axis.Pulsar.Parser.CST
         {
             return source switch
             {
-                ICSTNode.LeafNode => Enumerable.Empty<ICSTNode>(),
+                ICSTNode.LeafNode => null,
 
                 ICSTNode.BranchNode branch => branch.Nodes
                     .Aggregate(
@@ -216,7 +216,7 @@ namespace Axis.Pulsar.Parser.CST
         {
             return source switch
             {
-                ICSTNode.LeafNode => Enumerable.Empty<ICSTNode>(),
+                ICSTNode.LeafNode => null,
                 ICSTNode.BranchNode branch => branch.Nodes,
                 _ => throw new ArgumentException($"Invalid node type: {source?.GetType()}")
             };

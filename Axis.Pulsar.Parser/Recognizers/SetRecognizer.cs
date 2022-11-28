@@ -1,4 +1,5 @@
-﻿using Axis.Pulsar.Parser.Input;
+﻿using Axis.Pulsar.Parser.Grammar;
+using Axis.Pulsar.Parser.Input;
 using Axis.Pulsar.Parser.Utils;
 using System;
 using System.Collections.Generic;
@@ -8,6 +9,13 @@ namespace Axis.Pulsar.Parser.Recognizers
 {
     /// <summary>
     /// Recognizes tokens for a given <see cref="Grammar.SymbolGroup"/> that is configured with <see cref="Grammar.SymbolGroup.GroupingMode.Set"/>.
+    /// <para>
+    /// NOTE: If any given expression is recognized successfully, but it's <see cref="Parser.CST.ICSTNode"/> array is empty - 
+    /// meaning the expression was effectively optional, the set recognizes it as a failed recognition.
+    /// </para>
+    /// <para>
+    /// The bottom line is, DO NOT place optional expressions inside sets
+    /// </para>
     /// </summary>
     public class SetRecognizer : IRecognizer
     {
@@ -17,13 +25,19 @@ namespace Axis.Pulsar.Parser.Recognizers
         public static readonly string PSEUDO_NAME = "#Set";
 
         private readonly IRecognizer[] _recognizers;
+        private readonly SymbolGroup.Set _set;
 
         ///<inheritdoc/>
-        public Cardinality Cardinality { get; }
+        public Cardinality Cardinality => _set.Cardinality;
 
-        public SetRecognizer(Cardinality cardinality, params IRecognizer[] recognizers)
+        /// <summary>
+        /// See <see cref="SymbolGroup.Set.MinContentCount"/>
+        /// </summary>
+        public int? MinContentCount => _set.MinContentCount;
+
+        public SetRecognizer(SymbolGroup.Set set, params IRecognizer[] recognizers)
         {
-            Cardinality = cardinality;
+            _set = set ?? throw new ArgumentNullException(nameof(set));
 
             _recognizers = recognizers
                 .ThrowIf(Extensions.IsNull, new ArgumentNullException(nameof(recognizers)))
@@ -44,46 +58,56 @@ namespace Axis.Pulsar.Parser.Recognizers
 
                 int
                     cycleCount = 0,
-                    setPosition = 0;
+                    cyclePosition = 0;
                 do
                 {
-                    setPosition = tokenReader.Position;
+                    cyclePosition = tokenReader.Position;
                     var tempList = _recognizers.ToList();
                     var index = -1;
                     setResults = new List<IResult.Success>();
                     while (tempList.Count > 0)
                     {
-                        foreach(var tuple in tempList.Select((recognizer, index) => (recognizer.Recognize(tokenReader), index)))
+                        foreach(var tuple in tempList.Select((recognizer, _index) => (recognizer.Recognize(tokenReader), _index)))
                         {
                             (setResult, index) = tuple;
-                            if (setResult is not IResult.FailedRecognition)
-                                break;
+
+                            if (setResult is IResult.FailedRecognition)
+                                continue;
+
+                            else if (setResult is IResult.Success success && success.IsOptionalRecognition)
+                                continue;
+
+                            else break;
                         }
 
                         if (setResult is not IResult.Success)
-                        {
-                            tokenReader.Reset(setPosition);
                             break;
-                        }
 
-                        setResults.Add(setResult as IResult.Success);
-                        tempList.RemoveAt(index);
+                        else
+                        {
+                            setResults.Add(setResult as IResult.Success);
+                            tempList.RemoveAt(index);
+                        }
                     }
 
-                    if (setResult is IResult.Success)
+                    if (setResults.Count >= (MinContentCount ?? _recognizers.Length))
                         results.AddRange(setResults);
 
-                    else break;
+                    else
+                    {
+                        tokenReader.Reset(cyclePosition);
+                        break;
+                    }
                 }
                 while (Cardinality.CanRepeat(++cycleCount));
 
                 #region success
-                var cycles = results.Count / _recognizers.Length;
-                if (Cardinality.IsValidRange(cycles))
+                if (Cardinality.IsValidRange(cycleCount))
                 {
-                    result = results
+                    var recognizedSymbols = results
                         .SelectMany(result => result.Symbols)
-                        .Map(symbols => new IResult.Success(symbols));
+                        .ToArray();
+                    result = new IResult.Success(recognizedSymbols);
                     return true;
                 }
                 #endregion
@@ -127,6 +151,6 @@ namespace Axis.Pulsar.Parser.Recognizers
         }
 
         ///<inheritdoc/>
-        public override string ToString() => Helper.AsString(Grammar.SymbolGroup.GroupingMode.Set, Cardinality, _recognizers);
+        public override string ToString() => $"#{MinContentCount}{Helper.AsString(SymbolGroup.GroupingMode.Set, Cardinality, _recognizers)}";
     }
 }

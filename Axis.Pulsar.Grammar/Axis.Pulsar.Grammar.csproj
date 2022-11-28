@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netcoreapp3.1;net6.0</TargetFrameworks>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Version>0.7.1</Version>
+    <Description>Dynamic Grammar Parser Builder Library</Description>
+    <PackageReleaseNotes></PackageReleaseNotes>
+    <RepositoryUrl>https://github.com/d-dantte/Axis.Pulsar</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/d-dantte/Axis.Pulsar</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Company>Axiis</Company>
+    <Authors>Dantte</Authors>
+    <LangVersion>latest</LangVersion>
+    <PackageReadmeFile>axis.pulsar.grammar.readme.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="GlobalSuppressions.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\axis.pulsar.grammar.readme.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Axis.Luna.Common" Version="6.0.4" />
+  </ItemGroup>
+
+</Project>

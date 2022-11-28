@@ -21,6 +21,7 @@ namespace Axis.Pulsar.Importer.Tests.xBNF
 
                 timer.Restart();
                 var x = ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF1)));
+                var result = x.RootParser().Parse(new Parser.Input.BufferedTokenReader("mehmehbleh/"));
                 timer.Stop();
                 Console.WriteLine("Time to Import: " + timer.Elapsed);
 
@@ -80,7 +81,7 @@ namespace Axis.Pulsar.Importer.Tests.xBNF
                 Console.WriteLine("Time to Create Importer: " + timer.Elapsed);
 
                 timer.Restart();
-                Assert.ThrowsException<GrammarValidatoinException>(() => ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF6))));
+                Assert.ThrowsException<GrammarValidationException>(() => ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF6))));
                 timer.Stop();
                 Console.WriteLine("Time to Import: " + timer.Elapsed);
             }
@@ -91,12 +92,34 @@ namespace Axis.Pulsar.Importer.Tests.xBNF
         }
 
 
+        [TestMethod]
+        public void SampleGrammarTest()
+        {
+            try
+            {
+                using var sampleGrammarStream = typeof(ImportTests).Assembly
+                    .GetManifestResourceStream($"{typeof(ImportTests).Namespace}.TestGrammar.xbnf");
+
+                var ruleImporter = new Common.xBNF.GrammarImporter();
+                var x = ruleImporter.ImportGrammar(sampleGrammarStream);
+
+                var result = x.RootParser().Parse(new Parser.Input.BufferedTokenReader("meh"));
+
+                Assert.IsNotNull(x);
+            }
+            catch(Exception e)
+            {
+                throw;
+            }
+        }
+
+
         public static readonly string SampleBNF1 =
-@"$grama -> ?[$stuff $other-stuff $more-stuff]
+@"$grama -> +[?[$stuff $other-stuff.2 $more-stuff] EOF]
 # comments occupy a whole line.
 $more-stuff -> $stuff
 
-$stuff ::= /bleh/
+$stuff ::= /bleh///.i.5
 $other-stuff ::= ""meh""
 ";
 

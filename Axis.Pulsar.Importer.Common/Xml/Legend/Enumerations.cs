@@ -12,6 +12,10 @@ namespace Axis.Pulsar.Importer.Common.Xml.Legend
         public static readonly string PatternElement_MaxMismatch = "max-mismatch";
         public static readonly string PatternElement_AllowsEmpty = "allows-empty";
         public static readonly string PatternElement_CaseSensitive = "case-sensitive";
+        public static readonly string PatternElement_MultiLine = "multi-line";
+        public static readonly string PatternElement_SingleLine = "single-line";
+        public static readonly string PatternElement_ExplicitCapture = "explicit-capture";
+        public static readonly string PatternElement_IgnoreWhitespace = "ignore-whitespace";
         #endregion
 
         #region Literal Element
@@ -32,6 +36,10 @@ namespace Axis.Pulsar.Importer.Common.Xml.Legend
         #region Production Element
         public static readonly string ProductionElement_MinOccurs = "min-occurs";
         public static readonly string ProductionElement_MaxOccurs = "max-occurs";
+        #endregion
+
+        #region Set Element
+        public static readonly string SetElement_MaxContentCount = "min-content-count";
         #endregion
     }
 }

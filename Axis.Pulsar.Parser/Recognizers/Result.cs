@@ -17,6 +17,12 @@ namespace Axis.Pulsar.Parser.Recognizers
         {
             public ICSTNode[] Symbols { get; }
 
+            /// <summary>
+            /// Indicates if this result represents the parsing of an optional symbol -
+            /// i.e the token is absent in the input, but is reported as a success because it is optional.
+            /// </summary>
+            public bool IsOptionalRecognition => Symbols.Length == 0;
+
             public Success(params ICSTNode[] symbols)
                 :this((IEnumerable<ICSTNode>)symbols)
             { }

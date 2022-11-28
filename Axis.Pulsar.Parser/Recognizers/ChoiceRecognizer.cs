@@ -17,13 +17,14 @@ namespace Axis.Pulsar.Parser.Recognizers
         public static readonly string PSEUDO_NAME = "#Choice";
 
         private readonly IRecognizer[] _recognizers;
+        private readonly Grammar.SymbolGroup.Choice _choice;
 
         ///<inheritdoc/>
-        public Cardinality Cardinality { get; }
+        public Cardinality Cardinality => _choice.Cardinality;
 
-        public ChoiceRecognizer(Cardinality cardinality, params IRecognizer[] recognizers)
+        public ChoiceRecognizer(Grammar.SymbolGroup.Choice choice, params IRecognizer[] recognizers)
         {
-            Cardinality = cardinality;
+            _choice = choice ?? throw new ArgumentNullException(nameof(choice));
             _recognizers = recognizers
                 .ThrowIf(Extensions.IsNull, new ArgumentNullException(nameof(recognizers)))
                 .ThrowIf(Extensions.IsEmpty, new ArgumentException("Empty recognizer array supplied"))
@@ -104,6 +105,6 @@ namespace Axis.Pulsar.Parser.Recognizers
         }
 
         ///<inheritdoc/>
-        public override string ToString() => Helper.AsString(Grammar.SymbolGroup.GroupingMode.Choice, Cardinality, _recognizers);
+        public override string ToString() => $"?{Helper.AsString(Grammar.SymbolGroup.GroupingMode.Choice, Cardinality, _recognizers)}";
     }
 }

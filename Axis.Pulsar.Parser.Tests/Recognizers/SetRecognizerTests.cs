@@ -29,7 +29,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
         public void Constructor_Should_ReturnValidObject()
         {
             var parser = new SetRecognizer(
-                Cardinality.OccursOnlyOnce(),
+                new SymbolGroup.Set(Cardinality.OccursOnlyOnce(), null, DummyExpression.Instance),
                 CreateLiteralRecognizer("symbol-1", "token"));
 
             Assert.IsNotNull(parser);
@@ -40,7 +40,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
         public void TryRecognize_WithValidInput_Should_ReturnValidParseResult()
         {
             var parser = new SetRecognizer(
-                Cardinality.OccursOnlyOnce(),
+                new SymbolGroup.Set(Cardinality.OccursOnlyOnce(), null, DummyExpression.Instance),
                 CreateLiteralRecognizer("public-symbol", "public "),
                 CreateLiteralRecognizer("static-symbol", "static "),
                 CreateLiteralRecognizer("abstract-symbol", "abstract "),
@@ -77,7 +77,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
         public void TryRecognize_WithInvalidInput_Should_ReturnFailedParseResult()
         {
             var parser = new SetRecognizer(
-                Cardinality.OccursOnlyOnce(),
+                new SymbolGroup.Set(Cardinality.OccursOnlyOnce(), null, DummyExpression.Instance),
                 CreateLiteralRecognizer("public-symbol", "public "),
                 CreateLiteralRecognizer("static-symbol", "static "),
                 CreateLiteralRecognizer("abstract-symbol", "abstract "),
@@ -108,7 +108,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
         public void TryRecognize_WithFatalInput_Should_ReturnExceptionParseResult()
         {
             var parser = new SetRecognizer(
-                Cardinality.OccursOnlyOnce(),
+                new SymbolGroup.Set(Cardinality.OccursOnlyOnce(), null, DummyExpression.Instance),
                 CreateLiteralRecognizer("public-symbol", "public "),
                 new RecognizerResult.Exception(new Exception(), 2).CreateRecognizer(),
                 CreateLiteralRecognizer("static-symbol", "static "),

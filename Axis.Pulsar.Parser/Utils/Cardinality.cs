@@ -46,6 +46,9 @@ namespace Axis.Pulsar.Parser.Utils
             {
                 Cardinality c when c.MinOccurence.Equals(c.MaxOccurence) && c.MinOccurence > 1 => $".{MinOccurence}",
                 { MinOccurence: 1, MaxOccurence: 1 } => "",
+                { MinOccurence: 0, MaxOccurence: 1 } => ".?",
+                { MinOccurence: 0, MaxOccurence: null } => ".*",
+                { MinOccurence: 1, MaxOccurence: null } => ".+",
                 { MaxOccurence: null } => $".{MinOccurence},",
                 {} => $".{MinOccurence},{MaxOccurence}"
             };

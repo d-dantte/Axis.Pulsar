@@ -4,6 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Axis.Pulsar.Parser.Recognizers;
 using System;
 using Axis.Pulsar.Parser.CST;
+using Axis.Pulsar.Parser.Grammar;
 
 namespace Axis.Pulsar.Parser.Tests.Recognizers
 {
@@ -14,7 +15,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
         public void Constructor_Should_ReturnValidObject()
         {
             var parser = new ChoiceRecognizer(
-                Cardinality.OccursOnlyOnce(),
+                new SymbolGroup.Choice(Cardinality.OccursOnlyOnce(), DummyExpression.Instance),
                 ("symbol", "token").CreatePassingRecognizer());
 
             Assert.IsNotNull(parser);
@@ -26,7 +27,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
         public void TryRecognize_WithValidInput_Should_ReturnValidParseResult()
         {
             var parser = new ChoiceRecognizer(
-                Cardinality.OccursOnlyOnce(),
+                new SymbolGroup.Choice(Cardinality.OccursOnlyOnce(), DummyExpression.Instance),
                 new IResult.FailedRecognition(2, 1).CreateRecognizer(),
                 ("public-symbol", "public").CreatePassingRecognizer(),
                 ("private-symbol", "private").CreatePassingRecognizer(),
@@ -46,7 +47,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
 
             // 2
             parser = new ChoiceRecognizer(
-                Cardinality.OccursOnly(2),
+                new SymbolGroup.Choice(Cardinality.OccursOnly(2), DummyExpression.Instance),
                 //CreateRecognizer(new IResult.Exception(new Exception(), 1)),
                 (new IResult.FailedRecognition(2, 1)).CreateRecognizer(),
                 ("private-symbol", "private").CreatePassingRecognizer(),
@@ -68,7 +69,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
         public void TryRecognize_WithInvalidInput_Should_ReturnFailedParseResult()
         {
             var parser = new ChoiceRecognizer(
-                Cardinality.OccursOnlyOnce(),
+                new SymbolGroup.Choice(Cardinality.OccursOnlyOnce(), DummyExpression.Instance),
                 new IResult.FailedRecognition(2, 1).CreateRecognizer(),
                 new IResult.FailedRecognition(3, 1).CreateRecognizer());
 
@@ -89,7 +90,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
         public void TryRecognize_WithFatalInput_Should_ReturnExceptionParseResult()
         {
             var parser = new ChoiceRecognizer(
-                Cardinality.OccursOnlyOnce(),
+                new SymbolGroup.Choice(Cardinality.OccursOnlyOnce(), DummyExpression.Instance),
                 new IResult.FailedRecognition(2, 1).CreateRecognizer(),
                 new IResult.Exception(new SomeObscureException(), 1).CreateRecognizer(),
                 new IResult.FailedRecognition(3, 1).CreateRecognizer());
@@ -110,4 +111,10 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
 
     internal class SomeObscureException: Exception
     { }
+
+    internal class DummyExpression
+    {
+        public static readonly ISymbolExpression Instance = new ProductionRef("stuff", Cardinality.OccursOnlyOnce());
+
+    }
 }

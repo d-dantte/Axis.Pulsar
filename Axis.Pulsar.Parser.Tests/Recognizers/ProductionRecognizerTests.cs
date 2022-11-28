@@ -38,8 +38,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
         {
             var symbol = "someSymbol";
             var parser = new ProductionRefRecognizer(
-                symbol,
-                Cardinality.OccursOnlyOnce(),
+                new ProductionRef(symbol, Cardinality.OccursOnlyOnce()),
                 CreateGrammar((symbol, CreateLiteralParser(symbol, "blehri torious"))));
 
             Assert.IsNotNull(parser);
@@ -54,8 +53,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
 
             // 1
             var parser = new ProductionRefRecognizer(
-                symbol,
-                Cardinality.OccursOnlyOnce(),
+                new ProductionRef(symbol, Cardinality.OccursOnlyOnce()),
                 CreateGrammar((symbol, CreateLiteralParser(symbol, "blehri torious"))));
             var reader = new BufferedTokenReader("blehri torious sturvs");
             var succeeded = parser.TryRecognize(reader, out var result);
@@ -71,8 +69,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
 
             // 2
             parser = new ProductionRefRecognizer(
-                symbol,
-                Cardinality.OccursOnly(2),
+                new ProductionRef(symbol, Cardinality.OccursOnly(2)),
                 CreateGrammar((symbol, CreateLiteralParser(symbol, "blehri torious "))));
             reader = new BufferedTokenReader("blehri torious blehri torious sturvs");
             succeeded = parser.TryRecognize(reader, out result);
@@ -99,8 +96,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
                 .Setup(p => p.Parse(It.IsAny<BufferedTokenReader>()))
                 .Returns(new Parser.Parsers.IResult.FailedRecognition(innerSymbol, 0));
             var parser = new ProductionRefRecognizer(
-                symbol,
-                Cardinality.OccursOnlyOnce(),
+                new ProductionRef(symbol, Cardinality.OccursOnlyOnce()),
                 CreateGrammar((symbol, parserMock.Object)));
             var reader = new BufferedTokenReader("irrelevant");
             var succeeded = parser.TryRecognize(reader, out var result);
@@ -117,8 +113,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
                 .Setup(p => p.Parse(It.IsAny<BufferedTokenReader>()))
                 .Returns(new Parser.Parsers.IResult.PartialRecognition(1, innerSymbol, 0));
             parser = new ProductionRefRecognizer(
-                symbol,
-                Cardinality.OccursOnlyOnce(),
+                new ProductionRef(symbol, Cardinality.OccursOnlyOnce()),
                 CreateGrammar((symbol, parserMock.Object)));
             reader = new BufferedTokenReader("irrelevant");
             succeeded = parser.TryRecognize(reader, out result);
@@ -141,8 +136,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
                 .Setup(p => p.Parse(It.IsAny<BufferedTokenReader>()))
                 .Returns(new Parser.Parsers.IResult.Exception(new System.Exception(), 0));
             var parser = new ProductionRefRecognizer(
-                symbol,
-                Cardinality.OccursOnlyOnce(),
+                new ProductionRef(symbol, Cardinality.OccursOnlyOnce()),
                 CreateGrammar((symbol, parserMock.Object)));
             var reader = new BufferedTokenReader("irrelevant");
             var succeeded = parser.TryRecognize(reader, out var result);

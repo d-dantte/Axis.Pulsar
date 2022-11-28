@@ -18,20 +18,27 @@ namespace Axis.Pulsar.Parser.Builders
         /// <summary>
         /// Replaces the underlying rule with a literal rule
         /// </summary>
-        public RuleBuilder HavingLiteralRule(string stringLiteral, bool isCaseSensitive)
+        public RuleBuilder HavingLiteralRule(
+            string stringLiteral,
+            bool isCaseSensitive,
+            IRuleValidator<LiteralRule> validator = null)
         {
-            _rule = new LiteralRule(stringLiteral, isCaseSensitive);
+            _rule = new LiteralRule(stringLiteral, isCaseSensitive, validator);
             return this;
         }
 
         /// <summary>
         /// Replaces the underlying rule with a pattern rule
         /// </summary>
-        public RuleBuilder HavingPatternRule(string regexPattern, IPatternMatchType matchType = null)
+        public RuleBuilder HavingPatternRule(
+            string regexPattern,
+            IPatternMatchType matchType = null,
+            IRuleValidator<PatternRule> validator = null)
         {
             _rule = new PatternRule(
                 new Regex(regexPattern),
-                matchType ?? new IPatternMatchType.Open(1));
+                matchType ?? new IPatternMatchType.Open(1),
+                validator);
             return this;
         }
 
@@ -40,60 +47,75 @@ namespace Axis.Pulsar.Parser.Builders
         /// </summary>
         public RuleBuilder HavingSequence(
             Action<ExpressionListBuilder> builder,
-            Cardinality? cardinality = null)
-            => HavingGroup(
-                SymbolGroup.GroupingMode.Sequence,
-                cardinality ?? Cardinality.OccursOnlyOnce(),
-                new ExpressionListBuilder()
-                    .Use(builder.Invoke)
-                    .Build());
+            Cardinality? cardinality = null,
+            IRuleValidator<SymbolExpressionRule> validator = null)
+        {
+            _rule = new SymbolExpressionRule(
+                new SymbolGroup.Sequence(
+                    cardinality ?? Cardinality.OccursOnlyOnce(),
+                    new ExpressionListBuilder()
+                        .Use(builder.Invoke)
+                        .Build()),
+                null,
+                validator);
+
+            return this;
+        }
 
         /// <summary>
         /// Replaces the underlying rule with a symbol expression rule encapsulating a choice
         /// </summary>
         public RuleBuilder HavingChoice(
             Action<ExpressionListBuilder> builder,
-            Cardinality? cardinality = null)
-            => HavingGroup(
-                SymbolGroup.GroupingMode.Choice,
-                cardinality ?? Cardinality.OccursOnlyOnce(),
-                new ExpressionListBuilder()
-                    .Use(builder.Invoke)
-                    .Build());
+            Cardinality? cardinality = null,
+            IRuleValidator<SymbolExpressionRule> validator = null)
+        {
+            _rule = new SymbolExpressionRule(
+                new SymbolGroup.Choice(
+                    cardinality ?? Cardinality.OccursOnlyOnce(),
+                    new ExpressionListBuilder()
+                        .Use(builder.Invoke)
+                        .Build()),
+                null,
+                validator);
+
+            return this;
+        }
 
         /// <summary>
         /// Replaces the underlying rule with a symbol expression rule encapsulating a set
         /// </summary>
         public RuleBuilder HavingSet(
             Action<ExpressionListBuilder> builder,
-            Cardinality? cardinality = null)
-            => HavingGroup(
-                SymbolGroup.GroupingMode.Set,
-                cardinality ?? Cardinality.OccursOnlyOnce(),
-                new ExpressionListBuilder()
-                    .Use(builder.Invoke)
-                    .Build());
-
-        /// <summary>
-        /// Replaces the underlying rule with a symbol expression rule encapsulating a production ref
-        /// </summary>
-        public RuleBuilder HavingRef(string symbolRef, Cardinality? cardinality = null)
+            int? minContentCount,
+            Cardinality? cardinality = null,
+            IRuleValidator<SymbolExpressionRule> validator = null)
         {
             _rule = new SymbolExpressionRule(
-                new ProductionRef(symbolRef, cardinality ?? Cardinality.OccursOnlyOnce()));
+                new SymbolGroup.Set(
+                    cardinality ?? Cardinality.OccursOnlyOnce(),
+                    minContentCount,
+                    new ExpressionListBuilder()
+                        .Use(builder.Invoke)
+                        .Build()),
+                null,
+                validator);
 
             return this;
         }
 
-        private RuleBuilder HavingGroup(SymbolGroup.GroupingMode mode, Cardinality cardinality, ISymbolExpression[] expressions)
+        /// <summary>
+        /// Replaces the underlying rule with a symbol expression rule encapsulating a production ref
+        /// </summary>
+        public RuleBuilder HavingRef(
+            string symbolRef,
+            Cardinality? cardinality = null,
+            IRuleValidator<SymbolExpressionRule> validator = null)
         {
-            _rule = new SymbolExpressionRule(mode switch
-            {
-                SymbolGroup.GroupingMode.Choice => SymbolGroup.Choice(cardinality, expressions),
-                SymbolGroup.GroupingMode.Sequence => SymbolGroup.Sequence(cardinality, expressions),
-                SymbolGroup.GroupingMode.Set => SymbolGroup.Set(cardinality, expressions),
-                _ => throw new ArgumentException($"Invalid group mode: {mode}")
-            });
+            _rule = new SymbolExpressionRule(
+                new ProductionRef(symbolRef, cardinality ?? Cardinality.OccursOnlyOnce()),
+                null,
+                validator);
 
             return this;
         }

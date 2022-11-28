@@ -17,13 +17,14 @@ namespace Axis.Pulsar.Parser.Recognizers
         public static readonly string PSEUDO_NAME = "#Sequence";
 
         private readonly IRecognizer[] _recognizers;
+        private readonly Grammar.SymbolGroup.Sequence _sequence;
 
         ///<inheritdoc/>
-        public Cardinality Cardinality { get; }
+        public Cardinality Cardinality => _sequence.Cardinality;
 
-        public SequenceRecognizer(Cardinality cardinality, params IRecognizer[] recognizers)
+        public SequenceRecognizer(Grammar.SymbolGroup.Sequence sequence, params IRecognizer[] recognizers)
         {
-            Cardinality = cardinality;
+            _sequence = sequence ?? throw new ArgumentNullException(nameof(sequence));
             _recognizers = recognizers
                 .ThrowIf(Extensions.IsNull, _ => new ArgumentNullException(nameof(recognizers)))
                 .ThrowIf(Extensions.IsEmpty, _ => new ArgumentException("Empty recognizer array supplied"))
@@ -116,6 +117,6 @@ namespace Axis.Pulsar.Parser.Recognizers
         }
 
         ///<inheritdoc/>
-        public override string ToString() => Helper.AsString(Grammar.SymbolGroup.GroupingMode.Sequence, Cardinality, _recognizers);
+        public override string ToString() => $"+{Helper.AsString(Grammar.SymbolGroup.GroupingMode.Sequence, Cardinality, _recognizers)}";
     }
 }

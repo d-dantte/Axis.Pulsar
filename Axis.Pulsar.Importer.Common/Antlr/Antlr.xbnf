@@ -3,30 +3,50 @@
 # Pattern: recognizes the escape sequences: &amp; = &, &sol; = /
 # Sensitive-value: recognizes the escape sequences: &amp; = &, &quot; = "
 # Insensitive-value: recognizes the escape sequences: &amp; = &, &apos; = '
-#
+
+# Antlr Root
 $antlr -> +[?[$line-space $comment].* $production +[?[$line-space $comment].1, $production].*]
 $production -> +[$symbol-name $line-indent-space $colon $white-space $rule-list +[$line-indent-space $v-bar $white-space $rule-list].* $rule-end]
+
+# Rule
 $rule-list -> +[$rule-item +[$white-space $rule-item].*]
-$rule-item -> +[?[$rule-group $ref $terminal] $cardinality.?]
+$rule-item -> +[?[$rule-group $eof $ref $terminal] $cardinality.?]
 $rule-group -> +[$l-bracket $white-space.0, $rule-list $white-space.* $r-bracket]
+$rule-end -> +[$line-indent-space $semi-colon]
 $terminal -> ?[$pattern $sensitive-literal $insensitive-literal]
 $ref -> $symbol-name
-$pattern -> +[$f-slash $pattern-value $f-slash $match-cardinality.?]
+$eof -> "$EOF"
+
+# Pattern
+$pattern -> +[$f-slash $pattern-value $f-slash $pattern-flags.? $match-cardinality.?]
 $match-cardinality -> +[$dot $digits +[$comma ?[$digits $plus $star]].?]
+$pattern-flags -> +[$dot #1[$ignore-case-flag $multi-line-flag $single-line-flag $explicit-capture-flag $ignore-whitespace-flag]]
+$ignore-case-flag -> 'i'
+$multi-line-flag -> 'm'
+$single-line-flag -> 's'
+$explicit-capture-flag -> 'n'
+$ignore-whitespace-flag -> 'x'
+
+# Case sensitive literal
 $sensitive-literal -> +[$d-quote $sensitive-value $d-quote]
+
+# Case insensitive literal
 $insensitive-literal -> +[$s-quote $insensitive-value $s-quote]
+
+# Spaces
 $line-indent-space -> +[$line-space ?[$space.1, $tab.+]]
 $line-space -> +[$white-space.0, $new-line]
-$rule-end -> +[$line-indent-space $semi-colon]
+
+# General
 $symbol-name -> /^[a-zA-Z][\w\-]*$/
 $cardinality -> /^[\?\*\+]$/
 $space -> /^ $/
 $tab -> /^\t$/
 $digits -> /^\d+$/
 $white-space -> /^[ \t]+$/
-$sensitive-value -> /^[^"]+$/
-$insensitive-value -> /^[^']+$/
-$pattern-value -> /^[^&sol;]+$/
+$sensitive-value -> /^(\\"|[^"])+$/
+$insensitive-value -> /^(\\'|[^'])+$/
+$pattern-value -> /^(////|[^//])+$/
 $new-line -> /^(\r\n|\r|\n)$/
 $comment -> /^\#[^\n\r]*$/
 $colon -> ":"

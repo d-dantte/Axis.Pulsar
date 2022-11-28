@@ -25,18 +25,11 @@ namespace Axis.Pulsar.Parser.Builders
         }
 
         /// <summary>
-        /// Adds an array of expressions, encapsulated within a <see cref="SymbolGroup"/> of the given mode, into the list.
+        /// Adds an EOF expression to the list
         /// </summary>
-        public ExpressionListBuilder With(SymbolGroup.GroupingMode mode, params ISymbolExpression[] expressions)
+        public ExpressionListBuilder WithEOF()
         {
-            _expressions.Add(mode switch
-            {
-                SymbolGroup.GroupingMode.Choice => SymbolGroup.Choice(expressions),
-                SymbolGroup.GroupingMode.Sequence => SymbolGroup.Sequence(expressions),
-                SymbolGroup.GroupingMode.Set => SymbolGroup.Set(expressions),
-                _ => throw new ArgumentException($"Invalid group mode: {mode}")
-            });
-
+            _expressions.Add(new EOF());
             return this;
         }
 
@@ -51,7 +44,7 @@ namespace Axis.Pulsar.Parser.Builders
             new ExpressionListBuilder()
                 .Use(sequenceBuilderAction.Invoke)
                 .Build()
-                .Map(expressions => SymbolGroup.Sequence(cardinality.Value, expressions))
+                .Map(expressions => new SymbolGroup.Sequence(cardinality.Value, expressions))
                 .Consume(_expressions.Add);
             return this;
         }
@@ -67,7 +60,7 @@ namespace Axis.Pulsar.Parser.Builders
             new ExpressionListBuilder()
                 .Use(choiceBuilderAction.Invoke)
                 .Build()
-                .Map(expressions => SymbolGroup.Choice(cardinality.Value, expressions))
+                .Map(expressions => new SymbolGroup.Choice(cardinality.Value, expressions))
                 .Consume(_expressions.Add);
             return this;
         }
@@ -77,13 +70,14 @@ namespace Axis.Pulsar.Parser.Builders
         /// </summary>
         public ExpressionListBuilder WithSet(
             Action<ExpressionListBuilder> setBuilderAction,
-            Cardinality? cardinality = null)
+            Cardinality? cardinality = null,
+            int? minContentCount = null)
         {
             cardinality ??= Cardinality.OccursOnlyOnce();
             new ExpressionListBuilder()
                 .Use(setBuilderAction.Invoke)
                 .Build()
-                .Map(expressions => SymbolGroup.Set(cardinality.Value, expressions))
+                .Map(expressions => new SymbolGroup.Set(cardinality.Value, minContentCount, expressions))
                 .Consume(_expressions.Add);
             return this;
         }

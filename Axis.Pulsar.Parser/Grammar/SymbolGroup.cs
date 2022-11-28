@@ -1,5 +1,4 @@
-﻿using Axis.Pulsar.Parser.Exceptions;
-using Axis.Pulsar.Parser.Utils;
+﻿using Axis.Pulsar.Parser.Utils;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -8,7 +7,7 @@ using System.Linq;
 namespace Axis.Pulsar.Parser.Grammar
 {
 
-    public class SymbolGroup: ISymbolExpression
+    public abstract class SymbolGroup: ISymbolExpression
     {
         /// <summary>
         /// Represents types of non-terminal groupings.
@@ -63,7 +62,7 @@ namespace Axis.Pulsar.Parser.Grammar
         /// <param name="mode">The <see cref="GroupingMode"/> applied on this Rule</param>
         /// <param name="cardinality">The cardinality for this rule</param>
         /// <param name="expressions">The symbol-refs</param>
-        private SymbolGroup(
+        protected SymbolGroup(
             GroupingMode mode,
             Cardinality cardinality,
             params ISymbolExpression[] expressions)
@@ -84,7 +83,7 @@ namespace Axis.Pulsar.Parser.Grammar
                 Expressions = Array.AsReadOnly(expressions);
 
             //ensure that the expressions all terminate in Proeuction-Refs
-            if (!Expressions.ExactlyAll(TerminatesAtSymbolRef))
+            if (!Expressions.ExactlyAll(TerminatesAtSymbolRefOrEOF))
                 throw new ArgumentException($"Some expressions do not terminate in {nameof(ProductionRef)}");
         }
 
@@ -92,102 +91,112 @@ namespace Axis.Pulsar.Parser.Grammar
         /// Returns true if the given expression has all it's branches terminating in <see cref="ProductionRef"/> instances.
         /// </summary>
         /// <param name="expression">The expression to evaluate.</param>
-        private bool TerminatesAtSymbolRef(ISymbolExpression expression)
+        private bool TerminatesAtSymbolRefOrEOF(ISymbolExpression expression)
         {
             return expression switch
             {
-                SymbolGroup group => group.Expressions.ExactlyAll(TerminatesAtSymbolRef),
-                ProductionRef @ref => true,
+                SymbolGroup group => group.Expressions.ExactlyAll(TerminatesAtSymbolRefOrEOF),
+                ProductionRef => true,
+                EOF => true,
                 _ => false
             };
         }
 
-        public override bool Equals(object obj)
-        {
-            return obj is SymbolGroup sg
-                && sg.Mode == Mode
-                && sg.Cardinality == Cardinality
-                && sg.Expressions.SequenceEqual(Expressions);
-        }
 
-        public override int GetHashCode()
-        {
-            return Expressions.Aggregate(
-                HashCode.Combine(Mode, Cardinality),
-                (code, expression) => HashCode.Combine(code, expression));
-        }
-
-        #region Set
+        #region nested types
 
         /// <summary>
-        /// Creates a set-expression. Note that duplicates will be discarded from the <paramref name="symbolExpressions"/> array.
+        /// Represents an unordered set of expressions, each of which MUST be recognized successfully.
+        /// Sets do not accept optional recognitions as a success.
         /// </summary>
-        /// <param name="cardinality">The cardinality for this rule</param>
-        /// <param name="symbolExpressions">The symbol-refs</param>
-        public static SymbolGroup Set(
-            Cardinality cardinality,
-            params ISymbolExpression[] symbolExpressions)
+        public class Set : SymbolGroup
         {
-            return new(GroupingMode.Set, cardinality, symbolExpressions);
-        }
+            /// <summary>
+            /// Minimum number of recognized items that can exist for this group to be deemed recognized.
+            /// Default value is 1
+            /// </summary>
+            public int? MinContentCount { get; }
 
-        /// <summary>
-        /// Creates a set-expression. Note that duplicates will be discarded from the <paramref name="symbolExpressions"/> array.
-        /// </summary>
-        /// <param name="symbolExpressions">The symbol-refs</param>
-        public static SymbolGroup Set(params ISymbolExpression[] rules)
-        {
-            return new(GroupingMode.Set, Cardinality.OccursOnlyOnce(), rules);
-        }
+            public Set(
+                Cardinality cardinality,
+                int? minContentCount,
+                params ISymbolExpression[] expressions)
+                : base(GroupingMode.Set, cardinality, expressions)
+            {
+                MinContentCount = minContentCount.ThrowIf(
+                    v => v < 1,
+                    new ArgumentException($"Invalid content count: {minContentCount}"));
+            }
 
-        #endregion
+            public override bool Equals(object obj)
+            {
+                return obj is Set other
+                    && other.Cardinality == Cardinality
+                    && other.MinContentCount == MinContentCount
+                    && other.Expressions.SequenceEqual(Expressions);
+            }
 
-        #region Sequence
-
-        /// <summary>
-        /// Creates a sequence-expression.
-        /// </summary>
-        /// <param name="cardinality">The cardinality for this rule</param>
-        /// <param name="symbolExpressions">The symbol-refs</param>
-        public static SymbolGroup Sequence(Cardinality cardinality, params ISymbolExpression[] symbolExpressions)
-        {
-            return new(GroupingMode.Sequence, cardinality, symbolExpressions);
+            public override int GetHashCode()
+            {
+                return Expressions.Aggregate(
+                    HashCode.Combine(Mode, Cardinality, MinContentCount),
+                    (code, expression) => HashCode.Combine(code, expression));
+            }
         }
 
         /// <summary>
-        /// Creates a sequence-expression.
+        /// Represents an ordered list of expressions, each of which MUST be recognized successfully.
         /// </summary>
-        /// <param name="symbolExpressions">The symbol-refs</param>
-        public static SymbolGroup Sequence(params ISymbolExpression[] symbolExpressions)
+        public class Sequence : SymbolGroup
         {
-            return new(GroupingMode.Sequence, Cardinality.OccursOnlyOnce(), symbolExpressions);
+            public Sequence(
+                Cardinality cardinality,
+                params ISymbolExpression[] expressions)
+                : base(GroupingMode.Sequence, cardinality, expressions)
+            {
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is Sequence other
+                    && other.Cardinality == Cardinality
+                    && other.Expressions.SequenceEqual(Expressions);
+            }
+
+            public override int GetHashCode()
+            {
+                return Expressions.Aggregate(
+                    HashCode.Combine(Mode, Cardinality),
+                    (code, expression) => HashCode.Combine(code, expression));
+            }
         }
-
-        #endregion
-
-        #region Choice
 
         /// <summary>
-        /// Creates a choice-expression
+        /// Represents an ordered list of choices of expressions, only one of which MUST be recognied successfully.
         /// </summary>
-        /// <param name="cardinality">The cardinality for this rule</param>
-        /// <param name="symbolExpressions">The symbol-refs</param>
-        public static SymbolGroup Choice(
-            Cardinality cardinality,
-            params ISymbolExpression[] symbolExpressions)
+        public class Choice : SymbolGroup
         {
-            return new(GroupingMode.Choice, cardinality, symbolExpressions);
-        }
+            public Choice(
+                Cardinality cardinality,
+                params ISymbolExpression[] expressions)
+                : base(GroupingMode.Choice, cardinality, expressions)
+            {
+            }
 
-        /// <summary>
-        /// Creates a choice-expression
-        /// </summary>
-        /// <param name="symbolExpressions">The symbol-refs</param>
-        public static SymbolGroup Choice(params ISymbolExpression[] symbolExpressions)
-        {
-            return new(GroupingMode.Choice, Cardinality.OccursOnlyOnce(), symbolExpressions);
-        }
+            public override bool Equals(object obj)
+            {
+                return obj is Choice other
+                    && other.Cardinality == Cardinality
+                    && other.Expressions.SequenceEqual(Expressions);
+            }
 
+            public override int GetHashCode()
+            {
+                return Expressions.Aggregate(
+                    HashCode.Combine(Mode, Cardinality),
+                    (code, expression) => HashCode.Combine(code, expression));
+            }
+        }
         #endregion
     }
 }

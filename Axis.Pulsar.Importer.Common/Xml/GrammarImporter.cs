@@ -13,6 +13,7 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Xml.Schema;
 using Axis.Pulsar.Parser.Builders;
+using Axis.Pulsar.Parser;
 
 namespace Axis.Pulsar.Importer.Common.Xml
 {
@@ -102,7 +103,7 @@ namespace Axis.Pulsar.Importer.Common.Xml
                     validators?.TryGetValue(ruleName, out var validator) == true ? validator : null),
 
                 "literal" => new LiteralRule(
-                    element.Attribute(Legend.Enumerations.LiteralElement_Value).Value,
+                    element.Attribute(Legend.Enumerations.LiteralElement_Value).Value.ApplyEscape(),
                     ExtractCaseSensitivity(element),
                     validators?.TryGetValue(ruleName, out var validator) == true ? validator : null),
 
@@ -117,21 +118,26 @@ namespace Axis.Pulsar.Importer.Common.Xml
         {
             return element.Name.LocalName switch
             {
-                "sequence" => SymbolGroup.Sequence(
+                "sequence" => new SymbolGroup.Sequence(
                     ExtractCardinality(element),
                     element.Elements().Select(ToExpression).ToArray()),
 
-                "set" => SymbolGroup.Set(
+                "set" => new SymbolGroup.Set(
                     ExtractCardinality(element),
+                    element.TryAttribute(Legend.Enumerations.SetElement_MaxContentCount, out var att)
+                        ? int.Parse(att.Value)
+                        : null,
                     element.Elements().Select(ToExpression).ToArray()),
 
-                "choice" => SymbolGroup.Choice(
+                "choice" => new SymbolGroup.Choice(
                     ExtractCardinality(element),
                     element.Elements().Select(ToExpression).ToArray()),
 
                 "symbol" => new ProductionRef(
                     element.Attribute(Legend.Enumerations.SymbolElement_Name).Value,
                     ExtractCardinality(element)),
+
+                "eof" => new EOF(),
 
                 _ => throw new ArgumentException($"Invalid element: {element.Name}")
             };
@@ -178,10 +184,7 @@ namespace Axis.Pulsar.Importer.Common.Xml
         internal static Regex ExtractPatternRegex(XElement patternElement)
         {
             var regexPattern = patternElement.Attribute(Legend.Enumerations.PatternElement_Regex).Value;
-            var options =
-                !patternElement.TryAttribute(Legend.Enumerations.PatternElement_CaseSensitive, out var att) ? RegexOptions.IgnoreCase
-                : !bool.Parse(att.Value?.ToLower()) ? RegexOptions.IgnoreCase
-                : RegexOptions.None;
+            var options = ExtractPatternOptions(patternElement);
 
             return new Regex(regexPattern, options);
         }
@@ -197,6 +200,38 @@ namespace Axis.Pulsar.Importer.Common.Xml
             return nonTerminal.TryAttribute(Legend.Enumerations.NonTerminalElement_Threshold, out var attribute)
                 ? int.Parse(attribute.Value)
                 : null;
+        }
+
+        internal static RegexOptions ExtractPatternOptions(XElement patternElement)
+        {
+            var options = RegexOptions.Compiled;
+
+            var attribute = Legend.Enumerations.PatternElement_CaseSensitive;
+            options |= patternElement.TryAttribute(attribute, out var att) && !bool.Parse(att.Value)
+                ? RegexOptions.IgnoreCase
+                : RegexOptions.None;
+
+            attribute = Legend.Enumerations.PatternElement_MultiLine;
+            options |= patternElement.TryAttribute(attribute, out att) && bool.Parse(att.Value)
+                ? RegexOptions.Multiline
+                : RegexOptions.None;
+
+            attribute = Legend.Enumerations.PatternElement_SingleLine;
+            options |= patternElement.TryAttribute(attribute, out att) && bool.Parse(att.Value)
+                ? RegexOptions.Singleline
+                : RegexOptions.None;
+
+            attribute = Legend.Enumerations.PatternElement_ExplicitCapture;
+            options |= patternElement.TryAttribute(attribute, out att) && bool.Parse(att.Value)
+                ? RegexOptions.ExplicitCapture
+                : RegexOptions.None;
+
+            attribute = Legend.Enumerations.PatternElement_IgnoreWhitespace;
+            options |= patternElement.TryAttribute(attribute, out att) && bool.Parse(att.Value)
+                ? RegexOptions.IgnorePatternWhitespace
+                : RegexOptions.None;
+
+            return options;
         }
 
 

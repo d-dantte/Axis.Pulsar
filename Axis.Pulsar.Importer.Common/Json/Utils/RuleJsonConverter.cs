@@ -38,6 +38,8 @@ namespace Axis.Pulsar.Importer.Common.Json.Utils
 
                 RuleType.Grouping => jobj.ToObject<Grouping>(serializer),
 
+                RuleType.EOF => new EOF(),
+
                 _ => throw new Exception($"Invalid rule type: {ruleType}")
             };
         }

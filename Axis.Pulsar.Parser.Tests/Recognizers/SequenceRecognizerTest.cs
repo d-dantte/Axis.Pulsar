@@ -4,6 +4,7 @@ using Axis.Pulsar.Parser.Recognizers;
 using Axis.Pulsar.Parser.Input;
 using System.Linq;
 using Axis.Pulsar.Parser.CST;
+using Axis.Pulsar.Parser.Grammar;
 
 namespace Axis.Pulsar.Parser.Tests.Recognizers
 {
@@ -14,7 +15,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
         public void Constructor_Should_ReturnValidObject()
         {
             var parser = new SequenceRecognizer(
-                Cardinality.OccursOnlyOnce(),
+                new SymbolGroup.Sequence(Cardinality.OccursOnlyOnce(), DummyExpression.Instance),
                 ("symbol-1", "token").CreatePassingRecognizer());
 
             Assert.IsNotNull(parser);
@@ -25,7 +26,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
         public void TryRecognize_WithValidInput_Should_ReturnValidParseResult()
         {
             var parser = new SequenceRecognizer(
-                Cardinality.OccursOnlyOnce(),
+                new SymbolGroup.Sequence(Cardinality.OccursOnlyOnce(), DummyExpression.Instance),
                 ("public-symbol", "public").CreatePassingRecognizer(),
                 ("whitespace-symbol", " ").CreatePassingRecognizer(),
                 ("static-symbol", "static").CreatePassingRecognizer(),
@@ -47,7 +48,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
 
             // 2
             parser = new SequenceRecognizer(
-                Cardinality.OccursOnly(2),
+                new SymbolGroup.Sequence(Cardinality.OccursOnly(2), DummyExpression.Instance),
                 ("public-symbol", "public").CreatePassingRecognizer(),
                 ("whitespace-symbol", " ").CreatePassingRecognizer(),
                 ("static-symbol", "static").CreatePassingRecognizer(),
@@ -71,7 +72,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
         public void TryRecognize_WithInvalidInput_Should_ReturnFailedParseResult()
         {
             var parser = new SequenceRecognizer(
-                Cardinality.OccursOnlyOnce(),
+                new SymbolGroup.Sequence(Cardinality.OccursOnlyOnce(), DummyExpression.Instance),
                 ("public-symbol", "public").CreatePassingRecognizer(),
                 ("whitespace-symbol", " ").CreatePassingRecognizer(),
                 ("static-symbol", "static").CreatePassingRecognizer(),
@@ -91,7 +92,7 @@ namespace Axis.Pulsar.Parser.Tests.Recognizers
 
             // 2
             parser = new SequenceRecognizer(
-                Cardinality.OccursOnlyOnce(),
+                new SymbolGroup.Sequence(Cardinality.OccursOnlyOnce(), DummyExpression.Instance),
                 ("public-symbol", "public").CreatePassingRecognizer(),
                 ("whitespace-symbol", " ").CreatePassingRecognizer(),
                 ("static-symbol", "static").CreatePassingRecognizer(),

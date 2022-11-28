@@ -1,4 +1,5 @@
-﻿using Axis.Pulsar.Parser.Builders;
+﻿using Axis.Pulsar.Parser;
+using Axis.Pulsar.Parser.Builders;
 using Axis.Pulsar.Parser.CST;
 using Axis.Pulsar.Parser.Exceptions;
 using Axis.Pulsar.Parser.Grammar;
@@ -47,6 +48,8 @@ namespace Axis.Pulsar.Importer.Common.Antlr
         public const string SYMBOL_NAME_F_SLASH = "f-slash";
         public const string SYMBOL_NAME_S_QUOTE = "s-quote";
         public const string SYMBOL_NAME_D_QUOTE = "d-quote";
+        public const string SYMBOL_NAME_PATTERN_FLAGS = "pattern-flags";
+        public const string SYMBOL_NAME_EOF = "eof";
         #endregion
 
         private static readonly IGrammar AntlrGrammar;
@@ -153,7 +156,7 @@ namespace Axis.Pulsar.Importer.Common.Antlr
                         .FindNodes($"{SYMBOL_NAME_RULE_ITEM}")
                         .Select(ToExpression)
                         .ToArray()
-                        .Map(expressions => SymbolGroup.Sequence(cardinality.Value, expressions)),
+                        .Map(expressions => new SymbolGroup.Sequence(cardinality.Value, expressions)),
 
                     SYMBOL_NAME_RULE_GROUP => ruleElement
                         .FindNode($"{SYMBOL_NAME_RULE_LIST}")
@@ -168,7 +171,7 @@ namespace Axis.Pulsar.Importer.Common.Antlr
                 return ruleLists
                     .Select(list => ToSequence(list))
                     .ToArray()
-                    .Map(expressions => SymbolGroup.Choice(expressions));
+                    .Map(expressions => new SymbolGroup.Choice(Cardinality.OccursOnlyOnce(), expressions));
             }
 
             private ISymbolExpression ToExpression(ICSTNode ruleItem)
@@ -180,6 +183,7 @@ namespace Axis.Pulsar.Importer.Common.Antlr
 
                 return item.SymbolName switch
                 {
+                    SYMBOL_NAME_EOF => new EOF(),
                     SYMBOL_NAME_RULE_GROUP => ToSequence(item, cardinality),
                     SYMBOL_NAME_REF => new ProductionRef(item.TokenValue(), cardinality),
                     SYMBOL_NAME_TERMINAL => _terminals
@@ -194,13 +198,34 @@ namespace Axis.Pulsar.Importer.Common.Antlr
 
             private IRule ToTerminal(ICSTNode terminal)
             {
-                return terminal.FirstNode().SymbolName switch
+                var terminalType = terminal.FirstNode();
+                return terminalType.SymbolName switch
                 {
-                    SYMBOL_NAME_INSENSITIVE_LITERAL => new LiteralRule(terminal.TokenValue().UnescapeInsensitive(), false),
-                    SYMBOL_NAME_SENSITIVE_LITERAL => new LiteralRule(terminal.TokenValue().UnescapeSensitive()),
+                    SYMBOL_NAME_INSENSITIVE_LITERAL => new LiteralRule(
+                        isCaseSensitive: false,
+                        ruleValidator: null,
+                        value: terminalType
+                            .FindNode(SYMBOL_NAME_INSENSITIVE_VALUE)
+                            .TokenValue()
+                            .ApplyEscape()),
+
+                    SYMBOL_NAME_SENSITIVE_LITERAL => new LiteralRule(
+                        isCaseSensitive: true,
+                        ruleValidator: null,
+                        value: terminalType
+                            .FindNode(SYMBOL_NAME_SENSITIVE_VALUE)
+                            .TokenValue()
+                            .ApplyEscape()),
+
                     SYMBOL_NAME_PATTERN => new PatternRule(
-                        new Regex(terminal.FindNode($"{SYMBOL_NAME_PATTERN}.{SYMBOL_NAME_PATTERN_VALUE}").TokenValue()),
-                        ToMatchType(terminal.FindNode($"{SYMBOL_NAME_PATTERN}.{SYMBOL_NAME_MATCH_CARDINALITY}"))),
+                        ruleValidator: null,
+                        matchType: ToMatchType(terminal.FindNode($"{SYMBOL_NAME_PATTERN}.{SYMBOL_NAME_MATCH_CARDINALITY}")),
+                        regex: new Regex(
+                            options: ToRegexOptions(terminalType.FindNode(SYMBOL_NAME_PATTERN_FLAGS)),
+                            pattern: terminal
+                                .FindNode($"{SYMBOL_NAME_PATTERN}.{SYMBOL_NAME_PATTERN_VALUE}")
+                                .TokenValue())),
+
                     _ => throw new ArgumentException($"Invalid symbol name: {terminal.FirstNode().SymbolName}")
                 };
             }
@@ -235,6 +260,35 @@ namespace Axis.Pulsar.Importer.Common.Antlr
                     "+" => new IPatternMatchType.Open(int.Parse(first), false),
                     _ => new IPatternMatchType.Closed(int.Parse(first), int.Parse(second))
                 };
+            }
+
+            private static RegexOptions ToRegexOptions(ICSTNode patternFlags)
+            {
+                var options = RegexOptions.Compiled;
+                if (patternFlags == null)
+                    return options;
+
+                var flags = patternFlags
+                    .AllChildNodes()
+                    .Select(node => node.SymbolName)
+                    .Map(names => new HashSet<string>(names));
+
+                if (flags.Contains("ignore-case-flag"))
+                    options |= RegexOptions.IgnoreCase;
+
+                if (flags.Contains("multi-line-flag"))
+                    options |= RegexOptions.Multiline;
+
+                if (flags.Contains("single-line-flag"))
+                    options |= RegexOptions.Singleline;
+
+                if (flags.Contains("explicit-capture-flag"))
+                    options |= RegexOptions.ExplicitCapture;
+
+                if (flags.Contains("ignore-whitespace-flag"))
+                    options |= RegexOptions.IgnorePatternWhitespace;
+
+                return options;
             }
         }
     }

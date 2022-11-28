@@ -1,0 +1,157 @@
+﻿# A subset of the amazon.ion text-format grammar
+#
+# NOTE: for non-case-sensitive strings, use s-quote: ', and use d-quote: ", for case sensitive strings
+#
+
+# Ion
+$ion -> +[$block-space.? $ion-value +[$block-space $ion-value].* EOF]
+
+# Ion Value
+$ion-value -> +[$annotation-list.? $value]
+$value -> ?[$ion-clob $ion-blob $ion-struct $ion-list $ion-sexp $ion-string $ion-null $ion-bool $ion-symbol $ion-float $ion-decimal $ion-int $ion-timestamp]
+
+# Annotation
+$annotation-list -> +[$annotation $annotation-separator].+
+$annotation -> ?[$quoted-symbol $identifier]
+
+# null
+$ion-null -> ?[$null-null $null]
+$null-null -> "null.null"
+$null -> "null"
+
+# Bool
+# NOTE: single-quoted strings ignore case.
+$ion-bool -> ?[$null-bool $true-bool $false-bool]
+$null-bool -> "null.int"
+$true-bool -> 'true'
+$false-bool -> 'false'
+
+# Int
+$ion-int -> ?[$null-int $binary-int $hex-int $regular-int]
+$null-int -> "null.int"
+$binary-int -> /^-?0b[01](_?[01])*$/
+$hex-int -> /^-?0x[0-9A-Fa-f](_?[0-9A-Fa-f])*$/
+$regular-int -> /^-?\d(_?\d)*$/
+
+# Float
+$ion-float -> ?[$null-float $scientific-float]
+$null-float -> "null.float"
+$scientific-float -> /^-?\d(_?\d)*[Ee]-?\d(_?\d)*$/
+
+# Decimal
+$ion-decimal -> ?[$null-decimal $scientific-decimal $regular-decimal]
+$null-decimal -> "null.decimal"
+$scientific-decimal -> /^-?\d(_?\d)*[Dd]-?\d(_?\d)*$/
+$regular-decimal -> /^-?\d(_?\d)*\.(\d(_?\d)*)?$/
+
+# Timestamp
+$ion-timestamp -> ?[$null-timestamp $millisecond-precision $second-precision $minute-precision $day-precision $month-precision $year-precision]
+$null-timestamp -> "null.timestamp"
+$millisecond-precision -> +[$year $minus $month $minus $day $date-delimiter $hour $colon $minute $colon $second $dot $millisecond $time-zone-offset]
+$second-precision -> +[$year $minus $month $minus $day $date-delimiter $hour $colon $minute $colon $second $time-zone-offset]
+$minute-precision -> +[$year $minus $month $minus $day $date-delimiter $hour $colon $minute $time-zone-offset]
+$day-precision -> +[$year $minus $month $minus $day $date-delimiter.?]
+$month-precision -> +[$year $minus $month $date-delimiter]
+$year-precision -> +[$year $date-delimiter]
+$time-zone-offset -> ?[$utc-offset $minute-precision-offset]
+$minute-precision-offset -> +[?[$plus $minus] $hour $colon $minute]
+$utc-offset -> "Z"
+$date-delimiter -> "T"
+$year -> /^\d{4,}$/
+$month -> /^(01|02|03|04|05|06|07|08|09|10|11|12)$/
+$day -> /^(01|02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31)$/
+$hour -> /^(00|01|02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23)$/
+$minute -> /^[0-5]\d$/
+$second -> /^[0-5]\d$/
+$millisecond -> /^\d+$/
+
+# String
+$ion-string -> ?[$null-string $regular-string $multiline-string]
+$null-string -> "null.string"
+$regular-string -> +[$d-quote $d-unquoted-text $d-quote]
+$d-unquoted-text -> /^([^"]|(?<=\\)")+$/
+$multiline-string -> +[$l-parantheses +[$block-space.? $ml-string].+ $block-space.? $r-parantheses]
+$ml-string -> +[$s-quote.3 $s-unquoted-text $s-quote.3]
+
+# Symbols
+$ion-symbol -> ?[$null-symbol $quoted-symbol $operator-symbol $identifier]
+$null-symbol -> "null.symbol"
+$quoted-symbol -> +[$s-quote $s-unquoted-text $s-quote]
+$operator-symbol -> ?[$exclamation $hash $percent $ampersand $star $plus $minus $dot $f-slash $s-colon $less $equals $greater $q-mark $at $caret $b-tick $pipe $tilde].+
+$identifier -> /^[a-zA-Z_\\$][a-zA-Z0-9_\\$]*$/
+$s-unquoted-text -> /^([^']|(?<=\\)')+$/
+
+# Blob
+$ion-blob -> ?[$null-blob $blob-value]
+$null-blob -> "null.blob"
+$blob-value -> +[$l-brace.2 $char-space.+ $base-64 $char-space.+ $r-brace.2]
+$base-64 -> /^[A-Za-z0-9+//]+={0,2}$/
+
+# Clob
+$ion-clob -> ?[$null-clob $clob-value]
+$null-clob -> "null.clob"
+$clob-value -> +[$l-brace.2 $char-space.+ ?[$regular-string $clob-ml-string] $char-space.+ $l-brace.2]
+$clob-ml-string -> +[$char-space.* $ml-string].+
+
+# List
+$ion-list -> ?[$null-list $list-value]
+$null-list -> "null.list"
+$list-value -> +[$l-bracket +[$block-space.? $ion-value +[$block-space.? $comma $block-space.? $ion-value].*].? $block-space.? $r-bracket]
+
+# Sexp
+# NOTE: investigate if sexp's allow comments.
+$ion-sexp -> ?[$null-sexp $sexp-value]
+$null-sexp -> "null.sexp"
+$sexp-value -> +[$l-parantheses +[$char-space.* $ion-symbol].+ $char-space.* $r-parantheses]
+
+# Struct
+$ion-struct -> ?[$null-struct $struct-value]
+$null-struct -> "null.struct"
+$struct-value -> +[$l-brace +[$block-space.? $struct-field +[$block-space.? $comma $block-space $struct-field].*].? $block-space.? $r-brace]
+$struct-field -> +[?[$regular-string $quoted-symbol $identifier] $block-space.? $colon $block-space.? $ion-value]
+
+# Spaces
+$block-space -> ?[$char-space $block-comment $line-comment].+
+$char-space -> ?[$space $tab $new-line $carriage-return]
+$space -> ' '
+$tab -> '\t'
+$new-line -> '\n'
+$carriage-return -> '\r'
+
+# Comments
+$block-comment -> +[$f-slash $star $block-comment-content $star $f-slash]
+$block-comment-content -> /^([^*]|\*(?=[^//]))*$/.2,*
+$line-comment -> +[$f-slash.2 $line-comment-content]
+$line-comment-content -> /^[^\r\n]*\z/
+
+# General terminals
+$annotation-separator -> "::"
+$s-quote -> "'"
+$d-quote -> '"'
+$exclamation -> '!'
+$hash -> '#'
+$percent -> '%'
+$ampersand -> '&'
+$star -> '*'
+$plus -> '+'
+$minus -> '-'
+$dot -> '.'
+$comma -> ','
+$f-slash -> '/'
+$s-colon -> ';'
+$less -> '<'
+$equals -> '='
+$greater -> '>'
+$q-mark -> '?'
+$at -> '@'
+$caret -> '^'
+$b-tick -> '`'
+$pipe -> '|'
+$tilde -> '~'
+$colon -> ':'
+$l-brace -> '{'
+$r-brace -> '}'
+$l-bracket -> '['
+$r-bracket -> ']'
+$l-parantheses -> '('
+$r-parantheses -> ')'

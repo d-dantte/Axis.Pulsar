@@ -57,6 +57,7 @@ TODO
 	2. 
 
 8. For xBnf, Add suport for short-hand notations for zero-or-more (*), one-or-more (+), zero-or-one (?).
+   [Done]
 9. Add symbol validators: these are essentially lambda functions that take a symbol instance, perform some form of validation, and return
    true or false. If true, the symbol is allowed to be created, else the parsing of that symbol fails. This mechanism should be baked into
    the TryParse(xxx) methods of the parsers and recognizers where applicable.
@@ -71,3 +72,12 @@ TODO
 	   non-matches the parser should try before either reporting success (with the already matched tokens), or failure (if no token was matched).
 	2. Closed-Pattern: where the number of characters to match is fixed and known, having a max and min value. The parser pulls in the max number
 	   of tokens (or as many as can be pulled from the buffer), and counts backwards towards the min value till a match is found.
+    [Done]
+12. Change implementation of xAntlr's $line-indent-space to support any kind of white-space, cus that's what the actual language supports.
+    see here: https://github.com/antlr/antlr4/blob/master/doc/grammars.md, and here: https://github.com/antlr/antlr4/blob/master/doc/getting-started.md
+13. Include support for special terminals. These are IAtomicRule instances that perform specialized processing of the BufferedTokenReader's output tokens.
+	An example (and the reason for adding support) is with the need to recognize string literal patterns - i.e, strings like those in c-like programming
+	languages: "foo, bar 54£%$$". Using regular expressions for this is insufficient, as representing escaped characters adequately is impossible. E.g,
+	a regex that recognizes "\"", and also "\\" will have problems when it meets this: "\\\"". A Delimited string is Special Terminal that is
+	configurable to recognize cases like the above.
+	Each Special Terminal will have it's own symbol name that can be used while writing the gramma (and possilbly parametarized?).

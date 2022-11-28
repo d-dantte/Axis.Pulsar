@@ -139,10 +139,11 @@ namespace Axis.Pulsar.Parser.Builders
             });
 
             if (unreferencedProductions.Length > 0 || orphanedSymbols.Length > 0 || !hasTerminal)
-                throw new GrammarValidatoinException(
+                throw new GrammarValidationException(
                     unreferencedProductions,
                     orphanedSymbols,
-                    !hasTerminal);
+                    !hasTerminal,
+                    productions);
         }
 
         private IEnumerable<string> GetReferencedSymbols(IRule rule)
@@ -243,25 +244,26 @@ namespace Axis.Pulsar.Parser.Builders
             {
                 return expression switch
                 {
+                    EOF => new EOFRecognizer(),
+
                     ProductionRef @ref => new ProductionRefRecognizer(
-                        @ref.ProductionSymbol,
-                        @ref.Cardinality,
+                        @ref,
                         this),
 
                     SymbolGroup group => group.Expressions
                         .Select(CreateRecognizer)
-                        .Map(recogniers => group.Mode switch
+                        .Map(recogniers => group switch
                         {
-                            SymbolGroup.GroupingMode.Choice => new ChoiceRecognizer(
-                                group.Cardinality,
+                            SymbolGroup.Choice choice => new ChoiceRecognizer(
+                                choice,
                                 recogniers.ToArray()),
 
-                            SymbolGroup.GroupingMode.Sequence => new SequenceRecognizer(
-                                group.Cardinality,
+                            SymbolGroup.Sequence sequence => new SequenceRecognizer(
+                                sequence,
                                 recogniers.ToArray()),
 
-                            SymbolGroup.GroupingMode.Set => (IRecognizer)new SetRecognizer(
-                                group.Cardinality,
+                            SymbolGroup.Set set => (IRecognizer)new SetRecognizer(
+                                set,
                                 recogniers.ToArray()),
 
                             _ => throw new ArgumentException($"Invalid {typeof(SymbolGroup.GroupingMode)}: {group.Mode}")
