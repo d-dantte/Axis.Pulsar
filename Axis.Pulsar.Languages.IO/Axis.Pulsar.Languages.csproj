@@ -18,13 +18,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="xAntlr\xAntlr.xbnf" />
     <None Remove="xBNF\xBNFRule.xml" />
     <None Remove="Xml\RuleDefinition.xsd" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="xAntlr\xAntlr.xbnf" />
     <EmbeddedResource Include="xBNF\xBNFRule.xml" />
     <EmbeddedResource Include="Xml\RuleDefinition.xsd">
       <SubType>Designer</SubType>
