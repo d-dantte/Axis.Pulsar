@@ -1,4 +1,5 @@
-﻿using Axis.Pulsar.Grammar.Language;
+﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Grammar.Language;
 using Axis.Pulsar.Grammar.Language.Rules;
 using System;
 
@@ -86,9 +87,9 @@ namespace Axis.Pulsar.Grammar.Builders
         protected override void ValidateTarget()
         {
             // relies on the production struct to validate the parameters
-            _ = new Production(_symbol, new ProductionRule(_symbol, _recognitionThreshold, _rule, _validator));
+            _ = new Production(new ProductionRule(_symbol, _recognitionThreshold, _rule, _validator));
         }
 
-        protected override Production BuildTarget() => new(_symbol, new ProductionRule(_symbol, _recognitionThreshold, _rule, _validator));
+        protected override Production BuildTarget() => new(new ProductionRule(_symbol, _recognitionThreshold, _rule, _validator));
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Axis.Luna.Common;
+using Axis.Luna.Extensions;
 using Axis.Pulsar.Grammar.Language;
 using Axis.Pulsar.Grammar.Language.Rules.CustomTerminals;
 using Axis.Pulsar.Grammar.Recognizers.Results;
@@ -6,7 +7,7 @@ using System;
 using System.Text;
 using static Axis.Pulsar.Grammar.Language.Rules.CustomTerminals.DelimitedString;
 
-namespace Axis.Pulsar.Grammar.Recognizers.SpecialTerminals
+namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
 {
     public class DelimitedStringRecognizer : IRecognizer
     {
@@ -135,7 +136,7 @@ namespace Axis.Pulsar.Grammar.Recognizers.SpecialTerminals
                 if (matcher.EscapeDelimiter.Equals(potentialEscapeDelimiter))
                 {
                     context.EscapeMatcher = matcher;
-                    context.EscapeDelimiterIndex = context.TokenReader.Position;
+                    context.EscapeDelimiterIndex = index;
                     return StateNames.EscapeCharacters.ToString();
                 }
             }

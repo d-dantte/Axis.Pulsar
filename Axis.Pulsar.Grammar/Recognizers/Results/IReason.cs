@@ -1,4 +1,5 @@
-﻿using Axis.Pulsar.Grammar.Language.Rules;
+﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Grammar.Language.Rules;
 using System;
 using System.Linq;
 

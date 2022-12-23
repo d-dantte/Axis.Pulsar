@@ -2,7 +2,7 @@
 using Axis.Pulsar.Languages.xBNF;
 using System.Text;
 
-namespace Axis.Pulsar.Languges.IO.Tests.xBnf
+namespace Axis.Pulsar.Languages.IO.Tests.xBnf
 {
     [TestClass]
     public class ImporterTests
@@ -12,6 +12,7 @@ namespace Axis.Pulsar.Languges.IO.Tests.xBnf
         {
             try
             {
+                #region others
                 var timer = System.Diagnostics.Stopwatch.StartNew();
                 var ruleImporter = new Importer();
                 timer.Stop();
@@ -83,7 +84,7 @@ namespace Axis.Pulsar.Languges.IO.Tests.xBnf
                 x = ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleBNF6)));
                 timer.Stop();
                 Console.WriteLine("Time to Import: " + timer.Elapsed);
-
+                #endregion
 
 
                 timer.Restart();

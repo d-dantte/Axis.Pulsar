@@ -1,5 +1,7 @@
-﻿using Axis.Pulsar.Grammar.Language;
+﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Grammar.Language;
 using Axis.Pulsar.Grammar.Language.Rules;
+using Axis.Pulsar.Grammar.Language.Rules.CustomTerminals;
 using System;
 using System.Text.RegularExpressions;
 
@@ -137,6 +139,17 @@ namespace Axis.Pulsar.Grammar.Builders
         public RuleBuilder WithRule(IRule rule)
         {
             _rule = rule ?? throw new ArgumentNullException(nameof(rule));
+
+            return this;
+        }
+
+        /// <summary>
+        /// Replaces the underlying rule with the supplied instance
+        /// </summary>
+        /// <param name="customTerminal">The rule</param>
+        public RuleBuilder WithCustomTerminal(ICustomTerminal customTerminal)
+        {
+            _rule = customTerminal ?? throw new ArgumentNullException(nameof(customTerminal));
 
             return this;
         }

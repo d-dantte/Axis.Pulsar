@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Axis.Luna.Extensions;
+using System;
 
 namespace Axis.Pulsar.Grammar.Language
 {

@@ -6,6 +6,7 @@
       <xs:element name="literal" type="LiteralType"/>
       <xs:element name="closed-pattern" type="ClosedPatternType"/>
       <xs:element name="open-pattern" type="OpenPatternType"/>
+      <xs:element name="custom-terminal" type="CustomTerminalType" />
       <xs:element name="non-terminal" type="NonTerminalType"/>
     </xs:choice>
 
@@ -14,6 +15,11 @@
 
   <xs:complexType name="LiteralType">
     <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="value" type="xs:string" use="required"/>
+    <xs:attribute name="case-sensitive" type="xs:boolean" use="optional"/>
+  </xs:complexType>
+
+  <xs:complexType name="InlineLiteralType">
     <xs:attribute name="value" type="xs:string" use="required"/>
     <xs:attribute name="case-sensitive" type="xs:boolean" use="optional"/>
   </xs:complexType>
@@ -28,7 +34,7 @@
     <xs:attribute name="explicit-capture" type="xs:boolean" use="optional"/>
   </xs:complexType>
 
-  <xs:complexType name="ClosedPatternType">
+  <xs:complexType name="InlineClosedPatternType">
     <xs:complexContent>
       <xs:extension base="PatternType">
         <xs:attribute name="min-match" type="xs:int" use="optional" />
@@ -37,11 +43,27 @@
     </xs:complexContent>
   </xs:complexType>
 
-  <xs:complexType name="OpenPatternType">
+  <xs:complexType name="InlineOpenPatternType">
     <xs:complexContent>
       <xs:extension base="PatternType">
         <xs:attribute name="allow-empty" type="xs:boolean" use="optional" />
         <xs:attribute name="max-mismatch" type="xs:int" use="optional" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="ClosedPatternType">
+    <xs:complexContent>
+      <xs:extension base="InlineClosedPatternType">
+        <xs:attribute name="name" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="OpenPatternType">
+    <xs:complexContent>
+      <xs:extension base="InlineOpenPatternType">
+        <xs:attribute name="name" type="xs:string" use="required"/>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
@@ -53,6 +75,7 @@
       <xs:element name="set" type="SetGroupType"/>
       <xs:element name="symbol" type="SymbolType"/>
       <xs:element name="eof" type="EOFType"/>
+      <xs:element name="custom-terminal" type="CustomTerminalType" />
     </xs:choice>
 
     <xs:attribute name="name" type="xs:string" use="required"/>
@@ -66,9 +89,10 @@
       <xs:element name="set" type="SetGroupType"/>
       <xs:element name="symbol" type="SymbolType"/>
       <xs:element name="eof" type="EOFType"/>
+      <xs:element name="custom-terminal" type="CustomTerminalType" />
     </xs:choice>
 
-    <xs:attribute name="min-occurs" type="xs:string" use="optional" />
+    <xs:attribute name="min-occurs" type="xs:int" use="optional" />
     <xs:attribute name="max-occurs" type="xs:string" use="optional" />
   </xs:complexType>
 
@@ -82,8 +106,12 @@
 
   <xs:complexType name="SymbolType">
     <xs:attribute name="name" type="xs:string" use="required"/>
-    <xs:attribute name="min-occurs" type="xs:string" use="optional" />
+    <xs:attribute name="min-occurs" type="xs:int" use="optional" />
     <xs:attribute name="max-occurs" type="xs:string" use="optional" />
+  </xs:complexType>
+
+  <xs:complexType name="CustomTerminalType">
+    <xs:attribute name="symbol" type="xs:string" use="required" />
   </xs:complexType>
 
   <xs:complexType name="EOFType">

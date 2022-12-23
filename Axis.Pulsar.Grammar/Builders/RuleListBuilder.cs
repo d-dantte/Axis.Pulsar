@@ -1,5 +1,7 @@
-﻿using Axis.Pulsar.Grammar.Language;
+﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Grammar.Language;
 using Axis.Pulsar.Grammar.Language.Rules;
+using Axis.Pulsar.Grammar.Language.Rules.CustomTerminals;
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -145,6 +147,17 @@ namespace Axis.Pulsar.Grammar.Builders
         public RuleListBuilder HavingRule(IRule rule)
         {
             _rules.Add(rule ?? throw new ArgumentNullException(nameof(rule)));
+
+            return this;
+        }
+
+        /// <summary>
+        /// Appends the supplied instance to the underlying rule list
+        /// </summary>
+        /// <param name="customTerminal">The rule</param>
+        public RuleListBuilder HavingCustomTerminal(ICustomTerminal customTerminal)
+        {
+            _rules.Add(customTerminal ?? throw new ArgumentNullException(nameof(customTerminal)));
 
             return this;
         }

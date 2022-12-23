@@ -54,20 +54,6 @@ namespace Axis.Pulsar.Grammar
             return mapper.Invoke(@in);
         }
 
-        internal static TOut As<TOut>(this object value) => (TOut)value;
-
-        internal static void ForAll<T>(this IEnumerable<T> enumerable, Action<T> action)
-        {
-            if (action == null)
-                throw new ArgumentNullException(nameof(action));
-
-            if (enumerable == null)
-                throw new ArgumentNullException(nameof(enumerable));
-
-            foreach (var t in enumerable)
-                action.Invoke(t);
-        }
-
         internal static Dictionary<K, V> ToDictionary<K, V>(this IEnumerable<KeyValuePair<K, V>> kvps)
         {
             if (kvps is null)
@@ -97,43 +83,6 @@ namespace Axis.Pulsar.Grammar
                 throw new IndexOutOfRangeException(index.ToString());
 
             return builder.ToString(index, builder.Length - index);
-        }
-
-        /// <summary>
-        /// Akin to a decorator
-        /// </summary>
-        /// <typeparam name="T">The type of the target instance</typeparam>
-        /// <param name="value">The target instance</param>
-        /// <param name="consumer">The consumer/decorator action</param>
-        /// <returns>The target instance</returns>
-        /// <exception cref="ArgumentNullException">If the consumer action is null</exception>
-        internal static T With<T>(this T value, Action<T> consumer)
-        {
-            if (consumer == null)
-                throw new ArgumentNullException(nameof(consumer));
-
-            consumer.Invoke(value);
-            return value;
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="enumerable"></param>
-        /// <param name="consumer"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentNullException"></exception>
-        internal static IEnumerable<T> WithEach<T>(this IEnumerable<T> enumerable, Action<T> consumer)
-        {
-            if (consumer is null)
-                throw new ArgumentNullException(nameof(consumer));
-
-            return enumerable.Select(item =>
-            {
-                consumer.Invoke(item);
-                return item;
-            });
         }
 
         /// <summary>
@@ -172,22 +121,6 @@ namespace Axis.Pulsar.Grammar
         #endregion
 
         #region Exceptions
-        internal static T ThrowIf<T>(this T value, Func<T, bool> predicate, Exception exception)
-        {
-            if (predicate is null)
-                throw new ArgumentNullException(nameof(predicate));
-
-            if (exception is null)
-                throw new ArgumentNullException(nameof(exception));
-
-            if (predicate.Invoke(value))
-            {
-                if (exception.StackTrace == null) throw exception;
-                else ExceptionDispatchInfo.Capture(exception).Throw();
-            }
-
-            return value;
-        }
 
         internal static T ThrowIfNot<T>(this T value, Func<T, bool> predicate, Exception exception)
         {
@@ -198,34 +131,6 @@ namespace Axis.Pulsar.Grammar
                 throw new ArgumentNullException(nameof(exception));
 
             if (!predicate.Invoke(value))
-            {
-                if (exception.StackTrace == null) throw exception;
-                else ExceptionDispatchInfo.Capture(exception).Throw();
-            }
-
-            return value;
-        }
-
-        internal static T ThrowIfNull<T>(this T value, Exception exception)
-        {
-            if (exception is null)
-                throw new ArgumentNullException(nameof(exception));
-
-            if (value is null)
-            {
-                if (exception.StackTrace == null) throw exception;
-                else ExceptionDispatchInfo.Capture(exception).Throw();
-            }
-
-            return value;
-        }
-
-        internal static T ThrowIfDefault<T>(this T value, Exception exception)
-        {
-            if (exception is null)
-                throw new ArgumentNullException(nameof(exception));
-
-            if (EqualityComparer<T>.Default.Equals(default, value))
             {
                 if (exception.StackTrace == null) throw exception;
                 else ExceptionDispatchInfo.Capture(exception).Throw();

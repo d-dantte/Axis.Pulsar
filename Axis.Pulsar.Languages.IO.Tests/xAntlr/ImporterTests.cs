@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using Axis.Pulsar.Languages.xAntlr;
 
-namespace Axis.Pulsar.Languges.IO.Tests.xAntlr
+namespace Axis.Pulsar.Languages.IO.Tests.xAntlr
 {
     [TestClass]
     public class ImporterTests
@@ -16,7 +16,7 @@ namespace Axis.Pulsar.Languges.IO.Tests.xAntlr
 
             timer.Restart();
             var x = ruleImporter.ImportGrammar(new MemoryStream(Encoding.UTF8.GetBytes(SampleAntlr)));
-            timer.Stop();
+            timer.Stop(); 
             Console.WriteLine("Time to Import: " + timer.Elapsed);
         }
 
@@ -26,9 +26,9 @@ namespace Axis.Pulsar.Languges.IO.Tests.xAntlr
 # some other comment
 grammar
     > -threshold 5
-    : more-stuff $EOF
-    | other-stuff $EOF
-    | 'meh' $EOF
+    : more-stuff @EOF
+    | other-stuff @EOF
+    | 'meh' @EOF
     ;
 
 #    comment placed in between

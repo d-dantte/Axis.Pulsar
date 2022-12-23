@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Axis.Luna.Extensions;
+using System;
 using System.Collections.Generic;
 
 namespace Axis.Pulsar.Grammar
@@ -208,5 +209,8 @@ namespace Axis.Pulsar.Grammar
         /// Moves the position backwards by one space
         /// </summary>
         public BufferedTokenReader Back() => Back(1);
+
+
+        public static implicit operator BufferedTokenReader(string input) => new(input);
     }
 }

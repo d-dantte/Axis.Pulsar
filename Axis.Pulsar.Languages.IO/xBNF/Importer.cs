@@ -1,10 +1,12 @@
-﻿using Axis.Pulsar.Grammar;
+﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Grammar;
 using Axis.Pulsar.Grammar.Builders;
 using Axis.Pulsar.Grammar.CST;
 using Axis.Pulsar.Grammar.Exceptions;
 using Axis.Pulsar.Grammar.IO;
 using Axis.Pulsar.Grammar.Language;
 using Axis.Pulsar.Grammar.Language.Rules;
+using Axis.Pulsar.Grammar.Language.Rules.CustomTerminals;
 using Axis.Pulsar.Grammar.Recognizers.Results;
 using System;
 using System.Collections.Concurrent;
@@ -16,7 +18,7 @@ using System.Threading.Tasks;
 
 namespace Axis.Pulsar.Languages.xBNF
 {
-    using BNFGrammar = Grammar.Language.Grammar;
+    using PulsarGrammar = Grammar.Language.Grammar;
     using MatchType = Grammar.Language.MatchType;
 
     /// <summary>
@@ -46,11 +48,15 @@ namespace Axis.Pulsar.Languages.xBNF
         public const string SYMBOL_NAME_DIGITS = "digits";
         public const string SYMBOL_NAME_EOF = "eof";
         public const string SYMBOL_NAME_RECOGNITION_THRESHOLD = "recognition-threshold";
+        public const string SYMBOL_NAME_CUSTOM_TERMINAL = "custom-terminal";
+        public const string CUSTOM_TERMINAL_SYMBOL_NAME_DQD_STRING = "DQD-String";
+        public const string CUSTOM_TERMINAL_SYMBOL_NAME_SQD_STRING = "SQD-String";
         #endregion
 
-        private static readonly BNFGrammar BnfGrammar;
+        private static readonly PulsarGrammar xBnfGrammar;
 
         private ConcurrentDictionary<string, IProductionValidator> _validatorMap = new();
+        private ConcurrentDictionary<string, ICustomTerminal> _customTerminals = new();
 
         static Importer()
         {
@@ -58,9 +64,24 @@ namespace Axis.Pulsar.Languages.xBNF
                 .Assembly
                 .GetManifestResourceStream($"{typeof(Importer).Namespace}.xBNFRule.xml");
 
-            BnfGrammar = new Xml
+            xBnfGrammar = new Xml
                 .Importer()
                 .ImportGrammar(bnfXmlStream);
+        }
+
+        public Importer()
+        {
+            // Add Double-quote-delimited-string custom terminal with key 'DQD-String'
+            this._customTerminals[CUSTOM_TERMINAL_SYMBOL_NAME_DQD_STRING] = new DelimitedString(
+                CUSTOM_TERMINAL_SYMBOL_NAME_DQD_STRING,
+                "\"",
+                new DelimitedString.BSolGeneralEscapeMatcher());
+
+            // Add Single-quote-delimited-string custom terminal with key 'SQD-String'
+            this._customTerminals[CUSTOM_TERMINAL_SYMBOL_NAME_SQD_STRING] = new DelimitedString(
+                CUSTOM_TERMINAL_SYMBOL_NAME_SQD_STRING,
+                "\'",
+                new DelimitedString.BSolGeneralEscapeMatcher());
         }
 
         #region Validator API
@@ -80,7 +101,7 @@ namespace Axis.Pulsar.Languages.xBNF
             return this;
         }
 
-        public string[] RegisteredSymbols() => _validatorMap.Keys.ToArray();
+        public string[] RegisteredValidatorSymbols() => _validatorMap.Keys.ToArray();
 
         public IProductionValidator RegisteredValidator(string symbolName)
             => _validatorMap.TryGetValue(symbolName, out var validator)
@@ -89,17 +110,36 @@ namespace Axis.Pulsar.Languages.xBNF
         #endregion
 
         #region Custom Terminal API
-        ICustomTerminalRegistry RegisterTerminal(ICustomTerminal validator);
+        public ICustomTerminalRegistry RegisterTerminal(ICustomTerminal terminal)
+        {
+            if (!this.TryRegister(terminal))
+                throw new InvalidOperationException($"The symbol '{terminal.SymbolName}' is already registered");
 
-        bool TryRegister(ICustomTerminal terminal);
+            return this;
+        }
 
-        string[] RegisteredSymbols();
+        public bool TryRegister(ICustomTerminal terminal)
+        {
+            if (terminal is null)
+                throw new ArgumentNullException(nameof(terminal));
 
-        ICustomTerminal RegisteredTerminal(string symbolName);
+            if (!SymbolHelper.SymbolPattern.IsMatch(terminal.SymbolName))
+                throw new ArgumentException($"Invalid {nameof(terminal.SymbolName)}: {terminal.SymbolName}");
+
+            return _customTerminals.TryAdd(terminal.SymbolName, terminal);
+        }
+
+        public string[] RegisteredTerminalSymbols() => _customTerminals.Keys.ToArray();
+
+        public ICustomTerminal RegisteredTerminal(string symbolName)
+            => _customTerminals.TryGetValue(symbolName, out var terminal)
+            ? terminal
+            : null;
         #endregion
 
+        #region IImporter API
         /// <inheritdoc/>
-        public BNFGrammar ImportGrammar(Stream inputStream)
+        public PulsarGrammar ImportGrammar(Stream inputStream)
         {
             using var reader = new StreamReader(inputStream);
             var txt = reader.ReadToEnd();
@@ -108,18 +148,25 @@ namespace Axis.Pulsar.Languages.xBNF
         }
 
         /// <inheritdoc/>
-        public async Task<BNFGrammar> ImportGrammarAsync(Stream inputStream)
+        public async Task<PulsarGrammar> ImportGrammarAsync(Stream inputStream)
         {
             using var reader = new StreamReader(inputStream);
             var txt = await reader.ReadToEndAsync();
 
             return ToGrammar(txt);
         }
+        #endregion
 
-        internal BNFGrammar ToGrammar(string text)
+        /// <summary>
+        /// The unerlying xbnf grammar used to "parse" the input stream
+        /// </summary>
+        public PulsarGrammar ImporterGrammar => xBnfGrammar;
+
+
+        internal PulsarGrammar ToGrammar(string text)
         {
             var tokenReader = new BufferedTokenReader(text.Trim());
-            if (!BnfGrammar.RootRecognizer().TryRecognize(tokenReader, out var result))
+            if (!xBnfGrammar.RootRecognizer().TryRecognize(tokenReader, out var result))
                 throw new RecognitionException(result);
 
             var successResult = result as SuccessResult;
@@ -172,7 +219,12 @@ namespace Axis.Pulsar.Languages.xBNF
                     ruleTypeNode.FirstNode(),
                     ruleTypeNode.NodeAt(1)),
 
-                _ => throw new ArgumentException($"Invalid element: {ruleTypeNode.SymbolName}")
+                SYMBOL_NAME_CUSTOM_TERMINAL => !_customTerminals
+                    .TryGetValue(ruleTypeNode.TokenValue()[1..], out var customTerminal)
+                        ? throw new ArgumentException($"Invalid custom terminal: {ruleTypeNode.TokenValue()}")
+                        : builder.WithRule(customTerminal),
+
+                _ => throw new ArgumentException($"Invalid rule type: {ruleTypeNode.SymbolName}")
             };
         }
 
@@ -198,7 +250,12 @@ namespace Axis.Pulsar.Languages.xBNF
                         ruleTypeNode.FirstNode(),
                         ruleTypeNode.NodeAt(1)),
 
-                    _ => throw new ArgumentException($"Invalid element: {ruleTypeNode.SymbolName}")
+                    SYMBOL_NAME_CUSTOM_TERMINAL => !_customTerminals
+                        .TryGetValue(ruleTypeNode.TokenValue()[1..], out var customTerminal)
+                            ? throw new ArgumentException($"Invalid rule type: {ruleTypeNode.FirstNode().SymbolName}")
+                            : builder.HavingRule(customTerminal),
+
+                    _ => throw new ArgumentException($"Invalid rule type: {ruleTypeNode.SymbolName}")
                 };
             }
         }
@@ -228,13 +285,16 @@ namespace Axis.Pulsar.Languages.xBNF
         internal RuleBuilder WithLiteral(RuleBuilder builder, CSTNode literalNode)
         {
             var literalTypeNode = literalNode.FirstNode();
-            var isCaseSensitive = literalTypeNode.SymbolName switch
+            (var isCaseSensitive, var unwrapChars) = literalTypeNode.SymbolName switch
             {
-                SYMBOL_NAME_CASE_SENSITIVE => true,
-                SYMBOL_NAME_CASE_INSENSITIVE => false,
+                SYMBOL_NAME_CASE_SENSITIVE => (true, "\""),
+                SYMBOL_NAME_CASE_INSENSITIVE => (false, "\'"),
                 _ => throw new InvalidOperationException($"Invalid literal type: {literalTypeNode.SymbolName}")
             };
-            var literalValue = literalTypeNode.NodeAt(1).TokenValue();
+            var literalValue = literalTypeNode
+                .TokenValue()
+                .UnwrapFrom(unwrapChars)
+                .ApplyEscape();
 
             return builder.WithLiteral(literalValue, isCaseSensitive);
         }
@@ -242,13 +302,16 @@ namespace Axis.Pulsar.Languages.xBNF
         internal RuleListBuilder HavingLiteral(RuleListBuilder builder, CSTNode literalNode)
         {
             var literalTypeNode = literalNode.FirstNode();
-            var isCaseSensitive = literalTypeNode.SymbolName switch
+            (var isCaseSensitive, var unwrapChars) = literalTypeNode.SymbolName switch
             {
-                SYMBOL_NAME_CASE_SENSITIVE => true,
-                SYMBOL_NAME_CASE_INSENSITIVE => false,
+                SYMBOL_NAME_CASE_SENSITIVE => (true, "\""),
+                SYMBOL_NAME_CASE_INSENSITIVE => (false, "\'"),
                 _ => throw new InvalidOperationException($"Invalid literal type: {literalTypeNode.SymbolName}")
             };
-            var literalValue = literalTypeNode.NodeAt(1).TokenValue();
+            var literalValue = literalTypeNode
+                .TokenValue()
+                .UnwrapFrom(unwrapChars)
+                .ApplyEscape();
 
             return builder.HavingLiteral(literalValue, isCaseSensitive);
         }

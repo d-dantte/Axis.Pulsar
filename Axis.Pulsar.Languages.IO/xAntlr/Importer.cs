@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 
 namespace Axis.Pulsar.Languages.xAntlr
 {
-    using AntlrGrammar = Grammar.Language.Grammar;
+    using PulsarGrammar = Grammar.Language.Grammar;
     using MatchType = Grammar.Language.MatchType;
 
     public class Importer: IImporter, ICustomTerminalRegistry, IValidatorRegistry
@@ -62,11 +62,13 @@ namespace Axis.Pulsar.Languages.xAntlr
         public const string SYMBOL_NAME_DIGITS = "digits";
         public const string SYMBOL_NAME_PATTERN_FLAGS = "pattern-flags";
         public const string SYMBOL_NAME_EOF = "eof";
+        public const string SYMBOL_NAME_CUSTOM_TERMINAL = "custom-terminal";
         #endregion
 
-        private static readonly AntlrGrammar AntlrGrammar;
+        private static readonly PulsarGrammar AntlrGrammar;
 
         private ConcurrentDictionary<string, IProductionValidator> _validatorMap = new();
+        private ConcurrentDictionary<string, ICustomTerminal> _customTerminals = new();
 
         static Importer()
         {
@@ -97,7 +99,7 @@ namespace Axis.Pulsar.Languages.xAntlr
             return this;
         }
 
-        public string[] RegisteredSymbols() => _validatorMap.Keys.ToArray();
+        public string[] RegisteredValidatorSymbols() => _validatorMap.Keys.ToArray();
 
         public IProductionValidator RegisteredValidator(string symbolName)
             => _validatorMap.TryGetValue(symbolName, out var validator)
@@ -106,17 +108,36 @@ namespace Axis.Pulsar.Languages.xAntlr
         #endregion
 
         #region Custom Terminal API
-        ICustomTerminalRegistry RegisterTerminal(ICustomTerminal validator);
+        public ICustomTerminalRegistry RegisterTerminal(ICustomTerminal terminal)
+        {
+            if (!this.TryRegister(terminal))
+                throw new InvalidOperationException($"The symbol '{terminal.SymbolName}' is already registered");
 
-        bool TryRegister(ICustomTerminal terminal);
+            return this;
+        }
 
-        string[] RegisteredSymbols();
+        public bool TryRegister(ICustomTerminal terminal)
+        {
+            if (terminal is null)
+                throw new ArgumentNullException(nameof(terminal));
 
-        ICustomTerminal RegisteredTerminal(string symbolName);
+            if (!SymbolHelper.SymbolPattern.IsMatch(terminal.SymbolName))
+                throw new ArgumentException($"Invalid {nameof(terminal.SymbolName)}: {terminal.SymbolName}");
+
+            return _customTerminals.TryAdd(terminal.SymbolName, terminal);
+        }
+
+        public string[] RegisteredTerminalSymbols() => _customTerminals.Keys.ToArray();
+
+        public ICustomTerminal RegisteredTerminal(string symbolName)
+            => _customTerminals.TryGetValue(symbolName, out var terminal)
+            ? terminal
+            : null;
         #endregion
 
+        #region IImporter API
         /// <inheritdoc/>
-        public AntlrGrammar ImportGrammar(Stream inputStream)
+        public PulsarGrammar ImportGrammar(Stream inputStream)
         {
             using var reader = new StreamReader(inputStream);
             var txt = reader.ReadToEnd();
@@ -125,16 +146,21 @@ namespace Axis.Pulsar.Languages.xAntlr
         }
 
         /// <inheritdoc/>
-        public async Task<AntlrGrammar> ImportGrammarAsync(Stream inputStream)
+        public async Task<PulsarGrammar> ImportGrammarAsync(Stream inputStream)
         {
             using var reader = new StreamReader(inputStream);
             var txt = await reader.ReadToEndAsync();
 
             return ToGrammar(txt);
         }
+        #endregion
 
+        /// <summary>
+        /// The unerlying xbnf grammar used to "parse" the input stream
+        /// </summary>
+        public PulsarGrammar ImporterGrammar => AntlrGrammar;
 
-        internal AntlrGrammar ToGrammar(string text)
+        internal PulsarGrammar ToGrammar(string text)
         {
             var tokenReader = new BufferedTokenReader(text.Trim());
             if (!AntlrGrammar.RootRecognizer().TryRecognize(tokenReader, out var result))
@@ -211,6 +237,11 @@ namespace Axis.Pulsar.Languages.xAntlr
                 SYMBOL_NAME_RULE_GROUP => ToRuleListSequence(
                     ruleTypeNode.FindNode(SYMBOL_NAME_RULE_LIST),
                     ruleItemNode.LastNode()),
+
+                SYMBOL_NAME_CUSTOM_TERMINAL => !_customTerminals
+                    .TryGetValue(ruleTypeNode.TokenValue()[1..], out var customTerminal)
+                        ? throw new ArgumentException($"Invalid custom terminal: {ruleTypeNode.TokenValue()}")
+                        : customTerminal,
 
                 _ => throw new InvalidOperationException($"Invaid rule item type: {ruleTypeNode.SymbolName}")
             };

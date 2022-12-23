@@ -24,7 +24,7 @@ namespace Axis.Pulsar.Languages
         /// <summary>
         /// Gets an array of all symbols currently registered.
         /// </summary>
-        string[] RegisteredSymbols();
+        string[] RegisteredTerminalSymbols();
 
         /// <summary>
         /// Gets the terminal registered with the given symbol, or null.

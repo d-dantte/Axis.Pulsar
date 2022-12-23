@@ -18,11 +18,11 @@ $threshold -> +[$white-space $hyphen 'threshold' $white-space $digits]
 
 # Rule
 $rule-list -> +[$rule-item +[$white-space $rule-item].*]
-$rule-item -> ?[$eof $terminal +[?[$rule-group $ref] $cardinality.?]]
+$rule-item -> ?[$eof $terminal $custom-terminal +[?[$rule-group $ref] $cardinality.?]]
 $rule-group -> +[$l-bracket $white-space.* $rule-list $white-space.* $r-bracket]
 $terminal -> ?[$pattern $sensitive-literal $insensitive-literal]
 $ref -> $symbol-name
-$eof -> "$EOF"
+$eof -> "@EOF"
 $rule-end -> +[$line-indent-space $semi-colon]
 
 # Pattern
@@ -40,6 +40,9 @@ $sensitive-literal -> +[$d-quote $sensitive-value $d-quote]
 
 # Case insensitive literal
 $insensitive-literal -> +[$s-quote $insensitive-value $s-quote]
+
+# Custom Terminal
+$custom-terminal -> +[$at $symbol-name]
 
 # Spaces
 $line-indent-space -> +[$line-space ?[$space.1, $tab.+]]
@@ -71,3 +74,4 @@ $plus -> '+'
 $star -> '*'
 $r-chevron -> '>'
 $hyphen -> '-'
+$at -> '@'

@@ -43,6 +43,23 @@ namespace Axis.Pusar.Grammar.Tests.Recognizers
             Assert.IsNotNull(success);
             Assert.AreEqual(0, success.Position);
             Assert.AreEqual("stuff ", success.Symbol.TokenValue());
+
+
+            recognizer = new LiteralRecognizer(
+                new Literal("stuff\\nother stuff\\u00a9\""),
+                MockGrammar.Object);
+
+            recognized = recognizer.TryRecognize(
+                "stuff\nother stuff\u00a9",
+                out result);
+
+            Assert.IsNotNull(result);
+            Assert.IsTrue(recognized);
+
+            success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual(0, success.Position);
+            Assert.AreEqual("stuff ", success.Symbol.TokenValue());
         }
 
         [TestMethod]

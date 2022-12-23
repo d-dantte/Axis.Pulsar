@@ -1,4 +1,5 @@
-﻿using Axis.Pulsar.Grammar.CST;
+﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Grammar.CST;
 using Axis.Pulsar.Grammar.Exceptions;
 using Axis.Pulsar.Grammar.Language;
 using Axis.Pulsar.Grammar.Language.Rules;

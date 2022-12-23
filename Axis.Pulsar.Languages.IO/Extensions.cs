@@ -7,39 +7,19 @@ namespace Axis.Pulsar.Languages
 {
     public static class Extensions
     {
+        public static IEnumerable<T> GetFlags<T>(this T input)
+        where T: struct, Enum
+        {
+            foreach (T value in Enum.GetValues(input.GetType()))
+            {
+                if (input.HasFlag(value))
+                    yield return value;
+            }
+        }
 
         public static TOut Map<TIn, TOut>(this TIn @in, Func<TIn, TOut> func)
         {
             return func.Invoke(@in);
-        }
-
-        internal static void ForAll<T>(this IEnumerable<T> enumerable, Action<T> action)
-        {
-            if (action == null)
-                throw new ArgumentNullException(nameof(action));
-
-            if (enumerable == null)
-                throw new ArgumentNullException(nameof(enumerable));
-
-            foreach (var t in enumerable)
-                action.Invoke(t);
-        }
-
-        /// <summary>
-        /// Akin to a decorator
-        /// </summary>
-        /// <typeparam name="T">The type of the target instance</typeparam>
-        /// <param name="value">The target instance</param>
-        /// <param name="consumer">The consumer/decorator action</param>
-        /// <returns>The target instance</returns>
-        /// <exception cref="ArgumentNullException">If the consumer action is null</exception>
-        internal static T With<T>(this T value, Action<T> consumer)
-        {
-            if (consumer == null)
-                throw new ArgumentNullException(nameof(consumer));
-
-            consumer.Invoke(value);
-            return value;
         }
 
         internal static string ApplyPatternEscape(this string input) => input.Replace("//", "/");
@@ -111,5 +91,7 @@ namespace Axis.Pulsar.Languages
         }
 
         private static readonly Regex UTF16Pattern = new Regex(@"\\u[0-9a-fA-F]{4}", RegexOptions.Compiled);
+
+        public static IEnumerable<T> Enumerate<T>(params T[] values) => values;
     }
 }

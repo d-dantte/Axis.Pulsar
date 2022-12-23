@@ -1,4 +1,5 @@
-﻿using Axis.Pulsar.Grammar.CST;
+﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Grammar.CST;
 using System;
 
 namespace Axis.Pulsar.Grammar.Recognizers.Results

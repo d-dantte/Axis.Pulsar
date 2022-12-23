@@ -1,4 +1,5 @@
-﻿using Axis.Pulsar.Grammar.Language.Rules;
+﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Grammar.Language.Rules;
 using System;
 using System.Collections.Generic;
 
@@ -12,19 +13,15 @@ namespace Axis.Pulsar.Grammar.Language
         /// <summary>
         /// The symbol name
         /// </summary>
-        public string Symbol { get; }
+        public string Symbol => Rule.SymbolName;
 
         /// <summary>
         /// The rule for this production
         /// </summary>
         public ProductionRule Rule { get; }
 
-        public Production(string symbolName, ProductionRule productionRule)
+        public Production(ProductionRule productionRule)
         {
-            Symbol = symbolName.ThrowIfNot(
-                SymbolHelper.IsValidSymbolName,
-                new ArgumentException($"Invalid symbol name: {symbolName}"));
-
             Rule = productionRule.ThrowIfDefault(
                 new ArgumentNullException(nameof(productionRule)));
         }

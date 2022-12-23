@@ -1,9 +1,13 @@
-﻿using Axis.Pulsar.Languages.Xml;
+﻿using Axis.Pulsar.Grammar.Language.Rules;
+using Axis.Pulsar.Grammar.Language.Rules.CustomTerminals;
+using Axis.Pulsar.Languages.Xml;
+using Moq;
+using System;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
-namespace Axis.Pulsar.Languges.IO.Tests.Xml
+namespace Axis.Pulsar.Languages.IO.Tests.Xml
 {
     [TestClass]
     public class ImporterTests
@@ -19,6 +23,67 @@ namespace Axis.Pulsar.Languges.IO.Tests.Xml
             var xdoc = XDocument.Load(SampleXmlStream);
             Importer.ValidateDocument(xdoc);
         }
+
+        #region Valiidator API
+        [TestMethod]
+        public void RegisterValidator_WithValidArgs_ShouldRegister()
+        {
+            var mockValidator = new Mock<IProductionValidator>();
+            var importer = new Importer();
+            importer.RegisterValidator("symbol-name", mockValidator.Object);
+
+            Assert.AreEqual(mockValidator.Object, importer.RegisteredValidator("symbol-name"));
+        }
+
+        [TestMethod]
+        public void RegisterValidator_WithInvalidArgs_ShouldThrowException()
+        {
+            var mockValidator = new Mock<IProductionValidator>();
+            var importer = new Importer();
+            
+            Assert.ThrowsException<ArgumentNullException>(() => importer.RegisterValidator("symbol-name", null));
+            Assert.ThrowsException<ArgumentNullException>(() => importer.RegisterValidator(null, mockValidator.Object));
+            Assert.ThrowsException<ArgumentException>(() => importer.RegisterValidator("invalid symbol name", mockValidator.Object));
+        }
+        #endregion
+
+        #region Custom Terminal API
+        [TestMethod]
+        public void RegisterTerminal_WithValidArgs_ShouldRegister()
+        {
+            var importer = new Importer();
+            var mockTerminal = new Mock<ICustomTerminal>();
+            mockTerminal
+                .Setup(t => t.SymbolName)
+                .Returns("symbol-name");
+
+            importer.RegisterTerminal(mockTerminal.Object);
+
+            Assert.AreEqual(mockTerminal.Object, importer.RegisteredTerminal("symbol-name"));
+        }
+
+        [TestMethod]
+        public void RegisterTerminal_WithInvalidArgs_ShouldThrowException()
+        {
+            var importer = new Importer();
+            var mockTerminal = new Mock<ICustomTerminal>();
+
+            Assert.ThrowsException<ArgumentNullException>(() => importer.RegisterTerminal(null));
+            Assert.ThrowsException<ArgumentNullException>(() => importer.RegisterTerminal(mockTerminal.Object));
+
+            mockTerminal
+                .Setup(t => t.SymbolName)
+                .Returns("invalid symbol name");
+            Assert.ThrowsException<ArgumentException>(() => importer.RegisterTerminal(mockTerminal.Object));
+
+
+            mockTerminal
+                .Setup(t => t.SymbolName)
+                .Returns("symbol-name");
+            importer.RegisterTerminal(mockTerminal.Object);
+            Assert.ThrowsException<InvalidOperationException>(() => importer.RegisterTerminal(mockTerminal.Object));
+        }
+        #endregion
 
 
         #region Extract Cardinality
@@ -325,7 +390,7 @@ namespace Axis.Pulsar.Languges.IO.Tests.Xml
             var importer = new Importer();
             var grammar = importer.ImportGrammar(SampleXmlStream);
 
-            Assert.AreEqual(48, grammar.ProductionCount);
+            Assert.AreEqual(45, grammar.ProductionCount);
         }
         #endregion
     }

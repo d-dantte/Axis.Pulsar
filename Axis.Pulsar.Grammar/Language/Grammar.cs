@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Axis.Pulsar.Grammar.Language
 {
-    public class Grammar
+    public class Grammar: IProductionAppender
     {
         private readonly Dictionary<string, ProductionRule> _ruleMap = new();
         private readonly Dictionary<string, IRecognizer> _recognizers = new();
@@ -21,7 +21,7 @@ namespace Axis.Pulsar.Grammar.Language
         /// </summary>
         public virtual Production[] Productions
             => _ruleMap
-                .Select(kvp => new Production(kvp.Key, kvp.Value))
+                .Select(kvp => new Production(kvp.Value))
                 .ToArray();
 
         /// <summary>
@@ -54,18 +54,14 @@ namespace Axis.Pulsar.Grammar.Language
         /// Get the production for the root symbol.
         /// </summary>
         public virtual Production RootProduction() 
-            => new Production(
-                RootSymbol,
-                _ruleMap[RootSymbol]);
+            => new Production(_ruleMap[RootSymbol]);
 
         /// <summary>
         /// Returns the production for the given symbol.  Throws <see cref="SymbolNotFoundException"/> if the root symbol is absent.
         /// </summary>
         /// <param name="symbolName">The symbol name</param>
         public virtual Production GetProduction(string symbolName)
-            => new Production(
-                symbolName,
-                _ruleMap[symbolName]);
+            => new Production(_ruleMap[symbolName]);
 
         /// <summary>
         /// Returns the result of trying to get the production
@@ -77,9 +73,7 @@ namespace Axis.Pulsar.Grammar.Language
         {
             if(_ruleMap.ContainsKey(symbolName))
             {
-                production = new Production(
-                    symbolName,
-                    _ruleMap[symbolName]);
+                production = new Production(_ruleMap[symbolName]);
                 return true;
             }
 
@@ -95,7 +89,7 @@ namespace Axis.Pulsar.Grammar.Language
         #endregion
 
         #region Internal API
-        internal Grammar AddProduction(Production production)
+        IProductionAppender IProductionAppender.AddProduction(Production production)
         {
             _ruleMap[production.Symbol] = production.Rule;
             _recognizers[production.Symbol] = production.Rule.ToRecognizer(this);
@@ -103,7 +97,7 @@ namespace Axis.Pulsar.Grammar.Language
             return this;
         }
 
-        internal bool TryAddProduction(Production production)
+        bool IProductionAppender.TryAddProduction(Production production)
         {
             return _ruleMap.TryAdd(production.Symbol, production.Rule)
                 && _recognizers.TryAdd(production.Symbol, production.Rule.ToRecognizer(this));

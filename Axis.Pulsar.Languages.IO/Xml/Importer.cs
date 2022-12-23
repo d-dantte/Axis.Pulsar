@@ -2,6 +2,7 @@
 using Axis.Pulsar.Grammar.IO;
 using Axis.Pulsar.Grammar.Language;
 using Axis.Pulsar.Grammar.Language.Rules;
+using Axis.Pulsar.Grammar.Language.Rules.CustomTerminals;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -20,8 +21,28 @@ namespace Axis.Pulsar.Languages.Xml
 {
     public class Importer : IImporter, IValidatorRegistry, ICustomTerminalRegistry
     {
-        private ConcurrentDictionary<string, IProductionValidator> _validatorMap = new();
+        private static readonly string CustomTerminal_DQD_String = "DQD-String";
+        private static readonly string CustomTerminal_SQD_String = "SQD-String";
 
+        private ConcurrentDictionary<string, IProductionValidator> _validatorMap = new();
+        private ConcurrentDictionary<string, ICustomTerminal> _customTerminals = new();
+
+        public Importer()
+        {
+            // Add Double-quote-delimited-string custom terminal with key 'DQD-String'
+            this._customTerminals[CustomTerminal_DQD_String] = new DelimitedString(
+                CustomTerminal_DQD_String,
+                "\"",
+                new DelimitedString.BSolGeneralEscapeMatcher());
+
+            // Add Single-quote-delimited-string custom terminal with key 'SQD-String'
+            this._customTerminals[CustomTerminal_SQD_String] = new DelimitedString(
+                CustomTerminal_SQD_String,
+                "\'",
+                new DelimitedString.BSolGeneralEscapeMatcher());
+        }
+
+        #region IImporter API
         /// <inheritdoc/>
         public Grammar.Language.Grammar ImportGrammar(Stream inputStream)
         {
@@ -40,6 +61,7 @@ namespace Axis.Pulsar.Languages.Xml
 
             return ToGrammar(xml);
         }
+        #endregion
 
         #region Validator API
         public IValidatorRegistry RegisterValidator(string symbolName, IProductionValidator validator)
@@ -58,7 +80,7 @@ namespace Axis.Pulsar.Languages.Xml
             return this;
         }
 
-        public string[] RegisteredSymbols() => _validatorMap.Keys.ToArray();
+        public string[] RegisteredValidatorSymbols() => _validatorMap.Keys.ToArray();
 
         public IProductionValidator RegisteredValidator(string symbolName) 
             => _validatorMap.TryGetValue(symbolName, out var validator)
@@ -67,13 +89,31 @@ namespace Axis.Pulsar.Languages.Xml
         #endregion
 
         #region Custom Terminal API
-        ICustomTerminalRegistry RegisterTerminal(ICustomTerminal validator);7
+        public ICustomTerminalRegistry RegisterTerminal(ICustomTerminal terminal)
+        {
+            if (!this.TryRegister(terminal))
+                throw new InvalidOperationException($"The symbol '{terminal.SymbolName}' is already registered");
 
-        bool TryRegister(ICustomTerminal terminal);
+            return this;
+        }
 
-        string[] RegisteredSymbols();
+        public bool TryRegister(ICustomTerminal terminal)
+        {
+            if (terminal is null)
+                throw new ArgumentNullException(nameof(terminal));
 
-        ICustomTerminal RegisteredTerminal(string symbolName);
+            if (!SymbolHelper.SymbolPattern.IsMatch(terminal.SymbolName))
+                throw new ArgumentException($"Invalid {nameof(terminal.SymbolName)}: {terminal.SymbolName}");
+
+            return _customTerminals.TryAdd(terminal.SymbolName, terminal);
+        }
+
+        public string[] RegisteredTerminalSymbols() => _customTerminals.Keys.ToArray();
+
+        public ICustomTerminal RegisteredTerminal(string symbolName)
+            => _customTerminals.TryGetValue(symbolName, out var terminal)
+            ? terminal
+            : null;
         #endregion
 
         private Grammar.Language.Grammar ToGrammar(XDocument xml)
@@ -153,6 +193,8 @@ namespace Axis.Pulsar.Languages.Xml
                     element.Attribute(Legend.LiteralElement_Value).Value.ApplyEscape(),
                     ExtractCaseSensitivity(element)),
 
+                Legend.CustomTerminalElement => builder.WithRule(ExtractCustomTerminal(element, _customTerminals)),
+
                 Legend.SymbolElement => builder.WithRef(
                     element.Attribute(Legend.SymbolElement_Name).Value,
                     ExtractCardinality(element)),
@@ -193,6 +235,8 @@ namespace Axis.Pulsar.Languages.Xml
                     Legend.LiteralElement => builder.HavingLiteral(
                         element.Attribute(Legend.LiteralElement_Value).Value.ApplyEscape(),
                         ExtractCaseSensitivity(element)),
+
+                    Legend.CustomTerminalElement => builder.HavingRule(ExtractCustomTerminal(element, _customTerminals)),
 
                     Legend.SymbolElement => builder.HavingRef(
                         element.Attribute(Legend.SymbolElement_Name).Value,
@@ -312,6 +356,16 @@ namespace Axis.Pulsar.Languages.Xml
                     maxOccurs.Equals("unbounded") ? null :
                     int.Parse(maxOccurs));
             }
+        }
+
+        internal static ICustomTerminal ExtractCustomTerminal(
+            XElement element,
+            ConcurrentDictionary<string, ICustomTerminal> customTerminals)
+        {
+            var customTerminalName = element.Attribute(Legend.CustomTerminallement_Symbol)?.Value;
+            return !customTerminals.TryGetValue(customTerminalName, out var terminal)
+                ? throw new MissingCustomTerminalException(customTerminalName)
+                : terminal;
         }
     }
 }

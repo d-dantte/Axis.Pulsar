@@ -2,7 +2,7 @@
 using Axis.Pulsar.Grammar.Language.Rules.CustomTerminals;
 using Axis.Pulsar.Grammar.Recognizers;
 using Axis.Pulsar.Grammar.Recognizers.Results;
-using Axis.Pulsar.Grammar.Recognizers.SpecialTerminals;
+using Axis.Pulsar.Grammar.Recognizers.CustomTerminals;
 using Moq;
 
 namespace Axis.Pusar.Grammar.Tests.Recognizers

@@ -34,6 +34,7 @@
       <symbol name="literal"/>
       <symbol name="pattern"/>
       <symbol name="eof"/>
+      <symbol name="custom-terminal"/>
       <sequence>
         <choice>
           <symbol name="symbol-ref"/>
@@ -113,6 +114,7 @@
       <symbol name="literal"/>
       <symbol name="pattern"/>
       <symbol name="eof"/>
+      <symbol name="custom-terminal"/>
       <symbol name="symbol-ref"/>
       <symbol name="grouping"/>
     </choice>
@@ -125,22 +127,34 @@
     </choice>
   </non-terminal>
 
+  <!--
   <non-terminal name="case-sensitive">
     <sequence>
       <symbol name="quote"/>
-      <!--this is a terminal regex that describes escapable strings that lie between the " symbol. -->
+      <!- -this is a terminal regex that describes escapable strings that lie between the " symbol. - ->
       <symbol name="case-literal" min-occurs="0"/>
       <symbol name="quote"/>
     </sequence>
   </non-terminal>
+  -->
 
+  <non-terminal name="case-sensitive">
+    <custom-terminal symbol="DQD-String"/>
+  </non-terminal>
+
+  <!--
   <non-terminal name="case-insensitive">
     <sequence>
       <symbol name="squote"/>
-      <!--this is a terminal regex that describes escapable strings that lie between the ' symbol. -->
+      <!- -this is a terminal regex that describes escapable strings that lie between the ' symbol. - ->
       <symbol name="non-case-literal" min-occurs="0"/>
       <symbol name="squote"/>
     </sequence>
+  </non-terminal>
+  -->
+
+  <non-terminal name="case-insensitive">
+    <custom-terminal symbol="SQD-String"/>
   </non-terminal>
 
   <non-terminal name="pattern">
@@ -228,7 +242,12 @@
   <!-- Terminals-->
   <open-pattern
     name="symbol"
-    regex="^\$[0-9a-zA-Z_][\w-]*$"
+    regex="^\$[a-zA-Z_][\w-]*$"
+    max-mismatch="2"/>
+  
+  <open-pattern
+    name="custom-terminal"
+    regex="^@[a-zA-z_][\w-]*$"
     max-mismatch="2"/>
 
   <open-pattern
@@ -236,15 +255,17 @@
     regex="^[ \t]+$"
     max-mismatch="1"/>
 
-  <!-- Recognizes the escape \", to allow for quotes in the string. All other c# escapes are honored-->
+  <!-- Recognizes the escape \", to allow for quotes in the string. All other c# escapes are honored 
   <open-pattern
     name="case-literal"
     regex="^(\\&quot;|[^&quot;])*$"/>
-
-  <!-- Recognizes the escape \', to allow for apostrophes in the string. All other c# escapes are honored-->
+    -->
+  
+  <!-- Recognizes the escape \', to allow for apostrophes in the string. All other c# escapes are honored
   <open-pattern
     name="non-case-literal"
     regex="^(\\'|[^'])*$"/>
+    -->
   
   <!-- 
     Recognizes the escape //, to allow for forward-slashes (sol) in the string. All other c# escapes are honored.
@@ -324,13 +345,17 @@
     name="hash"
     value="#"/>
 
+  <!--
   <literal
     name="squote"
     value="'"/>
+  -->
 
+  <!--
   <literal
     name="quote"
     value="&quot;"/>
+  -->
 
   <literal
     name="r-chevron"

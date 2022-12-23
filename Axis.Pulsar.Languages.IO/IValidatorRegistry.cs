@@ -18,7 +18,7 @@ namespace Axis.Pulsar.Languages
         /// <summary>
         /// Gets an array of all symbols currently having validators registered for them.
         /// </summary>
-        string[] RegisteredSymbols();
+        string[] RegisteredValidatorSymbols();
 
         /// <summary>
         /// Gets the validator registered for the given symbol, or null.

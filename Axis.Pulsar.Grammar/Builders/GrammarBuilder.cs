@@ -1,4 +1,5 @@
-﻿using Axis.Pulsar.Grammar.Exceptions;
+﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Grammar.Exceptions;
 using Axis.Pulsar.Grammar.Language;
 using Axis.Pulsar.Grammar.Language.Rules;
 using System;
@@ -32,15 +33,13 @@ namespace Axis.Pulsar.Grammar.Builders
         /// <summary>
         /// Adds subsequent productions for this grammer.
         /// </summary>
-        /// <param name="symbol">The symbol name</param>
         /// <param name="rule">The production rule</param>
         /// <param name="overwriteDuplicate">Indicate what happens if symbolName-collision happens</param>
         /// <returns>This builder instance</returns>
         public GrammarBuilder HavingProduction(
-            string symbol,
             ProductionRule rule,
             bool overwriteDuplicate = false)
-            => HavingProduction(new Production(symbol, rule), overwriteDuplicate);
+            => HavingProduction(new Production(rule), overwriteDuplicate);
 
         /// <summary>
         /// Adds a list of productions to this builder. Collissions (duplicates) throw <see cref="ArgumentException"/>.
@@ -64,10 +63,12 @@ namespace Axis.Pulsar.Grammar.Builders
             if (production == default)
                 throw new ArgumentException($"Invalid {nameof(production)}");
 
-            if (overwriteDuplicate)
-                _grammar.AddProduction(production);
+            var appender = _grammar as IProductionAppender;
 
-            else if (!_grammar.TryAddProduction(production))
+            if (overwriteDuplicate)
+                appender.AddProduction(production);
+
+            else if (!appender.TryAddProduction(production))
                 throw new ArgumentException("Rule overwriting is not allowed for this call");
 
             return this;

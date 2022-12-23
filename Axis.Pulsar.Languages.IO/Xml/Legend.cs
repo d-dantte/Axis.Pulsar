@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Axis.Pulsar.Languages.Xml
+﻿namespace Axis.Pulsar.Languages.Xml
 {
     public static class Legend
     {
@@ -12,6 +8,8 @@ namespace Axis.Pulsar.Languages.Xml
         #endregion
 
         #region Pattern Element
+        public const string InlineOpenPatternElement = "inline-open-pattern";
+        public const string InlineClosedPatternElement = "inline-closed-pattern";
         public const string OpenPatternElement = "open-pattern";
         public const string ClosedPatternElement = "closed-pattern";
         public const string PatternElement_Name = "name";
@@ -28,6 +26,7 @@ namespace Axis.Pulsar.Languages.Xml
         #endregion
 
         #region Literal Element
+        public const string InlineLiteralElement = "inline-literal";
         public const string LiteralElement = "literal";
         public const string LiteralElement_Name = "name";
         public const string LiteralElement_Value = "value";
@@ -36,6 +35,11 @@ namespace Axis.Pulsar.Languages.Xml
 
         #region EOF Element
         public const string EOFlement = "eof";
+        #endregion
+
+        #region Custom Terminal Element
+        public const string CustomTerminalElement = "custom-terminal";
+        public const string CustomTerminallement_Symbol = "symbol";
         #endregion
 
         #region NonTerminal Element
