@@ -1,6 +1,8 @@
 ﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Grammar.IO;
 using Axis.Pulsar.Grammar.Language;
+using Axis.Pulsar.Grammar.Language.Rules;
+using Axis.Pulsar.Grammar.Language.Rules.CustomTerminals;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -32,7 +34,7 @@ namespace Axis.Pulsar.Languages.xBNF
             if (grammar == null)
                 throw new ArgumentNullException(nameof(grammar));
 
-            var text = ToGrammarText(grammar);
+            var text = ToGrammarString(grammar);
             var writer = new StreamWriter(outputStream);
             writer.Write(text);
         }
@@ -45,25 +47,99 @@ namespace Axis.Pulsar.Languages.xBNF
             if (grammar == null)
                 throw new ArgumentNullException(nameof(grammar));
 
-            var text = ToGrammarText(grammar);
+            var text = ToGrammarString(grammar);
             var writer = new StreamWriter(outputStream);
             await writer.WriteAsync(text);
+            await writer.FlushAsync();
         }
 
-        internal string ToGrammarText(Grammar.Language.Grammar grammar)
+        internal string ToGrammarString(Grammar.Language.Grammar grammar)
         {
             return grammar.Productions
                 .GroupBy(GroupProduction)
                 .Select(ToProductionBlockString)
                 .Aggregate(new StringBuilder(), (sb, next) => sb.AppendLine(next))
+                .ToString()
+                .Trim();
+        }
+
+        internal string ToProductionString(Production production)
+        {
+            return new StringBuilder()
+                .Append($"${production.Symbol}") //lhs
+                .Append(" -> ")
+                .Append(ToRuleString(production.Rule)) //rhs
                 .ToString();
         }
 
-        internal string ToProductionLine(Production production)
+        internal string ToRuleString(IRule rule)
         {
-            var text = production.ToString();
-            return text;
+            return rule switch
+            {
+                EOF eof => ToEOFString(eof),
+                Literal l => ToLiteralString(l),
+                Pattern p => ToPatternString(p),
+                ICustomTerminal ct => ToCustomTerminalString(ct),
+                ProductionRef pr => ToProductionRefString(pr),
+                Choice c => ToChoiceString(c),
+                Sequence seq => ToSequenceString(seq),
+                Set set => ToSetString(set),
+                ProductionRule prule => ToProductionRuleString(prule),
+
+                _ => throw new ArgumentException($"Invalid rule type: {rule?.GetType()}")
+            };
         }
+
+        internal string ToEOFString(EOF eof) => "EOF";
+
+        internal string ToLiteralString(Literal literal) => literal.ToString();
+
+        internal string ToPatternString(Pattern pattern) => pattern.ToString();
+
+        internal string ToCustomTerminalString(ICustomTerminal customTerminal) => customTerminal.ToString();
+
+        internal string ToProductionRefString(ProductionRef @ref)
+            => $"${@ref.ProductionSymbol}{ToCardinalityString(@ref.Cardinality)}";
+
+        internal string ToProductionRuleString(ProductionRule rule)
+        {
+            var threshold = rule.RecognitionThreshold > 0
+                ? $">{rule.RecognitionThreshold}"
+                : "";
+
+            var innerRuleString = ToRuleString(rule.Rule);
+            return $"{innerRuleString}{threshold}";
+        }
+
+        internal string ToChoiceString(Choice choice)
+        {
+            var ruleStrings = choice.Rules
+                .Select(ToRuleString)
+                .JoinUsing(" ");
+
+            return $"?[{ruleStrings}]{ToCardinalityString(choice.Cardinality)}";
+        }
+
+        internal string ToSequenceString(Sequence sequence)
+        {
+            var ruleStrings = sequence.Rules
+                .Select(ToRuleString)
+                .JoinUsing(" ");
+
+            return $"+[{ruleStrings}]{ToCardinalityString(sequence.Cardinality)}";
+        }
+
+        internal string ToSetString(Set set)
+        {
+            var ruleStrings = set.Rules
+                .Select(ToRuleString)
+                .JoinUsing(" ");
+
+            return $"#{set.MinRecognitionCount}[{ruleStrings}]{ToCardinalityString(set.Cardinality)}";
+        }
+
+
+        internal string ToCardinalityString(Cardinality cardinality) => cardinality.ToString();
 
         private GroupFilter GroupProduction(Production production)
             => _filters.Values.FirstOrDefault(f => f.Filter.Invoke(production));
@@ -74,11 +150,11 @@ namespace Axis.Pulsar.Languages.xBNF
                 .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(line => $"# {line}")
                 .JoinUsing(Environment.NewLine)
-                .ApplyTo(lines => new StringBuilder(lines))
+                .ApplyTo(lines => new StringBuilder().AppendLine(lines))
                 ?? new StringBuilder();
 
             return productionGroup
-                .Select(ToProductionLine)
+                .Select(ToProductionString)
                 .Aggregate(sb, (_sb, next) => _sb.AppendLine(next))
                 .ToString();
         }

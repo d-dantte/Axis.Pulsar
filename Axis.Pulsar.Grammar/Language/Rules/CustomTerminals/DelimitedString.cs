@@ -4,7 +4,6 @@ using Axis.Pulsar.Grammar.Recognizers.CustomTerminals;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -12,7 +11,6 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
 {
     public struct DelimitedString : ICustomTerminal
     {
-
         private readonly Dictionary<string, IEscapeSequenceMatcher> _escapeMatchers;
 
         public IReadOnlyDictionary<string, IEscapeSequenceMatcher> EscapeMatchers 
@@ -66,7 +64,7 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
         {
         }
 
-        public override string ToString() => $"%{SymbolName}";
+        public override string ToString() => $"@{SymbolName}";
 
         public override int GetHashCode()
         {

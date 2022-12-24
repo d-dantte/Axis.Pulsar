@@ -67,10 +67,14 @@ namespace Axis.Pulsar.Grammar.Language.Rules
                 return null;
 
             var options = Regex.Options;
-            if (options == RegexOptions.Compiled)
+            if (options == RegexOptions.Compiled
+                || options == RegexOptions.None)
                 return "";
 
             var sb = new StringBuilder();
+
+            if (options.HasFlag(RegexOptions.ExplicitCapture))
+                sb.Append('n');
 
             if (options.HasFlag(RegexOptions.IgnoreCase))
                 sb.Append('i');
@@ -83,9 +87,6 @@ namespace Axis.Pulsar.Grammar.Language.Rules
 
             if (options.HasFlag(RegexOptions.Singleline))
                 sb.Append('s');
-
-            if (options.HasFlag(RegexOptions.ExplicitCapture))
-                sb.Append('n');
 
             return $".{sb}";
         }

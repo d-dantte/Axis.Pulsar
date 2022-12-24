@@ -151,6 +151,9 @@ namespace Axis.Pulsar.Grammar.Recognizers
                 //CSTNode.LeafNode leaf
                 //when leaf.SymbolName.Equals(EOF.EOFSymbolName) => new[] { leaf },
 
+                //CSTNode.LeafNode leaf
+                //when leaf.SymbolName.StartsWith("@") => new[] { leaf },
+
                 CSTNode.LeafNode leaf => new[] { leaf },
                 #endregion
 

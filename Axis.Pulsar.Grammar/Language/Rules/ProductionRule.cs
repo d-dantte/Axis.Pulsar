@@ -99,5 +99,7 @@ namespace Axis.Pulsar.Grammar.Language.Rules
 
         public static bool operator ==(ProductionRule first, ProductionRule second) => first.Equals(second);
         public static bool operator !=(ProductionRule first, ProductionRule second) => !(first == second);
+
+        public static implicit operator Production(ProductionRule rule) => new Production(rule);
     }
 }

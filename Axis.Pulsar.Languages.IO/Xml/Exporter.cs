@@ -17,7 +17,9 @@ namespace Axis.Pulsar.Languages.Xml
     public class Exporter : IExporter
     {
         /// <inheritdoc/>
-        public void ExportGrammar(Grammar.Language.Grammar grammar, Stream outputStream)
+        public void ExportGrammar(
+            Grammar.Language.Grammar grammar,
+            Stream outputStream)
         {
             if (grammar == null)
                 throw new ArgumentNullException(nameof(grammar));
@@ -39,10 +41,11 @@ namespace Axis.Pulsar.Languages.Xml
                 throw new ArgumentNullException(nameof(grammar));
 
             var writer = XmlWriter.Create(outputStream);
-            await this.ToGrammarElement(grammar)
+            await this
+                .ToGrammarElement(grammar)
                 .WriteToAsync(writer, token ?? CancellationToken.None);
 
-            writer.Flush();
+            await writer.FlushAsync();
         }
 
         
