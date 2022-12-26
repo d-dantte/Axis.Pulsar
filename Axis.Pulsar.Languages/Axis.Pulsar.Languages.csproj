@@ -6,7 +6,7 @@
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
     <Version>0.7.2</Version>
-    <Description>Dynamic Grammar Parser Builder Library</Description>
+    <Description>Dynamic Parser Grammar Importer/Exporter Library. Companion library to Axis.Pulsar</Description>
     <PackageReleaseNotes></PackageReleaseNotes>
     <RepositoryUrl>https://github.com/d-dantte/Axis.Pulsar</RepositoryUrl>
     <PackageProjectUrl>https://github.com/d-dantte/Axis.Pulsar</PackageProjectUrl>
@@ -14,22 +14,30 @@
     <Company>Axiis</Company>
     <Authors>Dantte</Authors>
     <LangVersion>latest</LangVersion>
-    <PackageReadmeFile>axis.pulsar.grammar.readme.md</PackageReadmeFile>
+    <PackageReadmeFile>axis.pulsar.languages.readme.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="GlobalSuppressions.cs" />
+    <None Remove="xBNF\xBNFRule.xml" />
+    <None Remove="Xml\RuleDefinition.xsd" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\axis.pulsar.grammar.readme.md">
+    <EmbeddedResource Include="xBNF\xBNFRule.xml" />
+    <EmbeddedResource Include="Xml\RuleDefinition.xsd">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\axis.pulsar.languages.readme.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Axis.Luna.Common" Version="6.0.4" />
+    <ProjectReference Include="..\Axis.Pulsar.Grammar\Axis.Pulsar.Grammar.csproj" />
   </ItemGroup>
 
 </Project>

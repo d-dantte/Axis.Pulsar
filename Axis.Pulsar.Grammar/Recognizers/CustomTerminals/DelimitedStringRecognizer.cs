@@ -176,7 +176,7 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
             }
 
             context.TokenBuffer.Append(token);
-            var index = context.EscapeDelimiterIndex.Value + 1;
+            var index = context.EscapeDelimiterIndex.Value + context.EscapeMatcher.EscapeDelimiter.Length;
             var escapeSequence = context.TokenBuffer.ToString(index);
 
             if (context.EscapeMatcher.IsSubMatch(escapeSequence))

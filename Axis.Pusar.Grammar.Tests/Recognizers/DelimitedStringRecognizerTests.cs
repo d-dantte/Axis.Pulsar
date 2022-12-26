@@ -14,7 +14,7 @@ namespace Axis.Pusar.Grammar.Tests.Recognizers
         [TestMethod]
         public void TryRecognize_WithValidArgs_ShouldSucceed()
         {
-            // BSolUTF16EscapeMatcher
+            // BSolAsciiEscapeMatcher
             Mock<Pulsar.Grammar.Language.Grammar> mockGrammar = new();
             var dsrule = new DelimitedString(
                 "bleh",

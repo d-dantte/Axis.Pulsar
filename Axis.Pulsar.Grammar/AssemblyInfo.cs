@@ -2,4 +2,4 @@
 
 [assembly: InternalsVisibleTo("Axis.Pusar.Grammar.Tests")]
 
-[assembly: InternalsVisibleTo("Axis.Pulsar.Languges.IO.Tests")]
+[assembly: InternalsVisibleTo("Axis.Pulsar.Languages.Tests")]
