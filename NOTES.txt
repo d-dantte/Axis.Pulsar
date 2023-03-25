@@ -35,8 +35,6 @@
 	   exceptions, array out of bounds exception, class cast exception, etc...
 
 
-
-
 TODO
 1. Add support to Choice/Set recognizers for acknowledging, and stopping on partial failures - i.e treat them as HARD failures.
 2. Find a more complex grammar, translate it into xBNF or Xml, build the grammar, and test out the performance and correctness
@@ -75,9 +73,19 @@ TODO
     [Done]
 12. Change implementation of xAntlr's $line-indent-space to support any kind of white-space, cus that's what the actual language supports.
     see here: https://github.com/antlr/antlr4/blob/master/doc/grammars.md, and here: https://github.com/antlr/antlr4/blob/master/doc/getting-started.md
+	xAntlr has been deprecated
 13. Include support for special terminals. These are IAtomicRule instances that perform specialized processing of the BufferedTokenReader's output tokens.
 	An example (and the reason for adding support) is with the need to recognize string literal patterns - i.e, strings like those in c-like programming
 	languages: "foo, bar 54£%$$". Using regular expressions for this is insufficient, as representing escaped characters adequately is impossible. E.g,
 	a regex that recognizes "\"", and also "\\" will have problems when it meets this: "\\\"". A Delimited string is Special Terminal that is
 	configurable to recognize cases like the above.
 	Each Special Terminal will have it's own symbol name that can be used while writing the gramma (and possilbly parametarized?).
+	[DONE]
+
+
+
+2023-02-05 =================================================================
+1. Include support for character class specification. This can then be implemented via the special terminals as parameters.
+   If the special terminal implementation doesn't work, just have it as a native implementation.
+   Essentially, character classes are things like [a-z], or ^[a-z]; but this should be implemented to support the entire unicode character set.
+   * Investigate if this can be done using regular expressions.

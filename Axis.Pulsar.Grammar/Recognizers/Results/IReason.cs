@@ -82,7 +82,7 @@ namespace Axis.Pulsar.Grammar.Recognizers.Results
         }
 
         /// <summary>
-        /// When 
+        /// Represents a failure in production validation
         /// </summary>
         public record ValidationFailure: IReason
         {

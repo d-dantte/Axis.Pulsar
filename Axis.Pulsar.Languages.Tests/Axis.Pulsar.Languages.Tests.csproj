@@ -1,19 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
 
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="xBnf\TestGrammar.xbnf" />
+    <None Remove="xBnf\TestGrammar2.xbnf" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="xBnf\TestGrammar.xbnf" />
+    <EmbeddedResource Include="xBnf\TestGrammar2.xbnf" />
   </ItemGroup>
 
   <ItemGroup>

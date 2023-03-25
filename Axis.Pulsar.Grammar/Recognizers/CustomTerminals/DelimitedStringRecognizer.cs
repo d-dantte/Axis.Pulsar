@@ -121,6 +121,26 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
 
             _ = context.TokenBuffer.Append(token);
 
+            // illegal sequence?
+            foreach(var illegalSequence in context.Rule.IllegalSequences)
+            {
+                if (context.TokenBuffer.Length < illegalSequence.Length)
+                    continue;
+
+                var index = context.TokenBuffer.Length - illegalSequence.Length;
+                var potentialIllegalSequence = context.TokenBuffer.ToString(
+                    index,
+                    illegalSequence.Length);
+
+                if (illegalSequence.Equals(potentialIllegalSequence))
+                {
+                    context.Result = new FailureResult(
+                        context.TokenReader.Position + 1,
+                        IReason.Of($"{{Illegal character sequence encountered: {illegalSequence}}}"));
+                    return null;
+                }
+            }
+
             // escape?
             foreach(var matcher in context.Rule.EscapeMatchers.Values)
             {

@@ -1,6 +1,11 @@
-﻿using Axis.Pulsar.Grammar;
+﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Grammar;
+using Axis.Pulsar.Grammar.CST;
+using Axis.Pulsar.Grammar.Language.Rules.CustomTerminals;
+using Axis.Pulsar.Grammar.Recognizers.Results;
 using Axis.Pulsar.Languages.xBNF;
 using System.Text;
+using static Axis.Pulsar.Grammar.Language.Rules.CustomTerminals.DelimitedString;
 
 namespace Axis.Pulsar.Languages.Tests.xBnf
 {
@@ -86,7 +91,7 @@ namespace Axis.Pulsar.Languages.Tests.xBnf
                 Console.WriteLine("Time to Import: " + timer.Elapsed);
                 #endregion
 
-
+                #region TestGrammar
                 timer.Restart();
                 ruleImporter = new Importer();
                 timer.Stop();
@@ -98,6 +103,60 @@ namespace Axis.Pulsar.Languages.Tests.xBnf
                 x = ruleImporter.ImportGrammar(sampleGrammarStream);
                 timer.Stop();
                 Console.WriteLine("Time to Import: " + timer.Elapsed);
+                #endregion
+
+                #region TestGrammar2
+                timer.Restart();
+                ruleImporter = new Importer();
+                timer.Stop();
+                Console.WriteLine("Time to Create Importer: " + timer.Elapsed);
+
+                #region register custom terminals
+                string MultilineSingleQuoteDelimitedString = "Multiline-3SQDString";
+                string SinglelineSingleQuoteDelimitedString = "Singleline-SQDString";
+                string SinglelineDoubleQuoteDelimitedString = "Singleline-DQDString";
+
+                _ = ruleImporter.RegisterTerminal(
+                    new DelimitedString(
+                        MultilineSingleQuoteDelimitedString,
+                        "'''",
+                        new BSolGeneralEscapeMatcher()));
+
+                // register singleline-sqdstring
+                _ = ruleImporter.RegisterTerminal(
+                    new DelimitedString(
+                        SinglelineSingleQuoteDelimitedString,
+                        "\'",
+                        new[] { "\n", "\r" },
+                        new BSolGeneralEscapeMatcher()));
+
+                // register singleline-dqdstring
+                _ = ruleImporter.RegisterTerminal(
+                    new DelimitedString(
+                        SinglelineDoubleQuoteDelimitedString,
+                        "\"",
+                        new[] { "\n", "\r" },
+                        new BSolGeneralEscapeMatcher()));
+                #endregion
+
+                timer.Restart();
+                using var sampleGrammarStream2 = typeof(ImporterTests).Assembly
+                    .GetManifestResourceStream($"{typeof(ImporterTests).Namespace}.TestGrammar2.xbnf");
+                x = ruleImporter.ImportGrammar(sampleGrammarStream2);
+                timer.Stop();
+                Console.WriteLine("Time to Import: " + timer.Elapsed);
+                #endregion
+
+                var recognition = x
+                    .GetRecognizer("annotation-list")
+                    .Recognize("$the_identifier::")
+                    .As<SuccessResult>();
+
+                var queryPath = $"annotation.identifier|quoted-symbol";
+                var nodes = recognition.Symbol
+                    .FindNodes(queryPath)
+                    .Select(cstnode => cstnode.TokenValue())
+                    .ToArray();
             }
             catch (Exception e)
             {
@@ -129,7 +188,9 @@ namespace Axis.Pulsar.Languages.Tests.xBnf
 
 
         public static readonly string SampleBNF1 =
-@"$grama -> +[?[$stuff $other-stuff.2 $more-stuff 'foo'] EOF]
+@"$grama -> +[?[$stuff
+        $other-stuff.2
+        $more-stuff 'foo'] EOF]
 # comments occupy a whole line.
 $more-stuff -> $stuff
 

@@ -42,7 +42,7 @@ namespace Axis.Pulsar.Grammar.CST
         }
 
         /// <summary>
-        /// Gets all symbols found by searching corresponding child-symbols that match the path given.
+        /// Gets all symbols found by searching corresponding child-symbols that match the path given, starting from the source node
         /// <para>
         /// The path is a '.' separated list of symbol names. e.g expression.operator.constant.
         /// </para>
@@ -55,7 +55,7 @@ namespace Axis.Pulsar.Grammar.CST
         /// <param name="nodes">The nodes fitting the search criteria</param>
         public static bool TryFindNodes(this CSTNode source, string path, out CSTNode[] nodes)
         {
-            nodes = null;
+            nodes = Array.Empty<CSTNode>();
             return source switch
             {
                 CSTNode.LeafNode leaf => false,
@@ -79,7 +79,7 @@ namespace Axis.Pulsar.Grammar.CST
         /// <returns>Indicating if nodes were found, or not</returns>
         public static bool TryFindAllNodes(this CSTNode source, string symbolName, out CSTNode[] nodes)
         {
-            nodes = null;
+            nodes = Array.Empty<CSTNode>();
             return source switch
             {
                 CSTNode.LeafNode => false,
@@ -108,7 +108,7 @@ namespace Axis.Pulsar.Grammar.CST
         {
             return source switch
             {
-                CSTNode.LeafNode => null,
+                CSTNode.LeafNode => Array.Empty<CSTNode>(),
 
                 CSTNode.BranchNode => source.TryFindNodes(path, out var result) ? result : result,
 
@@ -149,20 +149,21 @@ namespace Axis.Pulsar.Grammar.CST
         {
             return source switch
             {
-                CSTNode.LeafNode => null,
+                CSTNode.LeafNode => Array.Empty<CSTNode>(),
 
                 CSTNode.BranchNode branch => branch.Nodes
                     .Aggregate(
-                        Enumerable.Empty<CSTNode>(),
+                        new List<CSTNode>(),
                         (list, node) =>
                         {
                             if (node.SymbolName.Equals(symbolName))
-                                list.Concat(node.Enumerate());
+                                list.Add(node);
 
-                            return node
+                            list.AddRange(node
                                 .AllChildNodes()
-                                .SelectMany(n => n.FindAllNodes(symbolName))
-                                .Map(list.Concat);
+                                .SelectMany(n => n.FindAllNodes(symbolName)));
+
+                            return list;
                         }),
 
                 _ => throw new ArgumentException($"Invalid node type: {source?.GetType()}")
@@ -217,7 +218,7 @@ namespace Axis.Pulsar.Grammar.CST
         {
             return source switch
             {
-                CSTNode.LeafNode => null,
+                CSTNode.LeafNode => Array.Empty<CSTNode>(),
                 CSTNode.BranchNode branch => branch.Nodes,
                 _ => throw new ArgumentException($"Invalid node type: {source?.GetType()}")
             };

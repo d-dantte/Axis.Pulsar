@@ -12,11 +12,14 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
     public struct DelimitedString : ICustomTerminal
     {
         private readonly Dictionary<string, IEscapeSequenceMatcher> _escapeMatchers;
+        private readonly string[] _illegalSequences;
 
         public IReadOnlyDictionary<string, IEscapeSequenceMatcher> EscapeMatchers 
             => _escapeMatchers is not null
                 ? new ReadOnlyDictionary<string, IEscapeSequenceMatcher>(_escapeMatchers)
                 : null;
+
+        public string[] IllegalSequences => _illegalSequences?.ToArray() ?? Array.Empty<string>();
 
         public string StartDelimiter { get; }
 
@@ -31,6 +34,7 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
             string symbolName,
             string startDelimiter,
             string endDelimiter,
+            string[] illegalSequences,
             params IEscapeSequenceMatcher[] escapeMatchers)
         {
             StartDelimiter = startDelimiter.ThrowIf(
@@ -45,6 +49,8 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
                 SymbolHelper.IsValidSymbolName,
                 new ArgumentException($"Invalid symbol name: {symbolName}"));
 
+            _illegalSequences = illegalSequences?.ToArray();
+
             var matchers = _escapeMatchers = new Dictionary<string, IEscapeSequenceMatcher>();
 
             escapeMatchers
@@ -58,9 +64,27 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
 
         public DelimitedString(
             string symbolName,
+            string startDelimiter,
+            string endDelimiter,
+            params IEscapeSequenceMatcher[] escapeMatchers)
+            : this(symbolName, startDelimiter, endDelimiter, Array.Empty<string>(), escapeMatchers)
+        {
+        }
+
+        public DelimitedString(
+            string symbolName,
             string delimiter,
             params IEscapeSequenceMatcher[] escapeMatchers)
             : this(symbolName, delimiter, delimiter, escapeMatchers)
+        {
+        }
+
+        public DelimitedString(
+            string symbolName,
+            string delimiter,
+            string[] illegalSequences,
+            params IEscapeSequenceMatcher[] escapeMatchers)
+            : this(symbolName, delimiter, delimiter, illegalSequences, escapeMatchers)
         {
         }
 
@@ -68,7 +92,12 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
 
         public override int GetHashCode()
         {
-            var transformersCode = _escapeMatchers?.Keys.Aggregate(
+            var escapeMatcherCode = _escapeMatchers?.Keys.Aggregate(
+                func: (value, next) => HashCode.Combine(value, next),
+                seed: 0)
+                ?? 0;
+
+            var illegalSequencesCode = _illegalSequences?.Aggregate(
                 func: (value, next) => HashCode.Combine(value, next),
                 seed: 0)
                 ?? 0;
@@ -77,7 +106,8 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
                 StartDelimiter,
                 EndDelimiter,
                 SymbolName,
-                transformersCode);
+                escapeMatcherCode,
+                illegalSequencesCode);
         }
 
         public override bool Equals(object obj)
@@ -89,6 +119,9 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
                 && stringEquality.Equals(other.SymbolName, SymbolName)
                 && other.EscapeMatchers.NullOrTrue(
                     EscapeMatchers,
+                    Enumerable.SequenceEqual)
+                && other.IllegalSequences.NullOrTrue(
+                    IllegalSequences,
                     Enumerable.SequenceEqual);
         }
 
@@ -96,7 +129,7 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
 
         public static bool operator !=(DelimitedString first, DelimitedString second) => !first.Equals(second);
 
-
+        #region Nested types
         /// <summary>
         /// Matches tokens against the encapsulated escape sequence.
         /// <para>
@@ -256,5 +289,6 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
                     || GreaterThan.Equals(tokenString);
             }
         }
+        #endregion
     }
 }

@@ -1,11 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1;net6.0</TargetFrameworks>
+    <TargetFrameworks>net7.0</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
-    <Version>0.7.2</Version>
+    <Version>0.7.6</Version>
+    <LangVersion>latest</LangVersion>
     <Description>Dynamic Parser Grammar Importer/Exporter Library. Companion library to Axis.Pulsar</Description>
     <PackageReleaseNotes></PackageReleaseNotes>
     <RepositoryUrl>https://github.com/d-dantte/Axis.Pulsar</RepositoryUrl>

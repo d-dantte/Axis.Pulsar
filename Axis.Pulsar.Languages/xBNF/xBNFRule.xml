@@ -252,7 +252,7 @@
 
   <open-pattern
     name="whitespace"
-    regex="^[ \t]+$"
+    regex="^[ \t\n\r]+$"
     max-mismatch="1"/>
 
   <!-- Recognizes the escape \", to allow for quotes in the string. All other c# escapes are honored 

@@ -24,7 +24,7 @@ namespace Axis.Pusar.Grammar.Tests.Recognizers
             var recognizer = new DelimitedStringRecognizer(dsrule, mockGrammar.Object);
 
             var recognized = recognizer.TryRecognize(
-                new Pulsar.Grammar.BufferedTokenReader("'stuff \\n\\''"),
+                new Pulsar.Grammar.BufferedTokenReader("'stuff \\t\\''"),
                 out IRecognitionResult result);
 
             Assert.IsNotNull(result);
@@ -32,7 +32,7 @@ namespace Axis.Pusar.Grammar.Tests.Recognizers
             var success = result as SuccessResult;
             Assert.IsNotNull(success);
             Assert.AreEqual(0, success.Position);
-            Assert.AreEqual("'stuff \\n\\\''", success.Symbol.TokenValue());
+            Assert.AreEqual("'stuff \\t\\\''", success.Symbol.TokenValue());
 
             // BSolUTF16EscapeMatcher
             dsrule = new DelimitedString(
@@ -71,6 +71,28 @@ namespace Axis.Pusar.Grammar.Tests.Recognizers
             Assert.IsNotNull(success);
             Assert.AreEqual(0, success.Position);
             Assert.AreEqual("'stuff \\u0a2f\\\''", success.Symbol.TokenValue());
+        }
+
+        [TestMethod]
+        public void Parse_WithIllegalSequence_ShouldFail()
+        {
+            Mock<Pulsar.Grammar.Language.Grammar> mockGrammar = new();
+            var dsrule = new DelimitedString(
+                "bleh",
+                "'",
+                new[] { "\r", "\n" });
+
+            var recognizer = new DelimitedStringRecognizer(dsrule, mockGrammar.Object);
+
+            var recognized = recognizer.TryRecognize(
+                new Pulsar.Grammar.BufferedTokenReader("'stuff\n'"),
+                out IRecognitionResult result);
+
+            Assert.IsNotNull(result);
+            Assert.IsFalse(recognized);
+            var failure = result as FailureResult;
+            Assert.IsNotNull(failure);
+            Assert.AreEqual(7, failure.Position);
         }
     }
 }
