@@ -5,6 +5,7 @@ using Axis.Pulsar.Grammar.Language.Rules.CustomTerminals;
 using Axis.Pulsar.Grammar.Recognizers.Results;
 using Axis.Pulsar.Languages.xBNF;
 using System.Text;
+using System.Text.RegularExpressions;
 using static Axis.Pulsar.Grammar.Language.Rules.CustomTerminals.DelimitedString;
 
 namespace Axis.Pulsar.Languages.Tests.xBnf
@@ -166,6 +167,38 @@ namespace Axis.Pulsar.Languages.Tests.xBnf
 
 
         [TestMethod]
+        public void TestGrammar3()
+        {
+            var importer = new Importer();
+
+            // register singleline-dqd string
+            _ = importer.RegisterTerminal(
+                new DelimitedString(
+                    "dqd-string",
+                    "\"",
+                    new[] { "\n", "\r" },
+                    new BSolGeneralEscapeMatcher()));
+
+            // register singleline-sqd string
+            _ = importer.RegisterTerminal(
+                new DelimitedString(
+                    "qas",
+                    "\'",
+                    new[] { "\n", "\r" },
+                    new BSolGeneralEscapeMatcher()));
+
+            using var sampleGrammarStream2 = typeof(ImporterTests).Assembly
+                .GetManifestResourceStream($"{typeof(ImporterTests).Namespace}.TestGrammar3.xbnf");
+
+            var grammar = importer.ImportGrammar(sampleGrammarStream2);
+
+            var recognizer = grammar.GetRecognizer("duration-expression");
+            var result = recognizer.Recognize("'D 17.23:12'");
+            Assert.IsTrue(result is SuccessResult);
+        }
+
+
+        [TestMethod]
         public void SampleGrammarTest()
         {
             try
@@ -188,13 +221,14 @@ namespace Axis.Pulsar.Languages.Tests.xBnf
 
 
         public static readonly string SampleBNF1 =
-@"$grama -> +[?[$stuff
-        $other-stuff.2
-        $more-stuff 'foo'] EOF]
+@"$grama -> +[
+    ?[$stuff
+      $other-stuff.2
+      $more-stuff 'foo'] EOF]
 # comments occupy a whole line.
 $more-stuff -> $stuff
 
-$stuff ::= /bleh///.i.5
+$stuff ::= /bleh/.i.5
 $other-stuff ::= ""meh""
 ";
 
@@ -241,5 +275,50 @@ $main-stuff ::= ""hem""
 # to
 # kick start
 # things";
+
+        #region nested types
+        public class BSolGeneralAndBraceEscapeMatcher : IEscapeSequenceMatcher
+        {
+            private readonly Regex HexPattern = new(@"^u[a-fA-F0-9]{0,4}$", RegexOptions.Compiled);
+
+            public string EscapeDelimiter => "\\";
+
+            public bool IsSubMatch(ReadOnlySpan<char> subTokens)
+            {
+                if (subTokens[0] == 'u')
+                    return subTokens.Length <= 5
+                        && HexPattern.IsMatch(new string(subTokens));
+
+                return subTokens.Length == 1 && subTokens[0] switch
+                {
+                    '\'' => true,
+                    '\"' => true,
+                    '\\' => true,
+                    'n' => true,
+                    'r' => true,
+                    'f' => true,
+                    'b' => true,
+                    't' => true,
+                    'v' => true,
+                    '0' => true,
+                    'a' => true,
+                    '{' => true,
+                    '}' => true,
+                    _ => false
+                };
+            }
+
+            public bool IsMatch(ReadOnlySpan<char> escapeTokens)
+            {
+                if (escapeTokens.Length == 5)
+                    return HexPattern.IsMatch(new string(escapeTokens));
+
+                if (escapeTokens.Length == 1 && escapeTokens[0] != 'u')
+                    return IsSubMatch(escapeTokens);
+
+                return false;
+            }
+        }
+        #endregion
     }
 }

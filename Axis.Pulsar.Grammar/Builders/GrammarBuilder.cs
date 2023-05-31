@@ -69,7 +69,7 @@ namespace Axis.Pulsar.Grammar.Builders
                 appender.AddProduction(production);
 
             else if (!appender.TryAddProduction(production))
-                throw new ArgumentException("Rule overwriting is not allowed for this call");
+                throw new ArgumentException($"Rule overwriting is not allowed for this call. Rule: {production.Symbol}");
 
             return this;
         }
@@ -199,7 +199,6 @@ namespace Axis.Pulsar.Grammar.Builders
 
             return found;
         }
-
 
         private string[] ResolveRule(IRule rule)
         {

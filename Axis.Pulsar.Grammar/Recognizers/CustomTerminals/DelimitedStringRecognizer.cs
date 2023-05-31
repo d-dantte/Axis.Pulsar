@@ -4,6 +4,8 @@ using Axis.Pulsar.Grammar.Language;
 using Axis.Pulsar.Grammar.Language.Rules.CustomTerminals;
 using Axis.Pulsar.Grammar.Recognizers.Results;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using static Axis.Pulsar.Grammar.Language.Rules.CustomTerminals.DelimitedString;
 
@@ -70,10 +72,6 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
                 StateNames.LeftDelimiter.ToString(),
                 RecognizeLeftDelimiter);
 
-            //var rightDelimiterState = new LambdaState<RecognitionContext>(
-            //    StateNames.RightDelimiter.ToString(),
-            //    RecognizeRightDelimiter);
-
             var stringCharacterState = new LambdaState<RecognitionContext>(
                 StateNames.StringCharacters.ToString(),
                 RecognizeStringCharacters);
@@ -86,7 +84,6 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
                 context,
                 StateNames.LeftDelimiter.ToString(),
                 leftDelimiterState,
-                //rightDelimiterState,
                 stringCharacterState,
                 escapeCharacterState);
         }
@@ -111,77 +108,56 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
 
         private static string RecognizeStringCharacters(RecognitionContext context)
         {
-            if (!context.TokenReader.TryNextToken(out var token))
+            int length;
+
+            while (true)
             {
-                context.Result = new FailureResult(
-                    context.StartPosition + 1,
-                    IReason.Of(context.Rule.ToString()));
-                return null;
-            }
+                // legal sequence?
+                if (!context.TokenReader.TryNextTokens(context.LegalSequenceLengths[0], out var tokens, false)
+                    || tokens.Length <= 0)
+                {
+                    context.Result = new FailureResult(
+                        context.StartPosition + 1,
+                        IReason.Of(context.Rule.ToString()));
+                    return null;
+                }
+                else if (!TryValidateLegalSequence(context, tokens, out length))
+                {
+                    if (!TryValidateEndDelimiter(context, tokens))
+                        context.Result = new FailureResult(
+                            context.TokenReader.Position + 1,
+                            IReason.Of($"Could not read legal character sequence: {new string(tokens)}"));
 
-            _ = context.TokenBuffer.Append(token);
+                    return null;
+                }
 
-            // illegal sequence?
-            foreach(var illegalSequence in context.Rule.IllegalSequences)
-            {
-                if (context.TokenBuffer.Length < illegalSequence.Length)
-                    continue;
+                // reset any excess tokens
+                if (tokens.Length > length)
+                {
+                    context.TokenReader.Back(tokens.Length - length);
+                    tokens = tokens[..length];
+                }
 
-                var index = context.TokenBuffer.Length - illegalSequence.Length;
-                var potentialIllegalSequence = context.TokenBuffer.ToString(
-                    index,
-                    illegalSequence.Length);
-
-                if (illegalSequence.Equals(potentialIllegalSequence))
+                // illegal sequence?
+                if (!TryValidateIllegalSequence(context, tokens, out var illegalSequence))
                 {
                     context.Result = new FailureResult(
                         context.TokenReader.Position + 1,
                         IReason.Of($"{{Illegal character sequence encountered: {illegalSequence}}}"));
                     return null;
                 }
-            }
 
-            // escape?
-            foreach(var matcher in context.Rule.EscapeMatchers.Values)
-            {
-                var escapeDelimiterLength = matcher.EscapeDelimiter.Length;
-                if (context.TokenBuffer.Length < escapeDelimiterLength)
-                    continue;
-
-                var index = context.TokenBuffer.Length - escapeDelimiterLength;
-                var potentialEscapeDelimiter = context.TokenBuffer.ToString(
-                    index,
-                    escapeDelimiterLength);
-
-                if (matcher.EscapeDelimiter.Equals(potentialEscapeDelimiter))
-                {
-                    context.EscapeMatcher = matcher;
-                    context.EscapeDelimiterIndex = index;
+                // escape?
+                if (TryValidateEscapeSequence(context, tokens))
                     return StateNames.EscapeCharacters.ToString();
-                }
-            }
 
-            // end-delimiter?
-            var delimiterLength = context.Rule.EndDelimiter.Length;
-            if (context.TokenBuffer.Length > delimiterLength)
-            {
-                var potentialEndDelimiter = context.TokenBuffer.ToString(
-                    context.TokenBuffer.Length - delimiterLength,
-                    delimiterLength);
-
-                if (context.Rule.EndDelimiter.Equals(potentialEndDelimiter))
-                {
-                    context.Result = new SuccessResult(
-                        context.StartPosition + 1,
-                        CST.CSTNode.Of(
-                            context.Rule.SymbolName,
-                            context.TokenBuffer.ToString()));
-
+                // end-delimiter?
+                if (TryValidateEndDelimiter(context, tokens))
                     return null;
-                }
-            }
 
-            return StateNames.StringCharacters.ToString();
+                // finally, add the tokens
+                _ = context.TokenBuffer.Append(tokens);
+            }
         }
 
         private static string RecognizeEscapeCharacters(RecognitionContext context)
@@ -202,7 +178,7 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
             if (context.EscapeMatcher.IsSubMatch(escapeSequence))
                 return StateNames.EscapeCharacters.ToString();
 
-            else if (context.EscapeMatcher.IsMatch(escapeSequence[..^1]))
+            else if (context.EscapeMatcher.IsMatch(escapeSequence.AsSpan()[..^1]))
             {
                 context.TokenReader.Back();
                 context.EscapeMatcher = null;
@@ -218,6 +194,98 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
                     IReason.Of("{Invalid escape characters}"));
                 return null;
             }
+        }
+
+        private static bool TryValidateLegalSequence(RecognitionContext context, char[] tokens, out int validLength)
+        {
+            if (!context.HasLegalSequences)
+            {
+                validLength = tokens.Length;
+                return true;
+            }
+
+            foreach(var length in context.LegalSequenceLengths)
+            {
+                if (context.LegalSequences.Contains(new string(tokens[..length])))
+                {
+                    validLength = length;
+                    return true;
+                }
+            }
+
+            validLength = 0;
+            return false;
+        }
+
+        private static bool TryValidateIllegalSequence(RecognitionContext context, char[] tokens, out string sequence)
+        {
+            var tbuff = context.TokenBuffer.ToString() + new string(tokens);
+            foreach (var illegalSequence in context.Rule.IllegalSequences)
+            {
+                if (tbuff.Length < illegalSequence.Length)
+                    continue;
+
+                var index = tbuff.Length - illegalSequence.Length;
+                var potentialIllegalSequence = tbuff[index..];
+
+                if (illegalSequence.Equals(potentialIllegalSequence))
+                {
+                    sequence = illegalSequence;
+                    return false;
+                }
+            }
+
+            sequence = null;
+            return true;
+        }
+
+        private static bool TryValidateEscapeSequence(RecognitionContext context, char[] tokens)
+        {
+            var tbuff = context.TokenBuffer.ToString() + new string(tokens);
+            foreach (var matcher in context.Rule.EscapeMatchers.Values)
+            {
+                var escapeDelimiterLength = matcher.EscapeDelimiter.Length;
+                if (tbuff.Length < escapeDelimiterLength)
+                    continue;
+
+                var index = tbuff.Length - escapeDelimiterLength;
+                var potentialEscapeDelimiter = tbuff[index..];
+
+                if (matcher.EscapeDelimiter.Equals(potentialEscapeDelimiter))
+                {
+                    context.TokenBuffer.Append(tokens);
+                    context.EscapeMatcher = matcher;
+                    context.EscapeDelimiterIndex = index;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryValidateEndDelimiter(RecognitionContext context, char[] tokens)
+        {
+            var tbuff = context.TokenBuffer.ToString() + new string(tokens);
+            var delimiterLength = context.Rule.EndDelimiter.Length;
+            if (tbuff.Length > delimiterLength)
+            {
+                var index = tbuff.Length - delimiterLength;
+                var potentialEndDelimiter = tbuff[index..];
+
+                if (context.Rule.EndDelimiter.Equals(potentialEndDelimiter))
+                {
+                    context.TokenBuffer.Append(tokens);
+                    context.Result = new SuccessResult(
+                        context.StartPosition + 1,
+                        CST.CSTNode.Of(
+                            context.Rule.SymbolName,
+                            context.TokenBuffer.ToString()));
+
+                    return true;
+                }
+            }
+
+            return false;
         }
 
 
@@ -273,6 +341,12 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
 
             public int? EscapeDelimiterIndex { get; set; }
 
+            public int[] LegalSequenceLengths { get; }
+
+            public IReadOnlySet<string> LegalSequences { get; }
+
+            public bool HasLegalSequences => LegalSequences.Count > 0;
+
             public RecognitionContext(
                 int startPosition,
                 DelimitedString rule,
@@ -283,6 +357,14 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
                 StartPosition = startPosition;
                 TokenBuffer = stringBuilder ?? throw new ArgumentNullException(nameof(stringBuilder));
                 TokenReader = tokenReader ?? throw new ArgumentNullException(nameof(tokenReader));
+                LegalSequences = new HashSet<string>(rule.LegalSequences);
+                LegalSequenceLengths = LegalSequences.Count <= 0
+                    ? new[] { 1 }
+                    : rule.LegalSequences
+                        .Select(seq => seq.Length)
+                        .OrderByDescending(l => l)
+                        .Distinct()
+                        .ToArray();
             }
         }
         #endregion

@@ -9,10 +9,14 @@ using System.Text.RegularExpressions;
 
 namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
 {
-    public struct DelimitedString : ICustomTerminal
+    /// <summary>
+    /// 
+    /// </summary>
+    public readonly struct DelimitedString : ICustomTerminal
     {
         private readonly Dictionary<string, IEscapeSequenceMatcher> _escapeMatchers;
         private readonly string[] _illegalSequences;
+        private readonly string[] _legalSequences;
 
         public IReadOnlyDictionary<string, IEscapeSequenceMatcher> EscapeMatchers 
             => _escapeMatchers is not null
@@ -20,6 +24,8 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
                 : null;
 
         public string[] IllegalSequences => _illegalSequences?.ToArray() ?? Array.Empty<string>();
+
+        public string[] LegalSequences => _legalSequences?.ToArray() ?? Array.Empty<string>();
 
         public string StartDelimiter { get; }
 
@@ -32,24 +38,67 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
 
         public DelimitedString(
             string symbolName,
+            string delimiter,
+            params IEscapeSequenceMatcher[] escapeMatchers)
+            : this(symbolName, delimiter, delimiter, Array.Empty<string>(), Array.Empty<string>(), escapeMatchers)
+        { }
+
+        public DelimitedString(
+            string symbolName,
+            string delimiter,
+            string[] illegalSequences,
+            params IEscapeSequenceMatcher[] escapeMatchers)
+            : this(symbolName, delimiter, delimiter, Array.Empty<string>(), illegalSequences, escapeMatchers)
+        { }
+
+        public DelimitedString(
+            string symbolName,
+            string delimiter,
+            string[] legalSequences,
+            string[] illegalSequences,
+            params IEscapeSequenceMatcher[] escapeMatchers)
+            : this(symbolName, delimiter, delimiter, legalSequences, illegalSequences, escapeMatchers)
+        { }
+
+        public DelimitedString(
+            string symbolName,
             string startDelimiter,
             string endDelimiter,
+            params IEscapeSequenceMatcher[] escapeMatchers)
+            : this(symbolName, startDelimiter, endDelimiter, Array.Empty<string>(), Array.Empty<string>(), escapeMatchers)
+        { }
+
+        public DelimitedString(
+            string symbolName,
+            string startDelimiter,
+            string endDelimiter,
+            string[] illegalSequences,
+            params IEscapeSequenceMatcher[] escapeMatchers)
+            : this(symbolName, startDelimiter, endDelimiter, Array.Empty<string>(), illegalSequences, escapeMatchers)
+        { }
+
+        public DelimitedString(
+            string symbolName,
+            string startDelimiter,
+            string endDelimiter,
+            string[] legalSequences,
             string[] illegalSequences,
             params IEscapeSequenceMatcher[] escapeMatchers)
         {
             StartDelimiter = startDelimiter.ThrowIf(
                 string.IsNullOrEmpty,
-                new ArgumentException(nameof(startDelimiter)));
+                new ArgumentException("Null or empty string", nameof(startDelimiter)));
 
             EndDelimiter = endDelimiter.ThrowIf(
                 string.IsNullOrEmpty,
-                new ArgumentException(nameof(endDelimiter)));
+                new ArgumentException("Null or empty string", nameof(endDelimiter)));
 
             SymbolName = symbolName.ThrowIfNot(
                 SymbolHelper.IsValidSymbolName,
-                new ArgumentException($"Invalid symbol name: {symbolName}"));
+                new ArgumentException($"Invalid symbol name: {symbolName}", nameof(symbolName)));
 
             _illegalSequences = illegalSequences?.ToArray();
+            _legalSequences = legalSequences?.ToArray();
 
             var matchers = _escapeMatchers = new Dictionary<string, IEscapeSequenceMatcher>();
 
@@ -60,32 +109,6 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
                     if (!matchers.TryAdd(transformer.EscapeDelimiter, transformer))
                         throw new ArgumentException($"Duplicate {nameof(IEscapeSequenceMatcher.EscapeDelimiter)} encountered: {transformer.EscapeDelimiter}");
                 });
-        }
-
-        public DelimitedString(
-            string symbolName,
-            string startDelimiter,
-            string endDelimiter,
-            params IEscapeSequenceMatcher[] escapeMatchers)
-            : this(symbolName, startDelimiter, endDelimiter, Array.Empty<string>(), escapeMatchers)
-        {
-        }
-
-        public DelimitedString(
-            string symbolName,
-            string delimiter,
-            params IEscapeSequenceMatcher[] escapeMatchers)
-            : this(symbolName, delimiter, delimiter, escapeMatchers)
-        {
-        }
-
-        public DelimitedString(
-            string symbolName,
-            string delimiter,
-            string[] illegalSequences,
-            params IEscapeSequenceMatcher[] escapeMatchers)
-            : this(symbolName, delimiter, delimiter, illegalSequences, escapeMatchers)
-        {
         }
 
         public override string ToString() => $"@{SymbolName}";

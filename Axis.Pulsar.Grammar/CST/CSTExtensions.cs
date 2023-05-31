@@ -245,7 +245,7 @@ namespace Axis.Pulsar.Grammar.CST
             string name)
             => nodes.SelectMany(node => node switch
             {
-                CSTNode.LeafNode => new CSTNode[0],
+                CSTNode.LeafNode => Array.Empty<CSTNode>(),
                 CSTNode.BranchNode branch => branch.GetChildren(name),
                 _ => throw new ArgumentException($"Invalid {nameof(CSTNode)} union-type: {(node.GetType())}")
             });

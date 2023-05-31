@@ -81,7 +81,7 @@ namespace Axis.Pulsar.Grammar.Recognizers
                 }
                 else if (_rule.MatchType is MatchType.Closed closed)
                 {
-                    _ = tokenReader.TryNextTokens(closed.MaxMatch, false, out var tokens);
+                    _ = tokenReader.TryNextTokens(closed.MaxMatch, out var tokens, false);
 
                     var lim = tokens?.Length ?? 0 - closed.MinMatch;
                     string symbolValue = null;

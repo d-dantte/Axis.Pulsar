@@ -49,5 +49,12 @@ namespace Axis.Pusar.Grammar.Tests.CST
             var nodes = cst.FindAllNodes("second").ToArray();
             Assert.AreEqual(4, nodes.Length);
         }
+
+        [TestMethod]
+        public void bleh()
+        {
+            Console.WriteLine(54.998009 - double.Truncate(54.998009));
+            Console.WriteLine(54.998009m - decimal.Truncate(54.998009m));
+        }
     }
 }

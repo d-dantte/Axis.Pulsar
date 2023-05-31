@@ -4,6 +4,7 @@ using Axis.Pulsar.Grammar.Recognizers;
 using Axis.Pulsar.Grammar.Recognizers.Results;
 using Axis.Pulsar.Grammar.Recognizers.CustomTerminals;
 using Moq;
+using static Axis.Pulsar.Grammar.Language.Rules.CustomTerminals.DelimitedString;
 
 namespace Axis.Pusar.Grammar.Tests.Recognizers
 {
@@ -93,6 +94,74 @@ namespace Axis.Pusar.Grammar.Tests.Recognizers
             var failure = result as FailureResult;
             Assert.IsNotNull(failure);
             Assert.AreEqual(7, failure.Position);
+        }
+
+        [TestMethod]
+        public void Parse_WithLegalSequence_ShouldPass()
+        {
+            Mock<Pulsar.Grammar.Language.Grammar> mockGrammar = new();
+            var dsrule = new DelimitedString(
+                "bleh",
+                "'",
+                new[] { "a", "b", "c", "d", "e", "f", " " },
+                Array.Empty<string>());
+
+            var recognizer = new DelimitedStringRecognizer(dsrule, mockGrammar.Object);
+
+            var recognized = recognizer.TryRecognize(
+                new Pulsar.Grammar.BufferedTokenReader("'bac cab fad deface bad'"),
+                out IRecognitionResult result);
+
+            Assert.IsNotNull(result);
+            Assert.IsTrue(recognized);
+            var success = result as SuccessResult;
+            Assert.IsNotNull(success);
+        }
+
+        [TestMethod]
+        public void Parse_WithLegalAndEscapeSequence_ShouldPass()
+        {
+            Mock<Pulsar.Grammar.Language.Grammar> mockGrammar = new();
+            var dsrule = new DelimitedString(
+                "bleh",
+                "'",
+                new[] { "a", "b", "c", "d", "e", "f", " ", "\\" },
+                Array.Empty<string>(),
+                new BSolAsciiEscapeMatcher());
+
+            var recognizer = new DelimitedStringRecognizer(dsrule, mockGrammar.Object);
+
+            var recognized = recognizer.TryRecognize(
+                new Pulsar.Grammar.BufferedTokenReader("'bac cab fad \\' deface bad'"),
+                out IRecognitionResult result);
+
+            Assert.IsNotNull(result);
+            Assert.IsTrue(recognized);
+            var success = result as SuccessResult;
+            Assert.IsNotNull(success);
+        }
+
+        [TestMethod]
+        public void Parse_WithLegalAndEscapeAndIllegalSequence_ShouldPass()
+        {
+            Mock<Pulsar.Grammar.Language.Grammar> mockGrammar = new();
+            var dsrule = new DelimitedString(
+                "bleh",
+                "'",
+                new[] { "a", "b", "c", "d", "e", "f", " ", "\\" },
+                new[] { "ce ba" },
+                new BSolAsciiEscapeMatcher());
+
+            var recognizer = new DelimitedStringRecognizer(dsrule, mockGrammar.Object);
+
+            var recognized = recognizer.TryRecognize(
+                new Pulsar.Grammar.BufferedTokenReader("'bac cab fad \\' deface bad'"),
+                out IRecognitionResult result);
+
+            Assert.IsNotNull(result);
+            Assert.IsFalse(recognized);
+            var failure = result as FailureResult;
+            Assert.IsNotNull(failure);
         }
     }
 }

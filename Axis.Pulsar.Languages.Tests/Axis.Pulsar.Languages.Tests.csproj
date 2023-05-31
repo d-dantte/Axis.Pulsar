@@ -12,11 +12,13 @@
   <ItemGroup>
     <None Remove="xBnf\TestGrammar.xbnf" />
     <None Remove="xBnf\TestGrammar2.xbnf" />
+    <None Remove="xBnf\TestGrammar3.xbnf" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="xBnf\TestGrammar.xbnf" />
     <EmbeddedResource Include="xBnf\TestGrammar2.xbnf" />
+    <EmbeddedResource Include="xBnf\TestGrammar3.xbnf" />
   </ItemGroup>
 
   <ItemGroup>

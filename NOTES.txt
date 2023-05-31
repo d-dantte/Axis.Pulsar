@@ -89,3 +89,10 @@ TODO
    If the special terminal implementation doesn't work, just have it as a native implementation.
    Essentially, character classes are things like [a-z], or ^[a-z]; but this should be implemented to support the entire unicode character set.
    * Investigate if this can be done using regular expressions.
+
+
+2023-03-25 =================================================================
+1. Include support for visual studio syntax highlighting. see here for guideance: https://code.visualstudio.com/api/language-extensions/syntax-highlight-guide
+2. Expand support for comments and whitespaces in xbnf lang
+3. Include an optional trace-writer for the recognizers so printing out the trace can be used as a debug tool
+4. Include support for importing languages from other sources, and referencing their productions via some namespace

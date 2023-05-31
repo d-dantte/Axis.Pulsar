@@ -1,5 +1,3 @@
-using Axis.Pulsar.Languages.IO.xBNF;
-
 namespace Axis.Pulsar.E2e
 {
     [TestClass]
@@ -8,7 +6,7 @@ namespace Axis.Pulsar.E2e
         [TestMethod]
         public void TestMethod1()
         {
-            var type = typeof(Axis.Pulsar.Languages.IO.Extensions);
+            var type = typeof(Languages.Extensions);
             var names = type.Assembly.GetManifestResourceNames();
             (names ?? Array.Empty<string>())
                 .ToList()

@@ -255,7 +255,7 @@ namespace Axis.Pulsar.Languages.xBNF
 
                     SYMBOL_NAME_CUSTOM_TERMINAL => !_customTerminals
                         .TryGetValue(ruleTypeNode.TokenValue()[1..], out var customTerminal)
-                            ? throw new ArgumentException($"Invalid rule type: {ruleTypeNode.FirstNode().SymbolName}")
+                            ? throw new ArgumentException($"Invalid custom terminal: {ruleTypeNode.TokenValue()}")
                             : builder.HavingRule(customTerminal),
 
                     _ => throw new ArgumentException($"Invalid rule type: {ruleTypeNode.SymbolName}")
