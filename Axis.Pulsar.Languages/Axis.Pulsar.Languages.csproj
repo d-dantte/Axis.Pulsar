@@ -5,7 +5,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
-    <Version>0.7.7</Version>
+    <Version>0.7.8</Version>
     <LangVersion>latest</LangVersion>
     <Description>Dynamic Parser Grammar Importer/Exporter Library. Companion library to Axis.Pulsar</Description>
     <PackageReleaseNotes></PackageReleaseNotes>
