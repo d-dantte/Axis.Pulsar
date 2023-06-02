@@ -5,6 +5,7 @@ using Axis.Pulsar.Grammar.Recognizers.Results;
 using Axis.Pulsar.Grammar.Recognizers.CustomTerminals;
 using Moq;
 using static Axis.Pulsar.Grammar.Language.Rules.CustomTerminals.DelimitedString;
+using System.Reflection.Metadata;
 
 namespace Axis.Pusar.Grammar.Tests.Recognizers
 {
@@ -125,7 +126,7 @@ namespace Axis.Pusar.Grammar.Tests.Recognizers
             var dsrule = new DelimitedString(
                 "bleh",
                 "'",
-                new[] { "a", "b", "c", "d", "e", "f", " ", "\\" },
+                new[] { "a", "b", "c", "d", "e", "f", " " },
                 Array.Empty<string>(),
                 new BSolAsciiEscapeMatcher());
 
@@ -142,13 +143,13 @@ namespace Axis.Pusar.Grammar.Tests.Recognizers
         }
 
         [TestMethod]
-        public void Parse_WithLegalAndEscapeAndIllegalSequence_ShouldPass()
+        public void Parse_WithLegalAndEscapeAndIllegalSequence_ShouldFail()
         {
             Mock<Pulsar.Grammar.Language.Grammar> mockGrammar = new();
             var dsrule = new DelimitedString(
                 "bleh",
                 "'",
-                new[] { "a", "b", "c", "d", "e", "f", " ", "\\" },
+                new[] { "a", "b", "c", "d", "e", "f", " " },
                 new[] { "ce ba" },
                 new BSolAsciiEscapeMatcher());
 
@@ -163,5 +164,54 @@ namespace Axis.Pusar.Grammar.Tests.Recognizers
             var failure = result as FailureResult;
             Assert.IsNotNull(failure);
         }
+
+        [TestMethod]
+        public void Parse_WithLegalAndEscapeAndIllegalSequence2_ShouldPass()
+        {
+            Mock<Pulsar.Grammar.Language.Grammar> mockGrammar = new();
+            var dsrule =
+                new DelimitedString(
+                    "blob",
+                    "{{",
+                    "}}",
+                    new[] 
+                    { 
+                        "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
+                        "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V",
+                        "W", "X", "Y", "Z",
+                        "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k",
+                        "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v",
+                        "w", "x", "y", "z",
+                        "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+                        "/", "=", "+", " ", "\t", "\n", "\r"
+                    },
+                    Array.Empty<string>());
+
+            var recognizer = new DelimitedStringRecognizer(dsrule, mockGrammar.Object);
+
+            var recognized = recognizer.TryRecognize(
+                new Pulsar.Grammar.BufferedTokenReader(BLOB.Trim()),
+                out IRecognitionResult result);
+
+            Console.WriteLine(result);
+            Assert.IsNotNull(result);
+            Assert.IsTrue(recognized);
+            var success = result as SuccessResult;
+            Assert.IsNotNull(success);
+        }
+
+        private static readonly string BLOB = @"
+{{
+A
+ R E
+Z H i
+ w 3 P
+E h R Y 2
+ d 1 f Y u
+O n K W x t
+ c b M 0 9 /
+v 9 v 8 A
+}}
+";
     }
 }

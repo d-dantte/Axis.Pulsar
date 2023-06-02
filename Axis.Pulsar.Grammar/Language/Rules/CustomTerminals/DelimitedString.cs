@@ -10,7 +10,21 @@ using System.Text.RegularExpressions;
 namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
 {
     /// <summary>
-    /// 
+    /// Represents parsing tokens with the following properties:
+    /// <list type="number">
+    /// <item>Has a left delimiter - a sequence of characters marking the beginning of the token group</item>
+    /// <item>Has a right delimiter - a sequence of characters marking the end of the token group. This may be the same as the left delimiter.</item>
+    /// <item>Has an optional list of legal sequences allowed between the left and right delimiters. If this list is absent, any character is allowed, EXCEPT the right delimiter</item>
+    /// <item>Has an optional list of illegal sequences prohibited from appearing between the left and right delimiters. This by default contains the right delimiter, so it is never absent.</item>
+    /// <item>
+    /// Has an optional list of escape matchers. Escape matchers are comprised of:
+    /// <list type="number">
+    ///     <item>a delimiter marking the start of the escape</item>
+    ///     <item>a list of sequences following the escape delimiter</item>
+    /// </list>
+    /// <para>Note, when recognizing escape sequences, parsing no longer considers the legal/illegal/delimiter sequences.</para> 
+    /// </item>
+    /// </list>
     /// </summary>
     public readonly struct DelimitedString : ICustomTerminal
     {
@@ -21,7 +35,7 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
         public IReadOnlyDictionary<string, IEscapeSequenceMatcher> EscapeMatchers 
             => _escapeMatchers is not null
                 ? new ReadOnlyDictionary<string, IEscapeSequenceMatcher>(_escapeMatchers)
-                : null;
+                : new Dictionary<string, IEscapeSequenceMatcher>();
 
         public string[] IllegalSequences => _illegalSequences?.ToArray() ?? Array.Empty<string>();
 
@@ -35,7 +49,7 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
 
         public IRecognizer ToRecognizer(Grammar grammar) => new DelimitedStringRecognizer(this, grammar);
 
-
+        #region Constructors
         public DelimitedString(
             string symbolName,
             string delimiter,
@@ -110,6 +124,7 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
                         throw new ArgumentException($"Duplicate {nameof(IEscapeSequenceMatcher.EscapeDelimiter)} encountered: {transformer.EscapeDelimiter}");
                 });
         }
+        #endregion
 
         public override string ToString() => $"@{SymbolName}";
 
