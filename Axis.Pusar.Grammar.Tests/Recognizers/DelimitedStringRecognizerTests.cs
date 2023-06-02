@@ -203,7 +203,11 @@ namespace Axis.Pusar.Grammar.Tests.Recognizers
         public void Stuff()
         {
             Mock<Pulsar.Grammar.Language.Grammar> mockGrammar = new();
-            var dsrule = new DelimitedString("bleh", "'''", new BSolGeneralEscapeMatcher());
+            var dsrule = new DelimitedString(
+                "bleh",
+                "'''",
+                new[] { "\n", "\r" },
+                new BSolGeneralEscapeMatcher());
 
             var recognizer = new DelimitedStringRecognizer(dsrule, mockGrammar.Object);
 
@@ -232,6 +236,6 @@ v 9 v 8 A
 }}
 ";
 
-        private static readonly string ML_STRING = @"''' bleh bleh '''";
+        private static readonly string ML_STRING = @"'''dfgh sdf'''";
     }
 }

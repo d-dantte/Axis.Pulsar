@@ -193,6 +193,7 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
                 if (TryVerifyIllegalSequence(context, tokens, out var illegalLength))
                 {
                     context.TokenReader.Back(illegalLength);
+                    context.TokenBuffer.RemoveLast(illegalLength - tokens.Length);
                     return StateNames.EscapeCharacters.ToString();
                 }
 
