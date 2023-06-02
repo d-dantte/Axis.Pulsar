@@ -190,9 +190,9 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
                 }
 
                 // illegal sequence?
-                if (TryVerifyIllegalSequence(context, tokens, out _))
+                if (TryVerifyIllegalSequence(context, tokens, out var illegalLength))
                 {
-                    context.TokenReader.Back(tokens.Length);
+                    context.TokenReader.Back(illegalLength);
                     return StateNames.EscapeCharacters.ToString();
                 }
 
