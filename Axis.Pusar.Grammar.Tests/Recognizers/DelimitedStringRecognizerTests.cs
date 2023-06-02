@@ -5,14 +5,12 @@ using Axis.Pulsar.Grammar.Recognizers.Results;
 using Axis.Pulsar.Grammar.Recognizers.CustomTerminals;
 using Moq;
 using static Axis.Pulsar.Grammar.Language.Rules.CustomTerminals.DelimitedString;
-using System.Reflection.Metadata;
 
 namespace Axis.Pusar.Grammar.Tests.Recognizers
 {
     [TestClass]
     public class DelimitedStringRecognizerTests
     {
-
         [TestMethod]
         public void TryRecognize_WithValidArgs_ShouldSucceed()
         {
@@ -21,7 +19,7 @@ namespace Axis.Pusar.Grammar.Tests.Recognizers
             var dsrule = new DelimitedString(
                 "bleh",
                 "'",
-                new DelimitedString.BSolAsciiEscapeMatcher());
+                new DelimitedString.BSolBasicEscapeMatcher());
 
             var recognizer = new DelimitedStringRecognizer(dsrule, mockGrammar.Object);
 
@@ -40,7 +38,7 @@ namespace Axis.Pusar.Grammar.Tests.Recognizers
             dsrule = new DelimitedString(
                 "bleh",
                 "'",
-                new DelimitedString.BSolUTF16EscapeMatcher());
+                new DelimitedString.BSolUTFEscapeMatcher());
 
             recognizer = new DelimitedStringRecognizer(dsrule, mockGrammar.Object);
 
@@ -128,7 +126,7 @@ namespace Axis.Pusar.Grammar.Tests.Recognizers
                 "'",
                 new[] { "a", "b", "c", "d", "e", "f", " " },
                 Array.Empty<string>(),
-                new BSolAsciiEscapeMatcher());
+                new BSolBasicEscapeMatcher());
 
             var recognizer = new DelimitedStringRecognizer(dsrule, mockGrammar.Object);
 
@@ -151,7 +149,7 @@ namespace Axis.Pusar.Grammar.Tests.Recognizers
                 "'",
                 new[] { "a", "b", "c", "d", "e", "f", " " },
                 new[] { "ce ba" },
-                new BSolAsciiEscapeMatcher());
+                new BSolBasicEscapeMatcher());
 
             var recognizer = new DelimitedStringRecognizer(dsrule, mockGrammar.Object);
 

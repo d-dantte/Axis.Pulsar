@@ -275,50 +275,5 @@ $main-stuff ::= ""hem""
 # to
 # kick start
 # things";
-
-        #region nested types
-        public class BSolGeneralAndBraceEscapeMatcher : IEscapeSequenceMatcher
-        {
-            private readonly Regex HexPattern = new(@"^u[a-fA-F0-9]{0,4}$", RegexOptions.Compiled);
-
-            public string EscapeDelimiter => "\\";
-
-            public bool IsSubMatch(ReadOnlySpan<char> subTokens)
-            {
-                if (subTokens[0] == 'u')
-                    return subTokens.Length <= 5
-                        && HexPattern.IsMatch(new string(subTokens));
-
-                return subTokens.Length == 1 && subTokens[0] switch
-                {
-                    '\'' => true,
-                    '\"' => true,
-                    '\\' => true,
-                    'n' => true,
-                    'r' => true,
-                    'f' => true,
-                    'b' => true,
-                    't' => true,
-                    'v' => true,
-                    '0' => true,
-                    'a' => true,
-                    '{' => true,
-                    '}' => true,
-                    _ => false
-                };
-            }
-
-            public bool IsMatch(ReadOnlySpan<char> escapeTokens)
-            {
-                if (escapeTokens.Length == 5)
-                    return HexPattern.IsMatch(new string(escapeTokens));
-
-                if (escapeTokens.Length == 1 && escapeTokens[0] != 'u')
-                    return IsSubMatch(escapeTokens);
-
-                return false;
-            }
-        }
-        #endregion
     }
 }

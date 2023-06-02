@@ -145,7 +145,7 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
                 || !context.Rule.EndDelimiter.Equals(new string(tokens)))
             {
                 context.Result = new FailureResult(
-                    context.StartPosition + 1,
+                    context.TokenReader.Position + 1,
                     IReason.Of(context.Rule.EndDelimiter));
             }
             else
@@ -203,68 +203,59 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
 
         private static string RecognizeEscapeCharacters(RecognitionContext context)
         {
+            var position = context.TokenReader.Position;
+
             // no escape matchers?
             if (context.Rule.EscapeMatchers.Count <= 0)
                 return StateNames.EndDelimiter.ToString();
 
-            // read escape
+            // read escape delimiter
             var delimLengths = context.Rule.EscapeMatchers.Keys
                 .Select(delim => delim.Length)
                 .OrderByDescending(l => l)
                 .Distinct()
                 .ToArray();
 
-            if (context.TokenReader.TryNextTokens(delimLengths[0], out var tokens, false) && tokens.Length <= 0)
+            if (context.TokenReader.TryNextTokens(delimLengths[0], out var delimTokens, false)
+                && delimTokens.Length <= 0)
             {
                 context.Result = new FailureResult(
                     context.TokenReader.Position + 1,
                     IReason.Of("EOF error. Expected escape tokens."));
+                context.TokenReader.Reset(position);
                 return null;
             }
 
+            // find the matcher
             var matcher = delimLengths
                 .Select(length => context.Rule.EscapeMatchers
-                    .TryGetValue(new string(tokens[..length]), out var _matcher)
+                    .TryGetValue(new string(delimTokens[..length]), out var _matcher)
                     ? _matcher : null)
                 .FirstOrDefault(m => m is not null);
 
             if (matcher is null)
             {
-                context.TokenReader.Back(tokens.Length);
+                context.TokenReader.Reset(position);
                 return StateNames.EndDelimiter.ToString();
             }
 
-            var escapeBuffer = new StringBuilder();
             while (true)
             {
-                if (!context.TokenReader.TryNextToken(out var token))
+                if (matcher.TryMatchEscapeArgument(context.TokenReader, out var argTokens))
                 {
-                    // fail
-                    context.Result = new FailureResult(
-                        context.TokenReader.Position + 1,
-                        IReason.Of("EOF error. Expected escape tokens."));
-                    return null;
-                }
-
-                _ = escapeBuffer.Append(token);
-                var escapeSequence = escapeBuffer.ToString();
-
-                if (matcher.IsSubMatch(escapeSequence))
-                    continue;
-
-                else if (matcher.IsMatch(escapeSequence.AsSpan()[..^1]))
-                {
-                    escapeBuffer.RemoveLast();
-                    context.TokenReader.Back();
-                    context.TokenBuffer.Append(tokens).Append(escapeBuffer);
+                    context.TokenBuffer.Append(delimTokens).Append(argTokens);
                     return StateNames.StringCharacters.ToString();
                 }
-
                 else // fail
                 {
+                    var failedEscape = new StringBuilder()
+                        .Append(delimTokens)
+                        .Append(argTokens);
+
                     context.Result = new FailureResult(
                         context.TokenReader.Position + 1,
-                        IReason.Of($"Invalid escape characters: {escapeSequence}"));
+                        IReason.Of($"Invalid escape characters: {failedEscape}"));
+                    context.TokenReader.Reset(position);
                     return null;
                 }
             }

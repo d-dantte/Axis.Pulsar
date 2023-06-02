@@ -169,14 +169,16 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
 
         #region Nested types
         /// <summary>
-        /// Matches tokens against the encapsulated escape sequence.
+        /// Matches tokens against the escape sequence.
         /// <para>
-        /// Note of caution: When using/combining escape matchers, abstain from combinding matchers that may have
-        /// <see cref="IEscapeSequenceMatcher.EscapeDelimiter"/>s that are subsets of other matchers. A good example of 
-        /// this is the <see cref="BSolAsciiEscapeMatcher"/> and the <see cref="BSolUTF16EscapeMatcher"/>.
-        /// The former has a delimiter of <c>"\"</c>, while the latter has a delimiter of <c>"\u"</c>. This means that the 
-        /// <see cref="BSolAsciiEscapeMatcher"/> will greedily match the delimiter, and fail instances of the
-        /// unicode-escape - e.g <c>\u21F5</c>. 
+        /// An escape sequence comprises 2 parts: <c>{delimiter}{argument}</c>. e.g: <c>{\}{n}</c>, <c>{\u}{0A2E}</c>, <c>{&amp;}{lt;}</c>.
+        /// </para>
+        /// <para>
+        /// Escape matchers are grouped into sets by their <see cref="IEscapeSequenceMatcher.EscapeDelimiter"/> property, meaning matchers with
+        /// duplicate escape delimiters cannot be used together in a <see cref="DelimitedString"/>. The recognition algorithm scans through
+        /// the matchers based on the length of their "Delimiters", finding which metchers delimiter matches with incoming tokens from the
+        /// <see cref="BufferedTokenReader"/>, then calling <see cref="IEscapeSequenceMatcher.TryMatch(BufferedTokenReader, out char[])"/>
+        /// to match the escape arguments
         /// </para>
         /// <para>
         /// A classic solution for this is to combine both into another matcher, as is done with the
@@ -191,84 +193,25 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
             public string EscapeDelimiter { get; }
 
             /// <summary>
-            /// Once the escape delimiter for this matcher is recognized, this matcher is called repeatedly with a subset of tokens,
-            /// starting from the token after the matcher delimiter, till the matcher returns false.
-            /// <para>
-            /// e.g, for the unicode escapes (\u0A2E), once the "\u" delimiter is matched, this method is called with:
-            /// <list type="number">
-            /// <item>0</item>
-            /// <item>0A</item>
-            /// <item>0A2</item>
-            /// <item>0A2E</item>
-            /// </list>
-            /// On the fifth call, the unicode matcher should return false.
-            /// </para>
+            /// Attempts to match the escape-argument.
+            /// If matching fails, this method MUST reset the reader to the position before it started reading.
             /// </summary>
-            /// <param name="subTokens">The sub tokens</param>
-            /// <returns>true if the sub-tokens matched, false otherwise</returns>
-            bool IsSubMatch(ReadOnlySpan<char> subTokens);
-
-            /// <summary>
-            /// After <see cref="IsSubMatch(ReadOnlySpan{char})"/> returns false, all the previously matched tokens are passed into this
-            /// method to do a full match. False from this method indicates that the tokens were not matched.
-            /// </summary>
-            /// <param name="escapeTokens">The escape tokens</param>
-            /// <returns>true if the tokens are a match, false otherwise</returns>
-            bool IsMatch(ReadOnlySpan<char> escapeTokens);
+            /// <param name="reader">the token reader</param>
+            /// <param name="tokens">returns the matched arguments if sucessful, or the unmatched tokens</param>
+            /// <returns>true if matched, otherwise false</returns>
+            bool TryMatchEscapeArgument(BufferedTokenReader reader, out char[] tokens);
         }
 
-        public class BSolAsciiEscapeMatcher : IEscapeSequenceMatcher
+        public class BSolBasicEscapeMatcher : IEscapeSequenceMatcher
         {
             public string EscapeDelimiter => "\\";
 
-            public bool IsSubMatch(ReadOnlySpan<char> tokens)
+            public bool TryMatchEscapeArgument(BufferedTokenReader reader, out char[] tokens)
             {
-                return tokens.Length == 1 && tokens[0] switch
-                {
-                    '\'' => true,
-                    '\"' => true,
-                    '\\' => true,
-                    'n' =>  true,
-                    'r' =>  true,
-                    'f' =>  true,
-                    'b' =>  true,
-                    't' =>  true,
-                    'v' =>  true,
-                    '0' =>  true,
-                    'a' =>  true,
-                    _ => false
-                };
-            }
+                if (!reader.TryNextTokens(1, out tokens))
+                    return false;
 
-            public bool IsMatch(ReadOnlySpan<char> tokens) => IsSubMatch(tokens);
-        }
-
-        public class BSolUTF16EscapeMatcher : IEscapeSequenceMatcher
-        {
-            private readonly Regex HexPattern = new(@"^[a-fA-F0-9]{1,4}$", RegexOptions.Compiled);
-
-            public string EscapeDelimiter => "\\u";
-
-            public bool IsSubMatch(ReadOnlySpan<char> subTokens)
-                => subTokens.Length <= 4 && HexPattern.IsMatch(new string(subTokens));
-
-            public bool IsMatch(ReadOnlySpan<char> tokens)
-                => tokens.Length == 4 && HexPattern.IsMatch(new string(tokens));
-        }
-
-        public class BSolGeneralEscapeMatcher: IEscapeSequenceMatcher
-        {
-            private readonly Regex HexPattern = new(@"^u[a-fA-F0-9]{0,4}$", RegexOptions.Compiled);
-
-            public string EscapeDelimiter => "\\";
-
-            public bool IsSubMatch(ReadOnlySpan<char> subTokens)
-            {
-                if (subTokens[0] == 'u')
-                    return subTokens.Length <= 5 
-                        && HexPattern.IsMatch(new string(subTokens));
-
-                return subTokens.Length == 1 && subTokens[0] switch
+                var matches = tokens[0] switch
                 {
                     '\'' => true,
                     '\"' => true,
@@ -283,18 +226,91 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
                     'a' => true,
                     _ => false
                 };
+
+                if (!matches)
+                    reader.Back();
+
+                return matches;
             }
+        }
 
-            public bool IsMatch(ReadOnlySpan<char> escapeTokens)
+        public class BSolUTFEscapeMatcher : IEscapeSequenceMatcher
+        {
+            private readonly Regex B2HexPattern = new(@"^u[a-fA-F0-9]{4}$", RegexOptions.Compiled);
+            private readonly Regex B4HexPattern = new(@"^U[a-fA-F0-9]{8}$", RegexOptions.Compiled);
+
+            public string EscapeDelimiter => "\\";
+
+            public bool TryMatchEscapeArgument(BufferedTokenReader reader, out char[] tokens)
             {
-                if (escapeTokens.Length == 5)
-                    return HexPattern.IsMatch(new string(escapeTokens));
+                var position = reader.Position;
 
-                if (escapeTokens.Length == 1 && escapeTokens[0] != 'u')
-                    return IsSubMatch(escapeTokens);
+                // utf-b4
+                if (reader.TryNextTokens(9, out tokens)
+                    && B4HexPattern.IsMatch(new string(tokens)))
+                    return true;
 
+                // utf-b2
+                if (reader.Reset(position).TryNextTokens(5, out tokens)
+                    && B2HexPattern.IsMatch(new string(tokens)))
+                    return true;
+
+                reader.Reset(position);
                 return false;
             }
+        }
+
+        public class BSolGeneralEscapeMatcher: IEscapeSequenceMatcher
+        {
+            private readonly Regex B1HexPattern = new(@"^x[a-fA-F0-9]{2}$", RegexOptions.Compiled);
+            private readonly Regex B2HexPattern = new(@"^u[a-fA-F0-9]{4}$", RegexOptions.Compiled);
+            private readonly Regex B4HexPattern = new(@"^U[a-fA-F0-9]{8}$", RegexOptions.Compiled);
+
+            public string EscapeDelimiter => "\\";
+
+            public bool TryMatchEscapeArgument(BufferedTokenReader reader, out char[] tokens)
+            {
+                var position = reader.Position;
+
+                // utf-b4
+                if (reader.TryNextTokens(9, out tokens)
+                    && B4HexPattern.IsMatch(new string(tokens)))
+                    return true;
+
+                // utf-b2
+                if (reader.Reset(position).TryNextTokens(5, out tokens)
+                    && B2HexPattern.IsMatch(new string(tokens)))
+                    return true;
+
+                // utf-b1
+                if (reader.Reset(position).TryNextTokens(3, out tokens)
+                    && B1HexPattern.IsMatch(new string(tokens)))
+                    return true;
+
+                // regular
+                if (reader.Reset(position).TryNextTokens(1, out tokens)
+                    && IsBasicEscapeArg(tokens[0]))
+                    return true;
+
+                reader.Reset(position);
+                return false;
+            }
+
+            private static bool IsBasicEscapeArg(char c) => c switch
+            {
+                '\'' => true,
+                '\"' => true,
+                '\\' => true,
+                'n' => true,
+                'r' => true,
+                'f' => true,
+                'b' => true,
+                't' => true,
+                'v' => true,
+                '0' => true,
+                'a' => true,
+                _ => false
+            };
         }
 
         public class XmlEscapeMatcher : IEscapeSequenceMatcher
@@ -307,24 +323,25 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
             private static readonly string LessThan = "lt;";
             private static readonly string GreaterThan = "gt;";
 
-            public bool IsSubMatch(ReadOnlySpan<char> subTokens)
+            public bool TryMatchEscapeArgument(BufferedTokenReader reader, out char[] tokens)
             {
-                var tokenString = new string(subTokens);
-                return Quotation.StartsWith(tokenString)
-                    || Apostrophe.StartsWith(tokenString)
-                    || Ampersand.StartsWith(tokenString)
-                    || LessThan.StartsWith(tokenString)
-                    || GreaterThan.StartsWith(tokenString);
-            }
+                var position = reader.Position;
+                if (reader.TryNextTokens(5, out tokens)
+                    && (Quotation.Equals(new string(tokens))
+                    || Apostrophe.Equals(new string(tokens))))
+                    return true;
 
-            public bool IsMatch(ReadOnlySpan<char> tokens)
-            {
-                var tokenString = new string(tokens);
-                return Quotation.Equals(tokenString)
-                    || Apostrophe.Equals(tokenString)
-                    || Ampersand.Equals(tokenString)
-                    || LessThan.Equals(tokenString)
-                    || GreaterThan.Equals(tokenString);
+                if (reader.Reset(position).TryNextTokens(4, out tokens)
+                    && Ampersand.Equals(new string(tokens)))
+                    return true;
+
+                if (reader.Reset(position).TryNextTokens(3, out tokens)
+                    && (LessThan.Equals(new string(tokens))
+                    || GreaterThan.Equals(new string(tokens))))
+                    return true;
+
+                reader.Reset(position);
+                return false;
             }
         }
         #endregion
