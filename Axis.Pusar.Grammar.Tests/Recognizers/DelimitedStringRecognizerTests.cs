@@ -199,29 +199,6 @@ namespace Axis.Pusar.Grammar.Tests.Recognizers
         }
 
 
-        [TestMethod]
-        public void Stuff()
-        {
-            Mock<Pulsar.Grammar.Language.Grammar> mockGrammar = new();
-            var dsrule = new DelimitedString(
-                "bleh",
-                "'''",
-                new[] { "\n", "\r" },
-                new BSolGeneralEscapeMatcher());
-
-            var recognizer = new DelimitedStringRecognizer(dsrule, mockGrammar.Object);
-
-            var recognized = recognizer.TryRecognize(
-                new Pulsar.Grammar.BufferedTokenReader(ML_STRING.Trim()),
-                out IRecognitionResult result);
-
-            Console.WriteLine(result);
-            Assert.IsNotNull(result);
-            Assert.IsTrue(recognized);
-            var success = result as SuccessResult;
-            Assert.IsNotNull(success);
-        }
-
         private static readonly string BLOB = @"
 {{
 A
@@ -236,6 +213,6 @@ v 9 v 8 A
 }}
 ";
 
-        private static readonly string ML_STRING = @"'''dfgh sdf'''";
+        private static readonly string ML_STRING = @"''' '''";
     }
 }

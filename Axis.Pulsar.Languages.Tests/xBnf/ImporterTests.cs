@@ -1,9 +1,11 @@
 ﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Grammar;
 using Axis.Pulsar.Grammar.CST;
+using Axis.Pulsar.Grammar.Language;
 using Axis.Pulsar.Grammar.Language.Rules.CustomTerminals;
 using Axis.Pulsar.Grammar.Recognizers.Results;
 using Axis.Pulsar.Languages.xBNF;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Text.RegularExpressions;
 using static Axis.Pulsar.Grammar.Language.Rules.CustomTerminals.DelimitedString;
@@ -217,6 +219,79 @@ namespace Axis.Pulsar.Languages.Tests.xBnf
             {
                 throw;
             }
+        }
+
+        [TestMethod]
+        public void SampleIonGrammarTest()
+        {
+            var grammar = GetIonGrammar();
+            Assert.IsNotNull(grammar);
+
+            var result = grammar
+                .GetRecognizer("ion")
+                .Recognize("{{\"\"}}\r\n{{''''''}}");
+
+            Assert.IsNotNull(result);
+            Console.WriteLine(result);
+
+            if (result is SuccessResult success)
+                Console.WriteLine("Success: " + success.Symbol.TokenValue());
+
+            else if (result is FailureResult failure)
+                Console.WriteLine("Failure: " + failure);
+        }
+
+        private Grammar.Language.Grammar GetIonGrammar()
+        {
+            using var ionXbnfStream = typeof(ImporterTests).Assembly
+                .GetManifestResourceStream($"{typeof(ImporterTests).Namespace}.TestIon.xbnf");
+
+            var importer = new Importer();
+
+            // register multiline-3sqdstring
+            _ = importer.RegisterTerminal(
+                new DelimitedString(
+                    "Multiline-3SQDString",
+                    "\'\'\'",
+                    new[] { "\n", "\r" },
+                    new BSolGeneralEscapeMatcher()));
+
+            // register singleline-sqdstring
+            _ = importer.RegisterTerminal(
+                new DelimitedString(
+                    "Singleline-SQDString",
+                    "\'",
+                    new[] { "\n", "\r" },
+                    new BSolGeneralEscapeMatcher()));
+
+            // register singleline-dqdstring
+            _ = importer.RegisterTerminal(
+                new DelimitedString(
+                    "Singleline-DQDString",
+                    "\"",
+                    new[] { "\n", "\r" },
+                    new BSolGeneralEscapeMatcher()));
+
+            // register blob string
+            _ = importer.RegisterTerminal(
+                new DelimitedString(
+                    "blob-value",
+                    "{{",
+                    "}}",
+                    new[]
+                    {
+                        "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
+                        "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V",
+                        "W", "X", "Y", "Z",
+                        "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k",
+                        "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v",
+                        "w", "x", "y", "z",
+                        "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+                        "/", "=", "+", " ", "\t", "\n", "\r"
+                    },
+                    Array.Empty<string>()));
+
+            return importer.ImportGrammar(ionXbnfStream);
         }
 
 

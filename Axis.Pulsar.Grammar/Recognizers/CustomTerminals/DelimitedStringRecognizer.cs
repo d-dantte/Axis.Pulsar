@@ -133,7 +133,6 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
                 return null;
             }
 
-            context.TokenBuffer.Append(tokens);
             return StateNames.StringCharacters.ToString();
         }
 
@@ -150,12 +149,13 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
             }
             else
             {
-                context.TokenBuffer.Append(tokens);
                 context.Result = new SuccessResult(
                     context.StartPosition + 1,
                     CST.CSTNode.Of(
                         context.Rule.SymbolName,
-                        context.TokenBuffer.ToString()));
+                        context.Rule.StartDelimiter
+                        + context.TokenBuffer
+                        + context.Rule.EndDelimiter));
             }
 
             return null;
@@ -359,6 +359,9 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
 
         internal record RecognitionContext
         {
+            /// <summary>
+            /// Buffer for tokens appearing between the start and end delimiters.
+            /// </summary>
             public StringBuilder TokenBuffer { get; }
 
             public BufferedTokenReader TokenReader { get; }

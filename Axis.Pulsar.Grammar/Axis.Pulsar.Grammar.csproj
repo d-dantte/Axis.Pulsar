@@ -5,7 +5,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
-    <Version>0.7.11</Version>
+    <Version>0.7.13</Version>
     <LangVersion>latest</LangVersion>
     <Description>Dynamic Grammar Parser Builder Library</Description>
     <PackageReleaseNotes></PackageReleaseNotes>
