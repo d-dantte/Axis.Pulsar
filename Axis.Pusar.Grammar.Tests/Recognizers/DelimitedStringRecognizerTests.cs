@@ -198,6 +198,26 @@ namespace Axis.Pusar.Grammar.Tests.Recognizers
             Assert.IsNotNull(success);
         }
 
+        [TestMethod]
+        public void Parse_()
+        {
+            Mock<Pulsar.Grammar.Language.Grammar> mockGrammar = new();
+            var dsrule = new DelimitedString(
+                "bleh",
+                "'''",
+                new BSolBasicEscapeMatcher());
+
+            var recognizer = new DelimitedStringRecognizer(dsrule, mockGrammar.Object);
+
+            var recognized = recognizer.TryRecognize(
+                new Pulsar.Grammar.BufferedTokenReader("'''\\''''"),
+                out IRecognitionResult result);
+
+            Assert.IsNotNull(result);
+            Assert.IsTrue(recognized);
+            Console.WriteLine((result as SuccessResult)!.Symbol.TokenValue());
+        }
+
 
         private static readonly string BLOB = @"
 {{

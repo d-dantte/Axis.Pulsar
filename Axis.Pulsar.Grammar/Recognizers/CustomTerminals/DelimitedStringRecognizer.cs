@@ -205,6 +205,7 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
         private static string RecognizeEscapeCharacters(RecognitionContext context)
         {
             var position = context.TokenReader.Position;
+            var index = context.TokenBuffer.Length;
 
             // no escape matchers?
             if (context.Rule.EscapeMatchers.Count <= 0)
@@ -245,6 +246,7 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
                 if (matcher.TryMatchEscapeArgument(context.TokenReader, out var argTokens))
                 {
                     context.TokenBuffer.Append(delimTokens).Append(argTokens);
+                    context.EscapeSpan = new EscapeSpan(index, delimTokens.Length + argTokens.Length);
                     return StateNames.StringCharacters.ToString();
                 }
                 else // fail
@@ -290,6 +292,9 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
         /// <summary>
         /// verifies that the given concatenation of the <c>context.TokenBuffer</c> and the<paramref name="tokens"/> contains at least one
         /// right-most subset that is present in the IllegalSequence set.
+        /// <para>
+        /// Note that concatenation begins from the end of the last escape sequence in the buffer, or the beginning of the buffer.
+        /// </para>
         /// </summary>
         /// <param name="context">the context</param>
         /// <param name="tokens">the tokens</param>
@@ -299,7 +304,11 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
             char[] tokens,
             out int illegalLength)
         {
-            var tbuff = context.TokenBuffer.ToString() + new string(tokens);
+            var lastEscapeEndIndex = 
+                (context.EscapeSpan?.Index ?? 0)
+                + (context.EscapeSpan?.Length ?? 0);
+
+            var tbuff = context.TokenBuffer.ToString(lastEscapeEndIndex..) + new string(tokens);
 
             foreach(var length in context.IllegalSequences.OrderedSequenceLengths)
             {
@@ -357,48 +366,6 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
             public void Leaving(string nextState, TData data) => _leaving?.Invoke(nextState, data);
         }
 
-        internal record RecognitionContext
-        {
-            /// <summary>
-            /// Buffer for tokens appearing between the start and end delimiters.
-            /// </summary>
-            public StringBuilder TokenBuffer { get; }
-
-            public BufferedTokenReader TokenReader { get; }
-
-            public DelimitedString Rule { get; }
-
-            public int StartPosition { get; }
-
-            public IRecognitionResult Result { get; set; }
-
-            public SequenceInfo LegalSequences { get; }
-
-            public SequenceInfo IllegalSequences { get; }
-
-            public RecognitionContext(
-                int startPosition,
-                DelimitedString rule,
-                StringBuilder stringBuilder,
-                BufferedTokenReader tokenReader)
-            {
-                Rule = rule;
-                StartPosition = startPosition;
-                TokenBuffer = stringBuilder ?? throw new ArgumentNullException(nameof(stringBuilder));
-                TokenReader = tokenReader ?? throw new ArgumentNullException(nameof(tokenReader));
-
-                IllegalSequences = new SequenceInfo(rule.IllegalSequences
-                    .Append(rule.EndDelimiter)
-                    .Concat(rule.EscapeMatchers.Values.Select(m => m.EscapeDelimiter))
-                    .ToArray());
-
-                // null represents "any character", meaning all characters are valid
-                LegalSequences = new SequenceInfo(rule.LegalSequences.Length == 0
-                    ? new string[] { null }
-                    : rule.LegalSequences);
-            }
-        }
-
         /// <summary>
         /// Specialized structure for recognizing sequences of tokens. If this sequence contains a null in it's sequence set,
         /// it means it will recognize any single character.
@@ -427,6 +394,52 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
                     return true;
 
                 return Sequences.Contains(sequence);
+            }
+        }
+
+        internal record EscapeSpan(int Index, int Length); 
+
+        internal record RecognitionContext
+        {
+            /// <summary>
+            /// Buffer for tokens appearing between the start and end delimiters.
+            /// </summary>
+            public StringBuilder TokenBuffer { get; }
+
+            public BufferedTokenReader TokenReader { get; }
+
+            public DelimitedString Rule { get; }
+
+            public int StartPosition { get; }
+
+            public IRecognitionResult Result { get; set; }
+
+            public SequenceInfo LegalSequences { get; }
+
+            public SequenceInfo IllegalSequences { get; }
+
+            public EscapeSpan EscapeSpan { get; internal set; }
+
+            public RecognitionContext(
+                int startPosition,
+                DelimitedString rule,
+                StringBuilder stringBuilder,
+                BufferedTokenReader tokenReader)
+            {
+                Rule = rule;
+                StartPosition = startPosition;
+                TokenBuffer = stringBuilder ?? throw new ArgumentNullException(nameof(stringBuilder));
+                TokenReader = tokenReader ?? throw new ArgumentNullException(nameof(tokenReader));
+
+                IllegalSequences = new SequenceInfo(rule.IllegalSequences
+                    .Append(rule.EndDelimiter)
+                    .Concat(rule.EscapeMatchers.Values.Select(m => m.EscapeDelimiter))
+                    .ToArray());
+
+                // null represents "any character", meaning all characters are valid
+                LegalSequences = new SequenceInfo(rule.LegalSequences.Length == 0
+                    ? new string[] { null }
+                    : rule.LegalSequences);
             }
         }
         #endregion

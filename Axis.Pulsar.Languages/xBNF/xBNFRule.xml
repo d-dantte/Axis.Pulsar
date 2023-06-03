@@ -127,31 +127,9 @@
     </choice>
   </non-terminal>
 
-  <!--
-  <non-terminal name="case-sensitive">
-    <sequence>
-      <symbol name="quote"/>
-      <!- -this is a terminal regex that describes escapable strings that lie between the " symbol. - ->
-      <symbol name="case-literal" min-occurs="0"/>
-      <symbol name="quote"/>
-    </sequence>
-  </non-terminal>
-  -->
-
   <non-terminal name="case-sensitive">
     <custom-terminal symbol="DQD-String"/>
   </non-terminal>
-
-  <!--
-  <non-terminal name="case-insensitive">
-    <sequence>
-      <symbol name="squote"/>
-      <!- -this is a terminal regex that describes escapable strings that lie between the ' symbol. - ->
-      <symbol name="non-case-literal" min-occurs="0"/>
-      <symbol name="squote"/>
-    </sequence>
-  </non-terminal>
-  -->
 
   <non-terminal name="case-insensitive">
     <custom-terminal symbol="SQD-String"/>

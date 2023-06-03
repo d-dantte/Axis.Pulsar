@@ -85,6 +85,14 @@ namespace Axis.Pulsar.Grammar
             return builder.ToString(index, builder.Length - index);
         }
 
+        internal static string ToString(this StringBuilder builder, Range range)
+        {
+            if (builder is null)
+                throw new ArgumentNullException(nameof(builder));
+
+            return builder.ToString()[range];
+        }
+
         /// <summary>
         /// Verifies that the rule terminates in a <see cref="ProductionRef"/>, <see cref="EOF"/>, <see cref="Literal"/>,
         /// or <see cref="Pattern"/>

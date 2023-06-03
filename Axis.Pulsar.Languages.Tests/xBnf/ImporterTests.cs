@@ -227,12 +227,15 @@ namespace Axis.Pulsar.Languages.Tests.xBnf
             var grammar = GetIonGrammar();
             Assert.IsNotNull(grammar);
 
+            //var result = grammar
+            //    .GetRecognizer("sexp-value")
+            //    .Recognize("(\n123\n123\n)");
+
             var result = grammar
-                .GetRecognizer("ion")
-                .Recognize("{{\"\"}}\r\n{{''''''}}");
+                .GetRecognizer("ion-value")
+                .Recognize("123\n\n");
 
             Assert.IsNotNull(result);
-            Console.WriteLine(result);
 
             if (result is SuccessResult success)
                 Console.WriteLine("Success: " + success.Symbol.TokenValue());
