@@ -11,6 +11,16 @@ namespace Axis.Pulsar.Grammar.Language.Rules
 
     public interface ProductionValidationResult
     {
+        /// <summary>
+        /// Default success result
+        /// </summary>
+        public static Success SuccessResult { get; } = new Success();
+
+        /// <summary>
+        /// Default error result
+        /// </summary>
+        public static Error ErrorResult { get; } = new Error();
+
         public record Success: ProductionValidationResult
         {
         }

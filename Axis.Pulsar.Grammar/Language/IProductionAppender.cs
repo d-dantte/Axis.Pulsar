@@ -5,7 +5,7 @@
         /// <summary>
         /// Adds a new production to the underlying SET of productions.
         /// </summary>
-        /// <param name="production"></param>
+        /// <param name="production">the production</param>
         /// <returns></returns>
         IProductionAppender AddProduction(Production production);
 

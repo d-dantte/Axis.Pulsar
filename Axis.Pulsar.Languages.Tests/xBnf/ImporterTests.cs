@@ -2,6 +2,7 @@
 using Axis.Pulsar.Grammar;
 using Axis.Pulsar.Grammar.CST;
 using Axis.Pulsar.Grammar.Language;
+using Axis.Pulsar.Grammar.Language.Rules;
 using Axis.Pulsar.Grammar.Language.Rules.CustomTerminals;
 using Axis.Pulsar.Grammar.Recognizers.Results;
 using Axis.Pulsar.Languages.xBNF;
@@ -232,8 +233,8 @@ namespace Axis.Pulsar.Languages.Tests.xBnf
             //    .Recognize("(\n123\n123\n)");
 
             var result = grammar
-                .GetRecognizer("ion-value")
-                .Recognize("123\n\n");
+                .GetRecognizer("ion")
+                .Recognize("123\n\n{{ abcdABCD }}");
 
             Assert.IsNotNull(result);
 
@@ -294,7 +295,17 @@ namespace Axis.Pulsar.Languages.Tests.xBnf
                     },
                     Array.Empty<string>()));
 
+            _ = importer.RegisterValidator("blob-text-value", new BlobValidator());
+
             return importer.ImportGrammar(ionXbnfStream);
+        }
+
+        public class BlobValidator : IProductionValidator
+        {
+            public ProductionValidationResult ValidateCSTNode(ProductionRule rule, CSTNode node)
+            {
+                return ProductionValidationResult.SuccessResult;
+            }
         }
 
 

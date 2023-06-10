@@ -6,6 +6,7 @@ using Axis.Pulsar.Grammar.Language.Rules;
 using Axis.Pulsar.Grammar.Recognizers.Results;
 using System;
 using System.Linq;
+using static Axis.Pulsar.Grammar.Language.Rules.ProductionValidationResult;
 
 namespace Axis.Pulsar.Grammar.Recognizers
 {
@@ -103,11 +104,11 @@ namespace Axis.Pulsar.Grammar.Recognizers
 
         public override string ToString() => _recognizer.ToString();
 
-        private bool IsValidatedCST(CSTNode node, out ProductionValidationResult.Error error)
+        private bool IsValidatedCST(CSTNode node, out Error error)
         {
-            var result = _rule.Validator?.ValidateCSTNode(_rule, node);
+            var result = _rule.Validator?.ValidateCSTNode(_rule, CSTNode.Of(_rule.SymbolName, Flatten(node)));
 
-            if(result is ProductionValidationResult.Error validationResult)
+            if (result is Error validationResult)
             {
                 error = validationResult;
                 return false;
