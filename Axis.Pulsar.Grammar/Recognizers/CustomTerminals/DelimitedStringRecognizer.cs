@@ -1,16 +1,12 @@
 ﻿using Axis.Luna.Common;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Grammar.Language;
-using Axis.Pulsar.Grammar.Language.Rules;
 using Axis.Pulsar.Grammar.Language.Rules.CustomTerminals;
 using Axis.Pulsar.Grammar.Recognizers.Results;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
-using System.Text.RegularExpressions;
-using static Axis.Pulsar.Grammar.Language.Rules.CustomTerminals.DelimitedString;
 
 namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
 {
@@ -152,10 +148,11 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
                 context.Result = new SuccessResult(
                     context.StartPosition + 1,
                     CST.CSTNode.Of(
+                        CST.CSTNode.TerminalType.Custom,
                         context.Rule.SymbolName,
                         context.Rule.StartDelimiter
-                        + context.TokenBuffer
-                        + context.Rule.EndDelimiter));
+                            + context.TokenBuffer
+                            + context.Rule.EndDelimiter));
             }
 
             return null;

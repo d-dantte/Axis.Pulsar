@@ -49,7 +49,10 @@ namespace Axis.Pulsar.Grammar.Recognizers
                 {
                     result = new SuccessResult(
                         inputPosition: position + 1, 
-                        symbol: CST.CSTNode.Of(SYMBOL_NAME, ""));
+                        symbol: CST.CSTNode.Of(
+                            CST.CSTNode.TerminalType.Literal,
+                            SYMBOL_NAME,
+                            ""));
                     return true;
                 }
                 else

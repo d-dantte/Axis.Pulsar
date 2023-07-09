@@ -1,4 +1,5 @@
 ﻿using Axis.Pulsar.Grammar.Recognizers;
+using System.Text.RegularExpressions;
 
 namespace Axis.Pulsar.Grammar.Language
 {
@@ -15,7 +16,20 @@ namespace Axis.Pulsar.Grammar.Language
 
         /// <summary>
         /// The name given to the recognized symbol in the Concrete Syntax Tree node. (<see  cref="CST.CSTNode"/>)
+        /// <para>
+        /// Symbol names conform to the pattern:
+        /// <code>
+        /// /^[a-zA-Z]([a-zA-Z0-9-])*\z/
+        /// </code>
+        /// </para>
         /// </summary>
         string SymbolName { get; }
+
+        /// <summary>
+        /// The symbol name pattern
+        /// </summary>
+        public static Regex SymbolNamePattern { get; } = new Regex(
+            "^[a-zA-Z]([a-zA-Z0-9-])*\\z",
+            RegexOptions.Compiled);
     }
 }

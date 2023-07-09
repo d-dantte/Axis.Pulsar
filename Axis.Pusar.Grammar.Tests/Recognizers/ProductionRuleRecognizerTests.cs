@@ -74,16 +74,16 @@ namespace Axis.Pusar.Grammar.Tests.Recognizers
             ///
             var tree = CSTNode.Of(
                 "B0",
-                CSTNode.Of("L00", "L00-tokens"),
+                CSTNode.Of(CSTNode.TerminalType.Literal, "L00", "L00-tokens"),
                 CSTNode.Of(
                     "B01",
                     CSTNode.Of(
                         "@B010R.Ref",
                         CSTNode.Of("B010R0"),
                         CSTNode.Of("B010R1")),
-                    CSTNode.Of("L011", "L011-tokens"),
-                    CSTNode.Of("L012", "L012-tokens")),
-                CSTNode.Of("L02", "L02-tokens"),
+                    CSTNode.Of(CSTNode.TerminalType.Literal, "L011", "L011-tokens"),
+                    CSTNode.Of(CSTNode.TerminalType.Literal, "L012", "L012-tokens")),
+                CSTNode.Of(CSTNode.TerminalType.Literal, "L02", "L02-tokens"),
                 CSTNode.Of(
                     "@B03R.Ref",
                     CSTNode.Of("B03R0")));

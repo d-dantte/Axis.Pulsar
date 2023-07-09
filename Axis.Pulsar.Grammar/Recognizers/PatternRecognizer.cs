@@ -75,7 +75,10 @@ namespace Axis.Pulsar.Grammar.Recognizers
                         return false;
                     }
 
-                    var node = CSTNode.Of(_rule.SymbolName, sbuffer.ToString());
+                    var node = CSTNode.Of(
+                        CSTNode.TerminalType.Pattern,
+                        _rule.SymbolName,
+                        sbuffer.ToString());
                     result = new SuccessResult(position + 1, node);
                     return true;
                 }
@@ -105,7 +108,10 @@ namespace Axis.Pulsar.Grammar.Recognizers
                         return false;
                     }
 
-                    var node = CSTNode.Of(_rule.SymbolName, symbolValue);
+                    var node = CSTNode.Of(
+                        CSTNode.TerminalType.Pattern,
+                        _rule.SymbolName,
+                        symbolValue);
                     result = new SuccessResult(position + 1, node);
                     return true;
                 }

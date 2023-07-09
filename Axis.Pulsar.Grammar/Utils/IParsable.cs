@@ -1,9 +1,10 @@
 ﻿using Axis.Luna.Common;
+using Axis.Luna.Common.Results;
 using Axis.Pulsar.Grammar.CST;
 
 namespace Axis.Pulsar.Grammar.Utils
 {
-    public interface IParsable<TValue>: System.IParsable<TValue>
+    public interface IParsable<TValue>
     where TValue : IParsable<TValue>
     {
         /// <summary>

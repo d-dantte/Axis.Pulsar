@@ -1,6 +1,8 @@
 ﻿using Axis.Luna.Extensions;
 using System;
 using System.Collections.Generic;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Axis.Pulsar.Grammar
 {
@@ -17,6 +19,23 @@ namespace Axis.Pulsar.Grammar
         /// The current position of the token reader
         /// </summary>
         public int Position => _position;
+
+        /// <summary>
+        /// Indicates that the end of the input source has been reached, and no more tokens can be read
+        /// from the current position.
+        /// </summary>
+        public bool IsConsumed
+        {
+            get
+            {
+                if (TryNextToken(out _))
+                {
+                    Back();
+                    return false;
+                }
+                return true;
+            }
+        }
 
         /// <summary>
         /// Creates a new instance of this class
@@ -112,6 +131,56 @@ namespace Axis.Pulsar.Grammar
                 tokens = null;
                 return false;
             }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="regex"></param>
+        /// <param name="tokens"></param>
+        /// <returns></returns>
+        public bool TryNextPattern(Regex regex, out string tokens)
+        {
+            var sb = new StringBuilder();
+            while(TryNextToken(out char next))
+            {
+                if (regex.IsMatch($"{sb}{next}"))
+                    sb.Append(next);
+
+                else
+                {
+                    Back(1);
+                    break;
+                }
+            }
+
+            tokens = sb.ToString();
+            return sb.Length > 0;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="chars"></param>
+        /// <param name="tokens"></param>
+        /// <returns></returns>
+        public bool TryNextPattern(HashSet<char> chars, out string tokens)
+        {
+            var sb = new StringBuilder();
+            while (TryNextToken(out char next))
+            {
+                if (chars.Contains(next))
+                    sb.Append(next);
+
+                else
+                {
+                    Back(1);
+                    break;
+                }
+            }
+
+            tokens = sb.ToString();
+            return sb.Length > 0;
         }
 
         /// <summary>

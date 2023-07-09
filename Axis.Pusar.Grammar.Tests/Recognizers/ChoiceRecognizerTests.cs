@@ -114,8 +114,8 @@ namespace Axis.Pusar.Grammar.Tests.Recognizers
                 0,
                 IReason.Of("expected tokens"),
                 new[] { 
-                    CSTNode.Of("_symbol_1", "partial-1"),
-                    CSTNode.Of("_symbol_2", "partial-2")
+                    CSTNode.Of(CSTNode.TerminalType.Literal, "_symbol_1", "partial-1"),
+                    CSTNode.Of(CSTNode.TerminalType.Literal, "_symbol_2", "partial-2")
                 });
             var choice = new Choice(
                 Cardinality.OccursAtLeast(1),

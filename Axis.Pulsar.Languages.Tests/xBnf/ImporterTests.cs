@@ -4,6 +4,7 @@ using Axis.Pulsar.Grammar.CST;
 using Axis.Pulsar.Grammar.Language;
 using Axis.Pulsar.Grammar.Language.Rules;
 using Axis.Pulsar.Grammar.Language.Rules.CustomTerminals;
+using Axis.Pulsar.Grammar.Recognizers;
 using Axis.Pulsar.Grammar.Recognizers.Results;
 using Axis.Pulsar.Languages.xBNF;
 using System.Reflection.Metadata;
@@ -233,8 +234,8 @@ namespace Axis.Pulsar.Languages.Tests.xBnf
             //    .Recognize("(\n123\n123\n)");
 
             var result = grammar
-                .GetRecognizer("ion")
-                .Recognize("123\n\n{{ abcdABCD }}");
+                .GetRecognizer("ion-timestamp")
+                .Recognize("2007-02-23T");
 
             Assert.IsNotNull(result);
 
@@ -243,6 +244,23 @@ namespace Axis.Pulsar.Languages.Tests.xBnf
 
             else if (result is FailureResult failure)
                 Console.WriteLine("Failure: " + failure);
+
+            var suc = result as SuccessResult;
+            Console.WriteLine(suc!.Symbol);
+        }
+
+        [TestMethod]
+        public void TestDiaGrammar()
+        {
+            try
+            {
+                var grammar = GetDiaGrammar();
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine(e);
+                Assert.Fail();
+            }
         }
 
         private Grammar.Language.Grammar GetIonGrammar()
@@ -300,6 +318,81 @@ namespace Axis.Pulsar.Languages.Tests.xBnf
             return importer.ImportGrammar(ionXbnfStream);
         }
 
+        public static readonly string BlockCommentString = "BlockCommentString";
+        public static readonly string DiaIdentifier = "DiaIdentifier";
+        public static readonly string SinglelineSQDString = "Singleline-SQDString";
+        public static readonly string SinglelineDQDString = "Singleline-DQDString";
+        public static readonly string MultilineDQDString = "Multiline-DQDString";
+        public static readonly string BlobValue = "BlobValue";
+        public static readonly string BlobTextValue = "blob-text-value";
+        public static readonly string ClobValue = "ClobValue";
+
+        private Grammar.Language.Grammar GetDiaGrammar()
+        {
+
+            using var xbnfStream = typeof(ImporterTests).Assembly
+                .GetManifestResourceStream($"{typeof(ImporterTests).Namespace}.TestDia.xbnf");
+
+            var importer = new Importer();
+
+            #region Register Terminals
+            // register multiline-dqdstring
+            _ = importer.RegisterTerminal(
+                new DelimitedString(
+                    MultilineDQDString,
+                    "@\"", "\"",
+                    new BSolBasicEscapeMatcher()));
+
+            // register singleline-sqdstring
+            _ = importer.RegisterTerminal(
+                new DelimitedString(
+                    SinglelineDQDString,
+                    "\"",
+                    new[] { "\n", "\r" },
+                    new BSolBasicEscapeMatcher()));
+
+            // register singleline-dqdstring
+            _ = importer.RegisterTerminal(
+                new DelimitedString(
+                    SinglelineSQDString,
+                    "\'",
+                    new[] { "\n", "\r" },
+                    new BSolBasicEscapeMatcher()));
+
+            // register clob-value
+            _ = importer.RegisterTerminal(
+                new DelimitedString(
+                    ClobValue,
+                    "<<", ">>",
+                    new BSolBasicEscapeMatcher()));
+
+            // register blob-value
+            _ = importer.RegisterTerminal(
+                new DelimitedString(
+                    BlobValue,
+                    "<", ">",
+                    new string[0]));
+
+            // register block comment
+            _ = importer.RegisterTerminal(
+                new DelimitedString(
+                    BlockCommentString,
+                    "/*", "*/"));
+
+            // register identifier rule
+            _ = importer.RegisterTerminal(new SymbolIdentifierRule());
+            #endregion
+
+            #region Register Validators
+
+            // register blob validator
+            _ = importer.RegisterValidator(BlobTextValue, new BlobValidator());
+
+            #endregion
+
+            return importer.ImportGrammar(xbnfStream);
+        }
+
         public class BlobValidator : IProductionValidator
         {
             public ProductionValidationResult ValidateCSTNode(ProductionRule rule, CSTNode node)
@@ -307,6 +400,40 @@ namespace Axis.Pulsar.Languages.Tests.xBnf
                 return ProductionValidationResult.SuccessResult;
             }
         }
+
+        public class SymbolIdentifierRule : ICustomTerminal
+        {
+            public string SymbolName => "SymbolIdentifier";
+
+            public IRecognizer ToRecognizer(Grammar.Language.Grammar grammar)
+            {
+                return new SymbolIdentifierRecognizer(grammar, this);
+            }
+        }
+
+        public class SymbolIdentifierRecognizer : IRecognizer
+        {
+            public Grammar.Language.Grammar Grammar { get; }
+
+            public IRule Rule { get; }
+
+            public SymbolIdentifierRecognizer(Grammar.Language.Grammar grammar, IRule rule)
+            {
+                Grammar = grammar;
+                Rule = rule;
+            }
+
+            public IRecognitionResult Recognize(BufferedTokenReader tokenReader)
+            {
+                throw new NotImplementedException();
+            }
+
+            public bool TryRecognize(BufferedTokenReader tokenReader, out IRecognitionResult result)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
 
 
         public static readonly string SampleBNF1 =

@@ -73,16 +73,16 @@ $ion-timestamp -> +[$annotation-list.? ?[
 	$year-precision]]
 $null-timestamp -> "null.timestamp"
 $millisecond-precision -> +[
-	$year $minus $month $minus $day $date-delimiter
+	$year '-' $month '-' $day $date-delimiter
 	$hour $colon $minute $colon $second $dot
 	$millisecond $time-zone-offset]>12
-$second-precision -> +[$year $minus $month $minus $day $date-delimiter $hour $colon $minute $colon $second $time-zone-offset]>10
-$minute-precision -> +[$year $minus $month $minus $day $date-delimiter $hour $colon $minute $time-zone-offset]>7
-$day-precision -> +[$year $minus $month $minus $day $date-delimiter.?]
-$month-precision -> +[$year $minus $month $date-delimiter]
+$second-precision -> +[$year '-' $month '-' $day $date-delimiter $hour $colon $minute $colon $second $time-zone-offset]>10
+$minute-precision -> +[$year '-' $month '-' $day $date-delimiter $hour $colon $minute $time-zone-offset]>7
+$day-precision -> +[$year '-' $month '-' $day $date-delimiter.?]
+$month-precision -> +[$year '-' $month $date-delimiter]
 $year-precision -> +[$year $date-delimiter]
 $time-zone-offset -> ?[$utc-offset $minute-precision-offset]
-$minute-precision-offset -> +[?[$plus $minus] $hour $colon $minute]
+$minute-precision-offset -> +[?[$plus '-'] $hour $colon $minute]
 $utc-offset -> "Z"
 $date-delimiter -> "T"
 $year -> /^\d{4,}\z/.4,+

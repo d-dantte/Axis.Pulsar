@@ -13,11 +13,26 @@ namespace Axis.Pulsar.Grammar.CST
         #region Of
 
         /// <summary>
-        /// Creates a <see cref="LeafNode"/> type of <see cref="CSTNode"/>
+        /// Creates a <see cref="LeafNode"/> instance with <see cref="LeafNode.TerminalType"/> of <see cref="TerminalType.Literal"/>.
         /// </summary>
         /// <param name="symbolName">The symbol name of this node</param>
         /// <param name="tokens">The recognized tokens</param>
-        public static CSTNode Of(string symbolName, string tokens) => new LeafNode(symbolName, tokens);
+        public static CSTNode Of(
+            string symbolName,
+            string tokens)
+            => Of(TerminalType.Literal, symbolName, tokens);
+
+        /// <summary>
+        /// Creates a <see cref="LeafNode"/> type of <see cref="CSTNode"/>
+        /// </summary>
+        /// <param name="type">The termianl type</param>
+        /// <param name="symbolName">The symbol name of this node</param>
+        /// <param name="tokens">The recognized tokens</param>
+        public static CSTNode Of(
+            TerminalType type,
+            string symbolName,
+            string tokens)
+            => new LeafNode(type, symbolName, tokens);
 
         /// <summary>
         /// Creates a <see cref="BranchNode"/> type of <see cref="CSTNode"/>
@@ -38,7 +53,7 @@ namespace Axis.Pulsar.Grammar.CST
         #endregion
 
         /// <summary>
-        /// Represents a leaf-node. This node accepts as tokens, anything except <c>null</c>.
+        /// A leaf-node that represents terminal symbols. This node accepts as tokens, anything except <c>null</c>.
         /// </summary>
         public record LeafNode : CSTNode
         {
@@ -50,7 +65,12 @@ namespace Axis.Pulsar.Grammar.CST
             /// </summary>
             public string Tokens { get; }
 
-            internal LeafNode(string symbolName, string tokens)
+            /// <summary>
+            /// The terminal type
+            /// </summary>
+            public TerminalType TerminalType { get; }
+
+            internal LeafNode(TerminalType terminalType, string symbolName, string tokens)
             {
                 SymbolName = symbolName.ThrowIf(
                     string.IsNullOrWhiteSpace,
@@ -59,13 +79,17 @@ namespace Axis.Pulsar.Grammar.CST
                 Tokens = tokens.ThrowIf(
                     Extensions.IsNull,
                     new ArgumentException("Invalid tokens"));
+
+                TerminalType = terminalType.ThrowIfNot(
+                    Enum.IsDefined,
+                    new ArgumentException($"Invalid terminal type: {terminalType}"));
             }
 
             public override string ToString() => $"{{{SymbolName}::{Tokens}}}";
         }
 
         /// <summary>
-        /// Represents a branch-node. This node consists of zero or more <see cref="CSTNode"/>s.
+        /// A branch-node that represents production references. This node consists of zero or more <see cref="CSTNode"/>s.
         /// </summary>
         public record BranchNode : CSTNode
         {
@@ -139,6 +163,13 @@ namespace Axis.Pulsar.Grammar.CST
                     .Map(strings => string.Join(", ", strings))
                     .Map(@string => $"{{{SymbolName}::[{@string}]}}");
             }
+        }
+
+        public enum TerminalType
+        {
+            Literal,
+            Pattern,
+            Custom
         }
     }
 }

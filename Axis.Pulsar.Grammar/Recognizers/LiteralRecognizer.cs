@@ -56,7 +56,10 @@ namespace Axis.Pulsar.Grammar.Recognizers
                             : StringComparison.InvariantCultureIgnoreCase))
                 {
                     result = new SuccessResult(
-                        symbol: CSTNode.Of(_rule.SymbolName, new string(tokens)), // consider using '@Literal(<tokens>)' as the symbol name, to aid searching
+                        symbol: CSTNode.Of(
+                            CSTNode.TerminalType.Literal,
+                            _rule.SymbolName,
+                            new string(tokens)),
                         inputPosition: position + 1);
 
                     return true;

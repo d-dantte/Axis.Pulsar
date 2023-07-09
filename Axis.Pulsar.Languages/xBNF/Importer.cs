@@ -393,7 +393,9 @@ namespace Axis.Pulsar.Languages.xBNF
 
         internal static RegexOptions ExtractRegexOptions(CSTNode patternNode)
         {
-            var patternFlags = patternNode.FindNode(SYMBOL_NAME_MATCH_CARDINALITY);
+            var patternFlags = patternNode
+                .FindNodes(SYMBOL_NAME_MATCH_CARDINALITY)
+                .First();
             var options = RegexOptions.Compiled;
 
             if (patternFlags == null)
@@ -425,14 +427,17 @@ namespace Axis.Pulsar.Languages.xBNF
         internal static string ExtractPattern(CSTNode patternNode)
         {
             return patternNode
-                .FindNode(SYMBOL_NAME_PATTERN_LITERAL)
+                .FindNodes(SYMBOL_NAME_PATTERN_LITERAL)
+                .First()
                 .TokenValue()
                 .ApplyPatternEscape();
         }
 
         internal static MatchType ExtractMatchType(CSTNode patternNode)
         {
-            var matchCardinality = patternNode.FindNode(SYMBOL_NAME_MATCH_CARDINALITY);
+            var matchCardinality = patternNode
+                .FindNodes(SYMBOL_NAME_MATCH_CARDINALITY)
+                .First();
 
             if (string.IsNullOrEmpty(matchCardinality.TokenValue()))
                 return MatchType.Open.DefaultMatch;
@@ -488,7 +493,10 @@ namespace Axis.Pulsar.Languages.xBNF
 
         internal static int? ExtractMinRecognitionCount(CSTNode setNode)
         {
-            return int.TryParse(setNode.FindNode(SYMBOL_NAME_DIGITS)?.TokenValue(), out var value)
+            return int.TryParse(setNode
+                .FindNodes(SYMBOL_NAME_DIGITS)
+                .FirstOrDefault()?
+                .TokenValue(), out var value)
                 ? value
                 : null;
         }
