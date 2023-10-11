@@ -1,4 +1,4 @@
-﻿using Axis.Luna.Common;
+﻿using Axis.Luna.Common.Automata.Sync;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Grammar.Language;
 using Axis.Pulsar.Grammar.Language.Rules.CustomTerminals;

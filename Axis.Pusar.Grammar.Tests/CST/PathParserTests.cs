@@ -22,7 +22,7 @@ namespace Axis.Pusar.Grammar.Tests.CST
             Assert.AreEqual(1, path.Segments[0].NodeFilters.Length);
             Assert.AreEqual(NodeType.None, path.Segments[0].NodeFilters[0].NodeType);
 
-            result = PathParser.Parse("@R:ab-cd");
+            result = PathParser.Parse("@r:ab-cd");
             Assert.IsNotNull(result);
             path = result.Resolve();
             Assert.AreEqual(1, path.Segments.Length);
