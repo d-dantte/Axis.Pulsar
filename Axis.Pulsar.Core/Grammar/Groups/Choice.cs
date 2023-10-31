@@ -40,35 +40,29 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                 if (element.Cardinality.TryRecognize(reader, parentPath, element, out result))
                     return true;
 
-                var error = result.AsError().ActualCause();
-                if (error is GroupError ge)
-                {
-                    if (ge.RecognitionError is Errors.UnrecognizedTokens)
-                    {
-                        reader.Reset(position);
-                        continue;
-                    }
+                reader.Reset(position);
 
-                    else
-                    {
-                        reader.Reset(position);
-                        return false;
-                    }
+                if (result.IsErrorResult(out RecognitionRuntimeError _))
+                    return false;
+                
+                else if (result.IsErrorResult(out GroupError ge))
+                {
+                    if (ge.NodeError is UnrecognizedTokens)
+                        continue;
+
+                    else return false;
                 }
                 else
                 {
-                    reader.Reset(position);
-                    result = Errors.RuntimeError
-                        .Of(parentPath, error)
-                        .ApplyTo(ire => (ire, NodeSequence.Empty))
-                        .ApplyTo(GroupError.Of)
+                    result = RecognitionRuntimeError
+                        .Of(result.AsError().ActualCause())
                         .ApplyTo(Result.Of<NodeSequence>);
                     return false;
                 }
             }
 
             reader.Reset(position);
-            result = Errors.UnrecognizedTokens
+            result = UnrecognizedTokens
                 .Of(parentPath, position)
                 .ApplyTo(ire => (ire, NodeSequence.Empty))
                 .ApplyTo(GroupError.Of)

@@ -35,7 +35,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             else
             {
                 reader.Reset(position);
-                result = Errors.UnrecognizedTokens
+                result = UnrecognizedTokens
                     .Of(productionPath, position)
                     .ApplyTo(Result.Of<ICSTNode>);
                 return false;

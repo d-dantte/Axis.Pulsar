@@ -20,7 +20,10 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             MatchType = matchType ?? throw new ArgumentNullException(nameof(matchType));
         }
 
-        public bool TryRecognize(TokenReader reader, ProductionPath productionPath, out IResult<ICSTNode> result)
+        public bool TryRecognize(
+            TokenReader reader,
+            ProductionPath productionPath,
+            out IResult<ICSTNode> result)
         {
             ArgumentNullException.ThrowIfNull(reader);
             ArgumentNullException.ThrowIfNull(productionPath);
@@ -39,10 +42,10 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                     Pattern,
                     open),
 
-                _ => Result.Of<ICSTNode>(new Errors.RuntimeError(
-                    productionPath,
-                    new InvalidOperationException(
-                        $"Invalid match type: {MatchType}")))
+                _ => Result.Of<ICSTNode>(
+                    new RecognitionRuntimeError(
+                        new InvalidOperationException(
+                            $"Invalid match type: {MatchType}")))
             };
 
             return result.IsDataResult();
@@ -70,7 +73,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             }
 
             reader.Reset(position);
-            return Errors.UnrecognizedTokens
+            return UnrecognizedTokens
                 .Of(productionPath, position)
                 .ApplyTo(Result.Of<ICSTNode>);
         }
@@ -103,7 +106,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                     .ApplyTo(Result.Of);
 
             else 
-                return Errors.UnrecognizedTokens
+                return UnrecognizedTokens
                     .Of(productionPath, position)
                     .ApplyTo(Result.Of<ICSTNode>);
         }

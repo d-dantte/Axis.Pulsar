@@ -59,7 +59,9 @@ namespace Axis.Misc.Pulsar.Utils
                     $"Invalid args. source-length:{sourceString.Length}, "
                     + $"offset:{offset}, segment-length:{length}");
 
-            _valueHash = new Lazy<int>(() => sourceString.Aggregate(0, HashCode.Combine));
+            _valueHash = new Lazy<int>(() => sourceString
+                .Substring(offset, length)
+                .Aggregate(0, HashCode.Combine));
         }
 
         public Tokens(string sourceString, int offset)
@@ -103,7 +105,7 @@ namespace Axis.Misc.Pulsar.Utils
             => new(_source, offset + _offset, _length - offset);
         #endregion
 
-        public override int GetHashCode() => HashCode.Combine(_offset, _length, _valueHash.Value);
+        public override int GetHashCode() => HashCode.Combine(_offset, _length, _valueHash?.Value ?? 0);
 
         public override string ToString() => _source?.Substring(_offset, _length) ?? string.Empty;
 
@@ -212,13 +214,15 @@ namespace Axis.Misc.Pulsar.Utils
             if (other.Length != _length)
                 return false;
 
-            if ((SourceEquals(other) || _valueHash.Value == other._valueHash.Value)
-                && _offset == other._offset)
+            if (_source is null ^ other._source is null)
+                return false;
+
+            if (SourceEquals(other) && _offset == other._offset)
                 return true;
 
             for (int cnt = 0; cnt < _length; cnt++)
             {
-                if (this[cnt + _offset] != other[cnt])
+                if (this[cnt] != other[cnt])
                     return false;
             }
 
@@ -227,8 +231,20 @@ namespace Axis.Misc.Pulsar.Utils
 
         public bool SourceEquals(Tokens other)
         {
+            var stringComparer = EqualityComparer<string>.Default;
             return ReferenceEquals(_source, other._source)
-                || _source.Equals(other._source);
+                || stringComparer.Equals(_source, other._source);
+        }
+
+        public bool HashEquals(Tokens other)
+        {
+            if (_valueHash is null && other._valueHash is null)
+                return true;
+
+            else if (_valueHash is null ^ other._valueHash is null)
+                return false;
+
+            else return (_valueHash?.Value ?? 0) == (other._valueHash?.Value ?? 0);
         }
 
         public static bool operator ==(Tokens left, Tokens right)

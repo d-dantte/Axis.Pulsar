@@ -40,39 +40,33 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             for (int cnt = 0; cnt < elementList.Count; cnt++)
             {
                 var element = elementList[cnt];
-                if (element.Cardinality.TryRecognize(reader, parentPath, element, out var elementResult))
-                {
-                    results.Add(elementResult);
-                    elementList.RemoveAt(cnt);
-                    cnt = 0;
-                    continue;
-                }
+                var tempPosition = reader.Position;
 
-                var error = elementResult.AsError().ActualCause();
-                if (error is GroupError groupError)
+                if (!element.Cardinality.TryRecognize(reader, parentPath, element, out var elementResult))
                 {
-                    if (groupError.RecognitionError is Errors.UnrecognizedTokens)
+                    reader.Reset(tempPosition);
+
+                    if (elementResult.IsErrorResult(out GroupError error, ge => ge.NodeError is UnrecognizedTokens))
                         continue;
 
                     else
                     {
                         reader.Reset(position);
-                        var prev = results.FoldInto(v => v.Fold()).Resolve();
-                        groupError = groupError.Prepend(prev);
-                        result = Result.Of<NodeSequence>(groupError);
+                        result = elementResult.AsError().MapGroupError(
+                            (ge, ute) => throw new InvalidOperationException("Unknown Error"),
+                            (ge, pte) => results
+                                .FoldInto(v => v.Fold())
+                                .Map(ns => ge.Prepend(ns))
+                                .Resolve());
+
                         return false;
                     }
                 }
-                else
-                {
-                    reader.Reset(position);
-                    result = Errors.RuntimeError
-                        .Of(parentPath, error)
-                        .ApplyTo(ire => (ire, NodeSequence.Empty))
-                        .ApplyTo(GroupError.Of)
-                        .ApplyTo(Result.Of<NodeSequence>);
-                    return false;
-                }
+
+                results.Add(elementResult);
+                elementList.RemoveAt(cnt);
+                cnt = 0;
+                continue;
             }
 
             if (results.Count == elementList.Count)
@@ -86,7 +80,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                     .FoldInto(_results => _results.Fold())
                     .Resolve();
 
-                result = Errors.UnrecognizedTokens
+                result = UnrecognizedTokens
                     .Of(parentPath, position)
                     .ApplyTo(ire => (ire, nodeSequence))
                     .ApplyTo(GroupError.Of)

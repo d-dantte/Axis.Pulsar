@@ -43,21 +43,11 @@ namespace Axis.Pulsar.Core.Grammar.Groups
 
                 else
                 {
-                    var error = elementResult.AsError().ActualCause();
-                    result = error switch
-                    {
-                        GroupError ge => ge
-                            .Prepend(nodes)
-                            .ApplyTo(Result.Of<NodeSequence>),
-
-                        _ => Errors.RuntimeError
-                            .Of(parentPath, error)
-                            .ApplyTo(ire => (ire, NodeSequence.Empty))
-                            .ApplyTo(GroupError.Of)
-                            .ApplyTo(Result.Of<NodeSequence>)
-                    };
-
                     reader.Reset(position);
+                    result = elementResult.AsError().MapGroupError(
+                        (ge, ute) => ge.Prepend(nodes),
+                        (ge, pte) => ge.Prepend(nodes));
+
                     return false;
                 }
             }

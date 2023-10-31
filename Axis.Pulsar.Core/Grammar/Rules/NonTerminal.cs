@@ -24,37 +24,34 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             ArgumentNullException.ThrowIfNull(nameof(productionPath));
 
             var position = reader.Position;
-            if (RuleGroup.Cardinality.TryRecognize(reader, productionPath, RuleGroup, out var groupResult))
+            if (!RuleGroup.Cardinality.TryRecognize(reader, productionPath, RuleGroup, out var groupResult))
             {
-                result = groupResult.Map(nodes => ICSTNode.Of(productionPath.Name, nodes.ToArray()));
-                return true;
+                result = groupResult.AsError().MapNodeError(
+                    (ge, ute) => MapUnrecognizedTokensError(ge, ute, productionPath, RecognitionThreshold),
+                    (ge, pte) => pte);
+
+                return false;
             }
 
-            var exception = groupResult.AsError().ActualCause();
-            if (exception is GroupError groupError)
-            {
-                if (groupError.RecognitionError is Errors.UnrecognizedTokens)
-                {
-                    if (groupError.Nodes.Count >= RecognitionThreshold)
-                        result = groupError.RecognitionError.MapPartiallyRecognizedTokens<ICSTNode>(
-                            productionPath,
-                            position,
-                            groupError.Nodes.Select(node => node.Tokens));
+            result = groupResult.Map(nodes => ICSTNode.Of(productionPath.Name, nodes));
+            return true;
+        }
 
-                    else result = groupError.RecognitionError.MapUnrecognizedTokens<ICSTNode>(productionPath, position);
-                }
+        private static INodeError MapUnrecognizedTokensError(
+            GroupError groupError,
+            UnrecognizedTokens unrecognizedTokens,
+            ProductionPath productionPath,
+            uint threshold)
+        {
+            if (groupError.Nodes.Count >= threshold)
+                return PartiallyRecognizedTokens.Of(
+                    productionPath,
+                    unrecognizedTokens.Position,
+                    groupError.Nodes.Tokens);
 
-                else if (groupError.RecognitionError is Errors.PartiallyRecognizedTokens
-                    || groupError.RecognitionError is Errors.RuntimeError)
-                    result = Result.Of<ICSTNode>((Exception)groupError.RecognitionError);
-
-                else result = Result.Of<ICSTNode>(
-                    new InvalidOperationException($"Invalid error: {groupError.RecognitionError}"));
-            }
-            else result = Result.Of<ICSTNode>(
-                new InvalidOperationException($"Invalid error: {exception}"));
-
-            return false;
+            else return UnrecognizedTokens.Of(
+                productionPath,
+                unrecognizedTokens.Position);
         }
     }
 }

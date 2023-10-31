@@ -1,14 +1,13 @@
 ﻿using Axis.Pulsar.Core.CST;
-using static Axis.Pulsar.Core.Exceptions.Errors;
 
-namespace Axis.Pulsar.Core.Grammar.Groups
+namespace Axis.Pulsar.Core.Exceptions
 {
-    internal class GroupError: Exception
+    internal class GroupError : Exception
     {
         /// <summary>
         /// Source Recognition error
         /// </summary>
-        internal IRecognitionError RecognitionError => (IRecognitionError) InnerException!; 
+        internal INodeError NodeError => (INodeError)InnerException!;
 
         /// <summary>
         /// Recognized nodes
@@ -16,7 +15,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
         internal NodeSequence Nodes { get; }
 
 
-        internal GroupError(IRecognitionError error, NodeSequence nodes)
+        internal GroupError(INodeError error, NodeSequence nodes)
         : base("", error as Exception)
         {
             ArgumentNullException.ThrowIfNull(error);
@@ -26,21 +25,21 @@ namespace Axis.Pulsar.Core.Grammar.Groups
         }
 
         internal static GroupError Of(
-            IRecognitionError error,
+            INodeError error,
             NodeSequence nodes) => new(error, nodes);
 
         public GroupError Prepend(NodeSequence nodes)
         {
             ArgumentNullException.ThrowIfNull(nodes);
 
-            return new GroupError(RecognitionError, Nodes.Prepend(nodes));
+            return new GroupError(NodeError, Nodes.Prepend(nodes));
         }
 
         public GroupError Append(NodeSequence nodes)
         {
             ArgumentNullException.ThrowIfNull(nodes);
 
-            return new GroupError(RecognitionError, Nodes.Append(nodes));
+            return new GroupError(NodeError, Nodes.Append(nodes));
         }
     }
 }

@@ -1,4 +1,6 @@
 ﻿using Axis.Luna.Extensions;
+using Axis.Misc.Pulsar.Utils;
+using Axis.Pulsar.Core.Utils;
 using System.Collections;
 
 namespace Axis.Pulsar.Core.CST
@@ -7,14 +9,20 @@ namespace Axis.Pulsar.Core.CST
     {
         private ICollection<ICSTNode> _nodes;
         private NodeSequence? _parent;
+        private Lazy<Tokens> _tokens;
 
         public NodeSequence? Parent => _parent;
 
         public int Count => _nodes.Count + (_parent?.Count ?? 0);
 
+        public Tokens Tokens => _tokens.Value;
+
+        public static NodeSequence Empty { get; } = new NodeSequence();
+
         public NodeSequence()
         {
             _nodes = Array.Empty<ICSTNode>();
+            _tokens = new Lazy<Tokens>(Tokens.Empty);
         }
 
         public NodeSequence(ICollection<ICSTNode> nodes, NodeSequence? parent = null)
@@ -23,9 +31,8 @@ namespace Axis.Pulsar.Core.CST
 
             _nodes = nodes;
             _parent = parent;
+            _tokens = new Lazy<Tokens>(() => this.Select(node => node.Tokens).Combine());
         }
-
-        public static NodeSequence Empty { get; } = new NodeSequence();
 
         public static NodeSequence Of(
             IEnumerable<ICSTNode> nodes)

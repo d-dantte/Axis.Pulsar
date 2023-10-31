@@ -247,7 +247,7 @@ namespace Axis.Pulsar.Core.Grammar.CustomRules
 
                 else
                 {
-                    sequencesResult = Errors.UnrecognizedTokens
+                    sequencesResult = UnrecognizedTokens
                         .Of(productionPath, position)
                         .ApplyTo(Result.Of<IEnumerable<object>>);
                     return false;
@@ -265,7 +265,7 @@ namespace Axis.Pulsar.Core.Grammar.CustomRules
 
                     else if (',' != commaToken[0])
                     {
-                        sequencesResult = Errors.PartiallyRecognizedTokens
+                        sequencesResult = PartiallyRecognizedTokens
                             .Of(productionPath, position, Tokens.Empty)
                             .ApplyTo(Result.Of<IEnumerable<object>>);
                         return false;
@@ -282,7 +282,7 @@ namespace Axis.Pulsar.Core.Grammar.CustomRules
 
                     else
                     {
-                        sequencesResult = Errors.PartiallyRecognizedTokens
+                        sequencesResult = PartiallyRecognizedTokens
                             .Of(productionPath, position, Tokens.Empty)
                             .ApplyTo(Result.Of<IEnumerable<object>>);
                         return false;
@@ -307,7 +307,7 @@ namespace Axis.Pulsar.Core.Grammar.CustomRules
                 if (!reader.TryGetToken(out var delimToken)
                     || delimToken[0] != '[')
                 {
-                    rangeResult = Errors.UnrecognizedTokens
+                    rangeResult = UnrecognizedTokens
                         .Of(productionPath, position)
                         .ApplyTo(Result.Of<CharRange>);
                     return false;
@@ -315,7 +315,7 @@ namespace Axis.Pulsar.Core.Grammar.CustomRules
 
                 if (!TryParseChar(reader, productionPath, out var startCharTokenResult))
                 {
-                    rangeResult = Errors.PartiallyRecognizedTokens
+                    rangeResult = PartiallyRecognizedTokens
                         .Of(productionPath, position, delimToken)
                         .ApplyTo(Result.Of<CharRange>);
                     return false;
@@ -327,7 +327,7 @@ namespace Axis.Pulsar.Core.Grammar.CustomRules
                     rangeResult = startCharTokenResult
                         .Map(start => delimToken
                             .CombineWith(start.Tokens))
-                        .Map(tokens => Errors.PartiallyRecognizedTokens
+                        .Map(tokens => PartiallyRecognizedTokens
                             .Of(productionPath, position, tokens))
                         .MapAs<CharRange>();
                     return false;
@@ -339,7 +339,7 @@ namespace Axis.Pulsar.Core.Grammar.CustomRules
                         .Map(start => delimToken
                             .CombineWith(start.Tokens)
                             .CombineWith(dashToken))
-                        .Map(tokens => Errors.PartiallyRecognizedTokens
+                        .Map(tokens => PartiallyRecognizedTokens
                             .Of(productionPath, position, tokens))
                         .MapAs<CharRange>();
                     return false;
@@ -354,7 +354,7 @@ namespace Axis.Pulsar.Core.Grammar.CustomRules
                             .CombineWith(tuple.start.Tokens)
                             .CombineWith(dashToken)
                             .CombineWith(tuple.end.Tokens))
-                        .Map(tokens => Errors.PartiallyRecognizedTokens
+                        .Map(tokens => PartiallyRecognizedTokens
                             .Of(productionPath, position, tokens))
                         .MapAs<CharRange>();
                     return false;
@@ -422,7 +422,7 @@ namespace Axis.Pulsar.Core.Grammar.CustomRules
                                             _tokens.AsSpan(),
                                             NumberStyles.HexNumber,
                                             null, out var value))
-                                            throw new Errors.PartiallyRecognizedTokens(
+                                            throw new PartiallyRecognizedTokens(
                                                 productionPath, position, token.CombineWith(escapeToken));
 
                                         return (
@@ -442,7 +442,7 @@ namespace Axis.Pulsar.Core.Grammar.CustomRules
                                             _tokens.AsSpan(),
                                             NumberStyles.HexNumber,
                                             null, out var value))
-                                            throw new Errors.PartiallyRecognizedTokens(
+                                            throw new PartiallyRecognizedTokens(
                                                 productionPath, position, token.CombineWith(escapeToken));
 
                                         return (
@@ -506,7 +506,7 @@ namespace Axis.Pulsar.Core.Grammar.CustomRules
 
                 tokensResult = tokens.Length > 0
                     ? Result.Of(tokens)
-                    : Result.Of<Tokens>(Errors.UnrecognizedTokens.Of(productionPath, position));
+                    : Result.Of<Tokens>(UnrecognizedTokens.Of(productionPath, position));
 
                 return tokensResult.IsDataResult();
             }

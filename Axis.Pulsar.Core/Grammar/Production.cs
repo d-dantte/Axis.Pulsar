@@ -33,7 +33,7 @@ namespace Axis.Pulsar.Core.Grammar
 
         public static Production Of(string symbol, IRule rule) => new(symbol, rule);
 
-        public bool TryRecognize(
+        public bool TryProcessRule(
             TokenReader reader,
             ProductionPath? parentPath,
             out IResult<ICSTNode> result)

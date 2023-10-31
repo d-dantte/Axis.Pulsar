@@ -112,7 +112,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             var occurence = 0;
             var position = reader.Position;
             var results = new List<IResult<NodeSequence>>();
-            IResult<NodeSequence> elementResult = null;
+            IResult<NodeSequence>? elementResult = null;
 
             while (CanRepeat(occurence))
             {
@@ -134,24 +134,9 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                 result = results.FoldInto(_results => _results.Fold());
                 return true;
             }
-            else if(elementResult.IsDataResult())
-            {
-                var nodes = results
-                    .FoldInto(_results => _results.Fold())
-                    .Resolve();
-
-                result = Errors.UnrecognizedTokens
-                    .Of(productionPath, position)
-                    .ApplyTo(ire => (ire, nodes))
-                    .ApplyTo(GroupError.Of)
-                    .ApplyTo(Result.Of<NodeSequence>);
-
-                reader.Reset(position);
-                return false;
-            }
             else
             {
-                var error = elementResult.AsError().ActualCause();
+                var error = elementResult?.AsError().ActualCause();
                 var nodes = results
                     .FoldInto(_results => _results.Fold())
                     .Resolve();
@@ -162,10 +147,10 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                         .Prepend(nodes)
                         .ApplyTo(Result.Of<NodeSequence>),
 
-                    _ => Errors.RuntimeError
-                        .Of(productionPath, error)
-                        .ApplyTo(ire => (ire, NodeSequence.Empty))
-                        .ApplyTo(GroupError.Of)
+                    RecognitionRuntimeError rre => Result.Of<NodeSequence>(rre),
+
+                    _ => RecognitionRuntimeError
+                        .Of(error ?? new Exception($"Invalid cardinality - did not attempt any recognitions. '{this}'"))
                         .ApplyTo(Result.Of<NodeSequence>)
                 };
 
