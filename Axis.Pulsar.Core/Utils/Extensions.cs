@@ -1,21 +1,27 @@
-﻿using Axis.Misc.Pulsar.Utils;
+﻿using Axis.Luna.Extensions;
+using Axis.Misc.Pulsar.Utils;
 
 namespace Axis.Pulsar.Core.Utils
 {
     internal static class Extensions
     {
-        /// <summary>
-        /// Calls <see cref="Tokens.CombineWith(Tokens)"/> on each consecutive items in the given sequence.
-        /// </summary>
-        /// <param name="segmentTokens">A sequence of consecutively related <see cref="Tokens"/> instances</param>
-        /// <returns>A new instance that is a combination of all the given consecutive instances</returns>
-        internal static Tokens Combine(this IEnumerable<Tokens> segmentTokens)
-        {
-            ArgumentNullException.ThrowIfNull(segmentTokens);
+        internal static Tokens Combine(this IEnumerable<Tokens> segmentTokens) => Tokens.Combine(segmentTokens);
 
-            return segmentTokens.Aggregate(
-                Tokens.Empty,
-                (segmentToken, next) => segmentToken.CombineWith(next));
-        }
+        internal static IEnumerable<CharRange> NormalizeRanges(this IEnumerable<CharRange> ranges) => CharRange.NormalizeRanges(ranges);
+
+        internal static IEnumerable<TItem> ThrowIfContainsNull<TItem>(
+            this IEnumerable<TItem> items,
+            Exception ex)
+            => items.ThrowIfAny(item => item is null, ex);
+
+        internal static IEnumerable<TItem> ThrowIfContainsDefault<TItem>(
+            this IEnumerable<TItem> items,
+            Exception ex)
+            => items.ThrowIfAny(item => EqualityComparer<TItem>.Default.Equals(default, item), ex);
+
+        internal static IEnumerable<TItem> ThrowIfContainsNull<TItem>(
+            this IEnumerable<TItem> items,
+            Func<TItem, Exception> exceptionMapper)
+            => items.ThrowIfAny(item => item is null, exceptionMapper);
     }
 }

@@ -55,7 +55,7 @@ namespace Axis.Pulsar.Core.CST
                     if (tokens.IsDefault)
                         return node.Tokens;
 
-                    if (!tokens.IsRelative(node.Tokens))
+                    if (!tokens.IsSourceRefEqual(node.Tokens))
                         throw new InvalidOperationException($"Invalid token: non-relative");
 
                     return tokens.CombineWith(node.Tokens);

@@ -12,13 +12,13 @@ namespace Axis.Pulsar.Core.Tests.Utils
             var @string = "the quick brown fox jumps over the lazy dog";
             var ss = new Tokens(@string);
 
-            Assert.AreEqual(@string.Length, ss.Length);
+            Assert.AreEqual(@string.Length, ss.Count);
 
             ss = new Tokens(@string, 5);
-            Assert.AreEqual(@string.Length - 5, ss.Length);
+            Assert.AreEqual(@string.Length - 5, ss.Count);
 
             ss = new Tokens(@string, 5, 2);
-            Assert.AreEqual(2, ss.Length);
+            Assert.AreEqual(2, ss.Count);
 
             Assert.ThrowsException<ArgumentNullException>(() => new Tokens(null, 0, 0));
             Assert.ThrowsException<ArgumentException>(() => new Tokens(@string, -1, 0));
@@ -33,16 +33,16 @@ namespace Axis.Pulsar.Core.Tests.Utils
             var @string = "the quick brown fox jumps over the lazy dog";
             var ss = Tokens.Of(@string);
 
-            Assert.AreEqual(@string.Length, ss.Length);
+            Assert.AreEqual(@string.Length, ss.Count);
 
             ss = Tokens.Of(@string, 5);
-            Assert.AreEqual(@string.Length - 5, ss.Length);
+            Assert.AreEqual(@string.Length - 5, ss.Count);
 
             ss = Tokens.Of(@string, 5, 2);
-            Assert.AreEqual(2, ss.Length);
+            Assert.AreEqual(2, ss.Count);
 
             ss = Tokens.Of("");
-            Assert.AreEqual(0, ss.Length);
+            Assert.AreEqual(0, ss.Count);
         }
 
         [TestMethod]
@@ -50,7 +50,7 @@ namespace Axis.Pulsar.Core.Tests.Utils
         {
             var @string = "the quick brown fox jumps over the lazy dog";
             Tokens ss = @string;
-            Assert.AreEqual(@string.Length, ss.Length);
+            Assert.AreEqual(@string.Length, ss.Count);
         }
 
         [TestMethod]
@@ -60,17 +60,17 @@ namespace Axis.Pulsar.Core.Tests.Utils
             var ss = Tokens.Of(@string);
 
             var ss2 = ss.Slice(3, 2);
-            Assert.AreEqual(2, ss2.Length);
+            Assert.AreEqual(2, ss2.Count);
             Assert.AreEqual(' ', ss2[0]);
             Assert.AreEqual('q', ss2[1]);
 
             ss2 = ss.Slice(17);
-            Assert.AreEqual(@string.Length - 17, ss2.Length);
+            Assert.AreEqual(@string.Length - 17, ss2.Count);
             Assert.AreEqual('o', ss2[0]);
             Assert.AreEqual('g', ss2[^1]);
 
             ss2 = ss[5..12];
-            Assert.AreEqual(7, ss2.Length);
+            Assert.AreEqual(7, ss2.Count);
             Assert.AreEqual('u', ss2[0]);
             Assert.AreEqual('r', ss2[^1]);
         }
@@ -84,9 +84,9 @@ namespace Axis.Pulsar.Core.Tests.Utils
             var ss2 = new Tokens(@string);
             var ss3 = new Tokens(string2);
 
-            Assert.IsTrue(ss.IsRelative(ss2));
-            Assert.IsTrue(ss2.IsRelative(ss));
-            Assert.IsFalse(ss.IsRelative(ss3));
+            Assert.IsTrue(ss.IsSourceRefEqual(ss2));
+            Assert.IsTrue(ss2.IsSourceRefEqual(ss));
+            Assert.IsFalse(ss.IsSourceRefEqual(ss3));
             Assert.AreEqual(@string, string2);
         }
 
@@ -100,12 +100,12 @@ namespace Axis.Pulsar.Core.Tests.Utils
             var ss3 = Tokens.Of(@string, 3, 2);
             var ss4 = Tokens.Of(string2, 3, 2);
 
-            Assert.IsTrue(ss.IsContiguousWith(ss2));
-            Assert.IsTrue(ss2.IsContiguousWith(ss3));
-            Assert.IsTrue(ss2.IsContiguousWith(ss4));
-            Assert.IsFalse(ss2.IsContiguousWith(ss));
-            Assert.IsFalse(ss3.IsContiguousWith(ss2));
-            Assert.IsFalse(ss.IsContiguousWith(ss3));
+            Assert.IsTrue(ss.IsConsecutiveTo(ss2));
+            Assert.IsTrue(ss2.IsConsecutiveTo(ss3));
+            Assert.IsTrue(ss2.IsConsecutiveTo(ss4));
+            Assert.IsFalse(ss2.IsConsecutiveTo(ss));
+            Assert.IsFalse(ss3.IsConsecutiveTo(ss2));
+            Assert.IsFalse(ss.IsConsecutiveTo(ss3));
         }
 
         [TestMethod]
@@ -127,7 +127,7 @@ namespace Axis.Pulsar.Core.Tests.Utils
             var ss = Tokens.Of(@string, 0, 2);
             var ss2 = Tokens.Of(@string, 2, 1);
             var ss3 = ss.CombineWith(ss2);
-            Assert.AreEqual(3, ss3.Length);
+            Assert.AreEqual(3, ss3.Count);
             Assert.IsTrue(ss3.Equals("123"));
         }
     }

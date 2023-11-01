@@ -838,7 +838,7 @@ namespace Axis.Pulsar.Core.CST
 
                 // both symbol name and tokens are empty
                 if (symbolName
-                    .Combine(tokens, (s, t) => s.Tokens.Length + t.Length == 0)
+                    .Combine(tokens, (s, t) => s.Tokens.Count + t.Length == 0)
                     .Resolve())
                 {
                     result = PartiallyRecognizedTokens

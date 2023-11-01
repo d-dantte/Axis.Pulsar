@@ -43,7 +43,7 @@ namespace Axis.Pulsar.Core.Utils
         {
             if (TryPeekTokens(tokenCount, failOnInsufficientTokens, out tokens))
             {
-                _position += tokens.Length;
+                _position += tokens.Count;
                 return true;
             }
 
@@ -85,7 +85,7 @@ namespace Axis.Pulsar.Core.Utils
             if (count == 1)
                 return false;
 
-            Reset(_position + tokens.Length);
+            Reset(_position + tokens.Count);
             return true;
         }
         #endregion

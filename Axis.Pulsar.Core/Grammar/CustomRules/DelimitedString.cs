@@ -504,7 +504,7 @@ namespace Axis.Pulsar.Core.Grammar.CustomRules
                     }
                 }
 
-                tokensResult = tokens.Length > 0
+                tokensResult = tokens.Count > 0
                     ? Result.Of(tokens)
                     : Result.Of<Tokens>(UnrecognizedTokens.Of(productionPath, position));
 
