@@ -1,6 +1,6 @@
 ﻿using Axis.Luna.Extensions;
-using Axis.Misc.Pulsar.Utils;
 using Axis.Pulsar.Core.Grammar;
+using Axis.Pulsar.Utils;
 
 namespace Axis.Pulsar.Core.Exceptions
 {

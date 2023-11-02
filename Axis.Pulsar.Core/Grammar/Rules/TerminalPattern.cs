@@ -67,7 +67,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
 
                     if (pattern.IsMatch(subtokens.AsSpan()))
                         return ICSTNode
-                            .Of(pattern, subtokens)
+                            .Of(productionPath.Name, subtokens)
                             .ApplyTo(Result.Of<ICSTNode>);
                 }
             }
@@ -102,7 +102,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             if ((trueLength == 0 && matchType.AllowsEmptyTokens)
                 || trueLength > 0)
                 return ICSTNode
-                    .Of(pattern, reader.GetTokens(trueLength, true))
+                    .Of(productionPath.Name, reader.GetTokens(trueLength, true))
                     .ApplyTo(Result.Of);
 
             else 
@@ -190,7 +190,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             IMatchType,
             IDefaultValueProvider<Open>
         {
-            public static readonly Closed DefaultMatch = new Closed(1, 1);
+            public static readonly Closed DefaultMatch = new(1, 1);
 
             /// <summary>
             /// Minimum number of tokens that the rule will match against

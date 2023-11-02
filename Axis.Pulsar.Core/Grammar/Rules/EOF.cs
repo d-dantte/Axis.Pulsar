@@ -7,6 +7,9 @@ using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar.Rules
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public class EOF : IAtomicRule
     {
         public static EOF Instance { get; } = new EOF();

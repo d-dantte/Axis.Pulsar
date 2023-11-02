@@ -1,7 +1,7 @@
 ﻿using Axis.Luna.Common;
 using Axis.Luna.Common.Utils;
 
-namespace Axis.Misc.Pulsar.Utils
+namespace Axis.Pulsar.Utils
 {
     public readonly struct Tokens :
         IEquatable<Tokens>,

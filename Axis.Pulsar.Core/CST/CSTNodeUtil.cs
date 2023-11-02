@@ -48,7 +48,7 @@ namespace Axis.Pulsar.Core.CST
                     if (child is ICSTNode.NonTerminal ntchild && ntchild.Name.Equals(name))
                         nodes.Add(child);
 
-                    if (child is ICSTNode.CustomTerminal ctchild && ctchild.Name.Equals(name))
+                    if (child is ICSTNode.Terminal ctchild && ctchild.Name.Equals(name))
                         nodes.Add(child);
 
                     FindAllChildNodes(child, name, nodes);

@@ -28,7 +28,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 && tokens.Equals(Tokens))
             {
                 result = ICSTNode
-                    .Of(tokens)
+                    .Of(productionPath.Name, tokens)
                     .ApplyTo(Result.Of);
                 return true;
             }

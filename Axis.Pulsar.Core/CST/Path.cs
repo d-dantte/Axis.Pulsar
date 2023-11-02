@@ -1,20 +1,32 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
+using System.Collections.Immutable;
 using System.Text;
 
 namespace Axis.Pulsar.Core.CST
 {
     public class Path
     {
-        private readonly Segment[] segments;
+        private readonly ImmutableArray<Segment> _segments;
+        private readonly Lazy<string> _text;
 
-        public Segment[] Segments => segments?.ToArray() ?? Array.Empty<Segment>();
+        public ImmutableArray<Segment> Segments => _segments;
 
         public Path(params Segment[] segments)
         {
             ArgumentNullException.ThrowIfNull(segments);
 
-            this.segments = segments;
+            _segments = segments
+                .ThrowIfAny(s => s is null, new ArgumentException("Invalid segment: null"))
+                .ToImmutableArray();
+
+            _text = new Lazy<string>(() =>
+            {
+                return _segments
+                    .Select(segment => segment.ToString())
+                    .JoinUsing("/")
+                    ?? "";
+            });
         }
 
         public static Path Of(params Segment[] segments) => new Path(segments);
@@ -24,23 +36,15 @@ namespace Axis.Pulsar.Core.CST
         public override bool Equals(object? obj)
         {
             return obj is Path other
-                && Enumerable.SequenceEqual(segments, other.segments);
+                && Enumerable.SequenceEqual(_segments, other._segments);
         }
 
         public override int GetHashCode()
         {
-            return segments?
-                .Aggregate(0, (prev, segment) => HashCode.Combine(prev, segment))
-                ?? 0;
+            return _segments.Aggregate(0, (prev, segment) => HashCode.Combine(prev, segment));
         }
 
-        public override string ToString()
-        {
-            return segments?
-                .Select(segment => segment.ToString())
-                .JoinUsing("/")
-                ?? "";
-        }
+        public override string ToString() => _text.Value;
 
         public static bool operator ==(Path left, Path right) => left.Equals(right);
 
@@ -51,41 +55,44 @@ namespace Axis.Pulsar.Core.CST
 
     public class Segment
     {
-        private readonly NodeFilter[] filters;
+        private readonly ImmutableArray<NodeFilter> _filters;
+        private readonly Lazy<string> _text;
 
-        public NodeFilter[] NodeFilters => filters?.ToArray() ?? Array.Empty<NodeFilter>();
+        public ImmutableArray<NodeFilter> NodeFilters => _filters;
 
         public Segment(params NodeFilter[] filters)
         {
             ArgumentNullException.ThrowIfNull(filters);
 
-            this.filters = filters;
+            _filters = filters
+                .ThrowIfAny(f => f is null, new ArgumentException("Invalid filter: null"))
+                .ToImmutableArray();
+
+            _text = new Lazy<string>(() =>
+            {
+                return _filters
+                        .Select(segment => segment.ToString())
+                        .JoinUsing("|")
+                        ?? "";
+            });
         }
 
-        public static Segment Of(params NodeFilter[] filters) => new Segment(filters);
+        public static Segment Of(params NodeFilter[] filters) => new(filters);
 
-        public static Segment Of(IEnumerable<NodeFilter> filters) => new Segment(filters.ToArray());
+        public static Segment Of(IEnumerable<NodeFilter> filters) => new(filters.ToArray());
 
         public override bool Equals(object? obj)
         {
             return obj is Segment other
-                && Enumerable.SequenceEqual(filters, other.filters);
+                && Enumerable.SequenceEqual(_filters, other._filters);
         }
 
         public override int GetHashCode()
         {
-            return filters?
-                .Aggregate(0, (prev, segment) => HashCode.Combine(prev, segment))
-                ?? 0;
+            return _filters.Aggregate(0, (prev, segment) => HashCode.Combine(prev, segment));
         }
 
-        public override string ToString()
-        {
-            return filters?
-                .Select(segment => segment.ToString())
-                .JoinUsing("|")
-                ?? "";
-        }
+        public override string ToString() => _text.Value;
 
         public static bool operator ==(Segment left, Segment right) => left.Equals(right);
 
@@ -93,22 +100,22 @@ namespace Axis.Pulsar.Core.CST
 
         public bool Matches(ICSTNode node)
         {
-            return filters.Any(filter => filter.Matches(node));
+            return _filters.Any(filter => filter.Matches(node));
         }
 
     }
 
     public enum NodeType
     {
-        None,
-        Ref,
-        Custom,
-        Literal,
-        Pattern
+        Unspecified,
+        NonTerminal,
+        Terminal
     }
 
     public record NodeFilter
     {
+        private Lazy<string> _text;
+
         public string SymbolName { get; }
 
         public string Tokens { get; }
@@ -120,16 +127,29 @@ namespace Axis.Pulsar.Core.CST
             NodeType = nodeType;
             SymbolName = symbolName;
             Tokens = tokens;
+
+            _text = new Lazy<string>(() =>
+            {
+                var sb = new StringBuilder()
+                    .Append('@')
+                    .Append(NodeType.ToString()[0]);
+
+                if (SymbolName is not null)
+                    sb.Append(':').Append(SymbolName);
+
+                if (Tokens is not null)
+                    sb.Append('<').Append(Tokens).Append('>');
+
+                return sb.ToString();
+            });
         }
 
         public bool Matches(ICSTNode node)
         {
-            var isNodeTypeMatch = NodeType == NodeType.None || node switch
+            var isNodeTypeMatch = NodeType == NodeType.Unspecified || node switch
             {
-                ICSTNode.NonTerminal => NodeType.Ref.Equals(NodeType),
-                ICSTNode.Pattern => NodeType.Pattern.Equals(NodeType),
-                ICSTNode.Literal => NodeType.Literal.Equals(NodeType),
-                ICSTNode.CustomTerminal => NodeType.Custom.Equals(NodeType),
+                ICSTNode.NonTerminal => NodeType.NonTerminal.Equals(NodeType),
+                ICSTNode.Terminal => NodeType.Terminal.Equals(NodeType),
                 _ => throw new InvalidOperationException($"Invalid ICSTNode type: '{node?.GetType()}'")
             };
 
@@ -143,7 +163,7 @@ namespace Axis.Pulsar.Core.CST
             return SymbolName is null || node switch
             {
                 ICSTNode.NonTerminal nt => SymbolName.Equals(nt.Name),
-                ICSTNode.CustomTerminal ct => SymbolName.Equals(ct.Name),
+                ICSTNode.Terminal t => SymbolName.Equals(t.Name),
                 _ => false
             };
         }
@@ -153,19 +173,6 @@ namespace Axis.Pulsar.Core.CST
             return string.IsNullOrEmpty(Tokens) || node.Tokens.Equals(Tokens);
         }
 
-        public override string ToString()
-        {
-            var sb = new StringBuilder()
-                .Append('@')
-                .Append(NodeType.ToString()[0]);
-
-            if (SymbolName is not null)
-                sb.Append(':').Append(SymbolName);
-
-            if (Tokens is not null)
-                sb.Append('<').Append(Tokens).Append('>');
-
-            return sb.ToString();
-        }
+        public override string ToString() => _text.Value;
     }
 }

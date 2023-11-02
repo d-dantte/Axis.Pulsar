@@ -5,18 +5,33 @@ using System.Collections;
 
 namespace Axis.Pulsar.Core.CST
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public class NodeSequence : IEnumerable<ICSTNode>
     {
         private ICollection<ICSTNode> _nodes;
         private NodeSequence? _parent;
         private Lazy<Tokens> _tokens;
 
+        /// <summary>
+        /// 
+        /// </summary>
         public NodeSequence? Parent => _parent;
 
+        /// <summary>
+        /// 
+        /// </summary>
         public int Count => _nodes.Count + (_parent?.Count ?? 0);
 
+        /// <summary>
+        /// 
+        /// </summary>
         public Tokens Tokens => _tokens.Value;
 
+        /// <summary>
+        /// 
+        /// </summary>
         public static NodeSequence Empty { get; } = new NodeSequence();
 
         public NodeSequence()
@@ -65,12 +80,21 @@ namespace Axis.Pulsar.Core.CST
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         #endregion
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         public IEnumerable<ICSTNode> Enumerate()
         {
             var prev = _parent?.AsEnumerable() ?? Enumerable.Empty<ICSTNode>();
             return prev.Concat(_nodes);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <returns></returns>
         public NodeSequence Prepend(NodeSequence parent)
         {
             return NodeSequence
@@ -79,6 +103,11 @@ namespace Axis.Pulsar.Core.CST
                 .Aggregate(parent, NodeSequence.Of);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="nodes"></param>
+        /// <returns></returns>
         public NodeSequence Append(NodeSequence nodes)
         {
             return NodeSequence.Of(this, nodes._nodes);

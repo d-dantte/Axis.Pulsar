@@ -1,7 +1,7 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Common.Utils;
 using Axis.Luna.Extensions;
-using Axis.Misc.Pulsar.Utils;
+using Axis.Pulsar.Utils;
 using Axis.Pulsar.Core.Exceptions;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Utils;
@@ -539,27 +539,83 @@ namespace Axis.Pulsar.Core.CST
     /// The <see cref="Path"/> syntax takes the form
     /// <code>
     ///     path ::= segment(/segment)*
-    ///     segment ::= @{filter-type}:{symbol-name}&lt;{tokens}&gt;
-    ///     filter-type ::= (l|r|p|c|n)
+    ///     segment ::= filter(|filter)*;
+    ///     filter ::= @{filter-type}:{symbol-name}&lt;{tokens}&gt;
+    ///     filter-type ::= (t|n|u)
     ///     symbol-name ::=identifier
     ///     tokens ::= any string
     /// </code>
     /// </summary>    
     public static class PathParser
     {
+        internal static readonly string NodeName_Path = "path";
+        internal static readonly string NodeName_Segment = "segment";
+        internal static readonly string NodeName_Filter = "filter";
+
         private static readonly HashSet<char> FilterTypeCharacters = new HashSet<char>
         {
-            'l', 'r', 'p', 'c', 'n'
+            't', 'n', 'u'
         };
 
 
-        public static IResult<Path> Parse(string path)
+        public static IResult<Path> Parse(string pathText)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrEmpty(pathText))
+                throw new ArgumentException("Invalid path: null/empty");
+
+            if (!TryRecognizePath(pathText, out var result))
+                return Result.Of<Path>(ToFormatException(result.AsError()));
+
+            try
+            {
+                var root = result.Resolve();
+                var path = ToPath(root);
+
+                return Result.Of(path);
+            }
+            catch (Exception e)
+            {
+                return Result.Of<Path>(e);
+            }
+
         }
 
+        #region Converters
+        internal static Path ToPath(ICSTNode node)
+        {
+            return node switch
+            {
+                ICSTNode.NonTerminal root => root.Nodes
+                    .Where(n => n.Name.Equals(NodeName_Segment))
+                    .Select(ToSegment)
+                    .ToArray()
+                    .ApplyTo(Path.Of),
 
+                _ => throw new ArgumentException($"Invalid node: {node?.GetType().ToString() ?? "null"}")
+            };
+        }
 
+        internal static Segment ToSegment(ICSTNode node)
+        {
+            return node switch
+            {
+                ICSTNode.NonTerminal root => root.Nodes
+                    .Where(n => n.Name.Equals(NodeName_Filter))
+                    .Select(ToNodeFilter)
+                    .ToArray()
+                    .ApplyTo(Segment.Of),
+
+                _ => throw new ArgumentException($"Invalid node: {node?.GetType().ToString() ?? "null"}")
+            };
+        }
+        
+        internal static NodeFilter ToNodeFilter(ICSTNode node)
+        {
+
+        }
+        #endregion
+
+        #region Recognizers
         internal static bool TryRecognizeTokens(
             TokenReader reader,
             ProductionPath parentPath,
@@ -599,7 +655,6 @@ namespace Axis.Pulsar.Core.CST
                             reader.Back(1);
                             break;
                         }
-
                         else tokens = tokens.CombineWith(token);
                     }
                     else
@@ -638,7 +693,7 @@ namespace Axis.Pulsar.Core.CST
                 result = openDelim
                     .CombineWith(tokens)
                     .CombineWith(closeDelim)
-                    .ApplyTo(ICSTNode.Of)
+                    .ApplyTo(tokens => ICSTNode.Of(tokensPath.Name, tokens))
                     .ApplyTo(Result.Of);
                 return true;
             }
@@ -683,7 +738,6 @@ namespace Axis.Pulsar.Core.CST
                         position));
                     return false;
                 }
-
                 else hasDelimiter = true;
                 #endregion
 
@@ -706,8 +760,9 @@ namespace Axis.Pulsar.Core.CST
                 }
                 #endregion
 
-                result = ICSTNode
-                    .Of(delimiter.CombineWith(symbolName))
+                result = delimiter
+                    .CombineWith(symbolName)
+                    .ApplyTo(tokens => ICSTNode.Of(symbolNamePath.Name, tokens))
                     .ApplyTo(Result.Of<ICSTNode>);
                 return true;
             }
@@ -740,7 +795,9 @@ namespace Axis.Pulsar.Core.CST
                 if (!'@'.Equals(delim[0]))
                 {
                     reader.Back();
-                    result = Result.Of(ICSTNode.Of(Tokens.Empty));
+                    result = ICSTNode
+                        .Of(filterTypePath.Name, Tokens.Empty)
+                        .ApplyTo(Result.Of);
                     return true;
                 }
                 #endregion
@@ -761,7 +818,7 @@ namespace Axis.Pulsar.Core.CST
 
                 result = delim
                     .CombineWith(typeChar)
-                    .ApplyTo(ICSTNode.Of)
+                    .ApplyTo(tokens => ICSTNode.Of(filterTypePath.Name, tokens))
                     .ApplyTo(Result.Of<ICSTNode>);
                 return true;
             }
@@ -786,82 +843,165 @@ namespace Axis.Pulsar.Core.CST
                 {
                     reader.Reset(position);
                     result = filterType.AsError().MapNodeError(
-                        ute => ute,
+                        ute => UnrecognizedTokens.Of(filterPath, position),
                         pte => pte);
                     return false;
                 }
 
+                var tempPosition = reader.Position;
                 if (!TryRecognizeSymbolName(reader, filterPath, out var symbolName))
                 {
-                    //var error = symbolName.AsError().ActualCause();
-                    //if (error is not UnrecognizedTokens)
-                    //{
-                    //    result = symbolName.MapAs<(NodeFilter, Tokens)>();
-                    //    reader.Reset(position);
-                    //    return false;
-                    //}
-                    //else
-                    //{
-                    //    symbolName = Tokens
-                    //        .Of(reader.Source, reader.Position, 0)
-                    //        .ApplyTo(Result.Of)
-                    //        .Map(r => ("", r));
-                    //}
-
                     reader.Reset(position);
                     result = symbolName.AsError().MapNodeError(
-                        ute => )
+                        ute => PartiallyRecognizedTokens.Of(
+                            filterPath,
+                            tempPosition,
+                            Tokens.Of(reader.Source, position, tempPosition - position)),
+                        pte => pte);
+                    return false;
                 }
 
+                tempPosition = reader.Position;
                 if (!TryRecognizeTokens(reader, filterPath, out var tokens))
                 {
-                    var actualCause = tokens.AsError().ActualCause();
-                    if (actualCause is not UnrecognizedTokens)
-                    {
-                        reader.Reset(position);
-                        result = actualCause switch
-                        {
-                            RecognitionRuntimeError => tokens.MapAs<(NodeFilter, Tokens)>(),
-                            _ => tokens.AsError().MapPartiallyRecognizedTokens<
-                                Tokens,
-                                (NodeFilter, Tokens)>(
-                                filterPath,
-                                position,
-                                filterType.Resolve().Tokens,
-                                symbolName.Resolve().Tokens)
-                        };
-                        return false;
-                    }
-
-                    tokens = Result.Of(Tokens.Of(reader.Source, reader.Position, 0));
+                    reader.Reset(position);
+                    result = symbolName.AsError().MapNodeError(
+                        ute => PartiallyRecognizedTokens.Of(
+                            filterPath,
+                            tempPosition,
+                            Tokens.Of(reader.Source, position, tempPosition - position)),
+                        pte => pte);
+                    return false;
                 }
 
                 // both symbol name and tokens are empty
                 if (symbolName
-                    .Combine(tokens, (s, t) => s.Tokens.Count + t.Length == 0)
+                    .Combine(tokens, (s, t) => s.Tokens.Count + t.Tokens.Count == 0)
                     .Resolve())
                 {
                     result = PartiallyRecognizedTokens
                         .Of(filterPath, position, filterType.Resolve().Tokens)
-                        .ApplyTo(Result.Of<(NodeFilter, Tokens)>);
+                        .ApplyTo(Result.Of<ICSTNode>);
                     return false;
                 }
 
                 result = filterType
                     .Combine(symbolName, (type, name) => (type, name))
-                    .Combine(tokens, (tuple, tokens) => (
-                        Filter: new NodeFilter(
-                            tuple.type.NodeType,
-                            tuple.name.Name,
-                            !tokens.IsEmpty ? tokens[1..^1].ToString() : ""),
-                        Tokens: ArrayUtil.Of(tuple.type.Tokens, tuple.name.Tokens, tokens).Combine()));
+                    .Combine(tokens, (tuple, tokens) => (tuple.type, tuple.name, tokens))
+                    .Map(tuple => ICSTNode.Of(filterPath.Name, tuple.type, tuple.name, tuple.tokens));
                 return true;
             }
             catch (Exception e)
             {
-                result = Result.Of<(NodeFilter, Tokens)>(new RecognitionRuntimeError(e));
+                result = Result.Of<ICSTNode>(new RecognitionRuntimeError(e));
                 return false;
             }
         }
+
+        internal static bool TryRecognizeSegment(
+            TokenReader reader,
+            ProductionPath parentPath,
+            out IResult<ICSTNode> result)
+        {
+            var position = reader.Position;
+            var segmentPath = parentPath.Next("segment");
+
+            try
+            {
+                if (!TryRecognizeFilter(reader, segmentPath, out var filterResult))
+                {
+                    reader.Reset(position);
+                    result = filterResult.AsError().MapNodeError(
+                        ute => UnrecognizedTokens.Of(segmentPath, position),
+                        pte => pte);
+                    return false;
+                }
+
+                var alternates = new List<ICSTNode>();
+                filterResult.Consume(alternates.Add);
+
+                while (reader.TryGetTokens("|", out var filterSeparator))
+                {
+                    alternates.Add(ICSTNode.Of("filter-separator", filterSeparator));
+                    var tempPosition = reader.Position;
+
+                    if (!TryRecognizeFilter(reader, segmentPath, out var alternateFilterResult))
+                    {
+                        reader.Reset(position);
+                        result = filterResult.AsError().MapNodeError(
+                            ute => PartiallyRecognizedTokens.Of(
+                                segmentPath,
+                                tempPosition,
+                                Tokens.Of(reader.Source, position, tempPosition - position)),
+                            pte => pte);
+                        return false;
+                    }
+                    alternateFilterResult.Consume(alternates.Add);
+                }
+
+                result = ICSTNode
+                    .Of(segmentPath.Name, alternates.ToArray())
+                    .ApplyTo(Result.Of);
+                return true;
+            }
+            catch (Exception e)
+            {
+                result = Result.Of<ICSTNode>(new RecognitionRuntimeError(e));
+                return false;
+            }
+        }
+
+        internal static bool TryRecognizePath(
+            TokenReader reader,
+            out IResult<ICSTNode> result)
+        {
+            var position = reader.Position;
+            var path = ProductionPath.Of("path");
+
+            try
+            {
+                if (!TryRecognizeSegment(reader, path, out var segmentResult))
+                {
+                    reader.Reset(position);
+                    result = segmentResult.AsError().MapNodeError(
+                        ute => UnrecognizedTokens.Of(path, position),
+                        pte => pte);
+                    return false;
+                }
+
+                var alternates = new List<ICSTNode>();
+                segmentResult.Consume(alternates.Add);
+
+                while (reader.TryGetTokens("/", out var segmentSeparator))
+                {
+                    alternates.Add(ICSTNode.Of("segment-separator", segmentSeparator));
+                    var tempPosition = reader.Position;
+
+                    if (!TryRecognizeSegment(reader, path, out var alternateFilterResult))
+                    {
+                        reader.Reset(position);
+                        result = segmentResult.AsError().MapNodeError(
+                            ute => PartiallyRecognizedTokens.Of(
+                                path,
+                                tempPosition,
+                                Tokens.Of(reader.Source, position, tempPosition - position)),
+                            pte => pte);
+                        return false;
+                    }
+                    alternateFilterResult.Consume(alternates.Add);
+                }
+
+                result = ICSTNode
+                    .Of(path.Name, alternates.ToArray())
+                    .ApplyTo(Result.Of);
+                return true;
+            }
+            catch (Exception e)
+            {
+                result = Result.Of<ICSTNode>(new RecognitionRuntimeError(e));
+                return false;
+            }
+        }
+        #endregion
     }
 }

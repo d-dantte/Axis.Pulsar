@@ -1,5 +1,5 @@
-﻿using Axis.Misc.Pulsar.Utils;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
+using Axis.Pulsar.Utils;
 
 namespace Axis.Pulsar.Core.Utils
 {
@@ -39,6 +39,17 @@ namespace Axis.Pulsar.Core.Utils
         }
 
         #region TryGetTokens
+        public bool TryGetTokens(string expectedTokens, out Tokens tokens)
+        {
+            if (TryPeekTokens(expectedTokens, out tokens))
+            {
+                _position += expectedTokens.Length;
+                return true;
+            }
+
+            return false;
+        }
+
         public bool TryGetTokens(int tokenCount, bool failOnInsufficientTokens, out Tokens tokens)
         {
             if (TryPeekTokens(tokenCount, failOnInsufficientTokens, out tokens))
@@ -91,6 +102,18 @@ namespace Axis.Pulsar.Core.Utils
         #endregion
 
         #region TryPeekTokens
+        public bool TryPeekTokens(string expectedTokens, out Tokens tokens)
+        {
+            if (string.IsNullOrEmpty(expectedTokens))
+                throw new ArgumentException($"Invalid {nameof(expectedTokens)}: null/empty");
+
+            if (TryPeekTokens(expectedTokens.Length, true, out tokens)
+                && tokens.Equals(expectedTokens))
+                return true;
+
+            return false;
+        }
+
         public bool TryPeekTokens(int tokenCount, bool failOnInsufficientTokens, out Tokens tokens)
         {
             if (tokenCount < 0)
