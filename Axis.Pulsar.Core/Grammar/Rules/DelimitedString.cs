@@ -1,13 +1,10 @@
-﻿using Axis.Luna.Common.Automata.Sync;
-using Axis.Luna.Common.Results;
+﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Misc.Pulsar.Utils;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Exceptions;
 using Axis.Pulsar.Core.Utils;
 using System.Collections.Immutable;
-using System.Globalization;
-using System.Text;
 
 namespace Axis.Pulsar.Core.Grammar.Rules
 {
@@ -30,7 +27,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
     /// </summary>
     public class DelimitedString : IAtomicRule
     {
-        private string[] _orderedMatcherDelimiters;
+        private readonly string[] _orderedMatcherDelimiters;
 
         public ImmutableDictionary<string, IEscapeSequenceMatcher> EscapeMatchers { get; }
         public ImmutableHashSet<Tokens> IllegalSequences { get; }
@@ -39,7 +36,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
         public ImmutableHashSet<CharRange> LegalRanges { get; }
         public string StartDelimiter { get; }
         public string EndDelimiter { get; }
-        public bool AcceptsEmptyString{ get; }
+        public bool AcceptsEmptyString { get; }
 
         /// <summary>
         /// 
@@ -95,6 +92,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 .ToImmutableHashSet();
 
             // NOTE: Ensure that the escape delimiters do not clash with the Illegal ranges/sequences.
+            throw new NotImplementedException("NOTE: Ensure that the escape delimiters do not clash with the Illegal ranges/sequences");
         }
 
         #region Procedural implementation
@@ -205,12 +203,32 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             return false;
         }
 
+        /// <summary>
+        /// Attempts to recognize the string between the start and end delimiters. The algorithm works as follows:
+        /// <list type="number">
+        /// <item><paramref name="tokens"/> represents all currently valid string tokens</item>
+        /// <item>Check that the tail end of the tokens does not match with the <see cref="DelimitedString.EndDelimiter"/>. If it does, exit.</item>
+        /// <item>Next, check that the last token does not match any given illegal character range.</item>
+        /// <item>Next, check that the last token matches any given legal character range. If no legal range exists, then all non-illegal tokens are legal</item>
+        /// <item>Next, check that the tail end of the tokens does not match any illegal sequence.</item>
+        /// <item>Next, check that the tail end of the tokens matches any given legal sequence. If no legal sequence exists, then all non-illegal sequences are legal</item>
+        /// <item>If we got this far, we have a legal token. Append it to <paramref name="tokens"/>.</item>
+        /// </list>
+        /// </summary>
+        /// <param name="reader">The token reader</param>
+        /// <param name="tokens">The token instance, holding all valid tokens</param>
+        /// <returns>True if recognition succeeds, false otherwise</returns>
         internal bool TryRecognizeString(TokenReader reader, out Tokens tokens)
         {
             var position = reader.Position;
             tokens = Tokens.Empty;
 
             // build sequence matchers
+            var endDelimiterMatcher = SequenceMatcher.Of(
+                EndDelimiter,
+                reader.Source,
+                position);
+
             var escapeDelimMatchers = _orderedMatcherDelimiters
                 .Select(delim => new SequenceMatcher(delim, reader.Source, position))
                 .ToArray();
@@ -225,282 +243,81 @@ namespace Axis.Pulsar.Core.Grammar.Rules
 
             while (reader.TryGetToken(out var token))
             {
-                #region Ranges
-                // illegal ranges
-                if (IllegalRanges.Any(range => range.Contains(token[0])))
-                    return false;
+                var tempPosition = reader.Position;
 
-                // legal ranges
+                // end delimiter?
+                if (endDelimiterMatcher.TryNextWindow(out var isMatch) && isMatch)
+                    return ResetReader(reader, tempPosition, true);
+
+                #region Ranges
+                // illegal ranges?
+                if (IllegalRanges.Any(range => range.Contains(token[0])))
+                    return ResetReader(reader, tempPosition, false);
+
+                // legal ranges?
                 if (!LegalRanges.IsEmpty
                     && !LegalRanges.Any(range => range.Contains(token[0])))
-                    return false;
+                    return ResetReader(reader, tempPosition, false);
                 #endregion
 
                 #region Sequences
-                // escape sequences
-                foreach (var matcher in escapeDelimMatchers)
-                {
-                    if (matcher.TryNextWindow(out var isMatch) && isMatch)
-                    {
-                        var escapeDelimString = matcher.MatchSequence.ToString()!;
-                        var escapeMatcher = EscapeMatchers[escapeDelimString];
 
-                        if (!escapeMatcher.TryMatchEscapeArgument(reader, out var escapeArgs))
-                            return false;
-                        
-                        token = tokens.CombineWith(token).CombineWith(escapeArgs.Resolve());
-                    }
+                // escape sequences?
+                if (TryMatch(escapeDelimMatchers, out var matcher))
+                {
+                    var escapeDelimString = matcher!.Pattern.ToString()!;
+                    var escapeMatcher = EscapeMatchers[escapeDelimString];
+
+                    if (!escapeMatcher.TryMatchEscapeArgument(reader, out var escapeArgs))
+                        return ResetReader(reader, tempPosition, false);
+
+                    tokens = tokens.CombineWith(token).CombineWith(escapeArgs.Resolve());
+                    continue;
                 }
 
-                // illegal sequences
+                // illegal sequences?
+                if (TryMatch(illegalSequenceMatchers, out _))
+                    return ResetReader(reader, tempPosition, false);
 
-                // legal sequences
+                // legal sequences?
+                if (!legalSequenceMatchers.IsEmpty()
+                    && !TryMatch(legalSequenceMatchers, out matcher))
+                    return ResetReader(reader, tempPosition, false);
                 #endregion
+
+                tokens = tokens.CombineWith(token);
             }
 
             reader.Reset(position);
             return false;
         }
 
-        #endregion
-
-        #region State Machine Implementation
-        private static StateMachine<RecognitionContext> CreateStateMachine(RecognitionContext context)
+        /// <summary>
+        /// Advances all matchers by one token, then returns the first one whose window matches.
+        /// </summary>
+        /// <param name="matchers">Sequence of matchers</param>
+        /// <param name="matcher">The delimiter that matched.</param>
+        /// <returns>True if a match was made, false otherwise</returns>
+        internal static bool TryMatch(IEnumerable<SequenceMatcher> matchers, out SequenceMatcher? matcher)
         {
-            var startDelimiterState = new LambdaState<RecognitionContext>(
-                StateNames.StartDelimiter.ToString(),
-                RecognizeStartDelimiter);
-
-            var endDelimiterState = new LambdaState<RecognitionContext>(
-                StateNames.EndDelimiter.ToString(),
-                RecognizeEndDelimiter);
-
-            var stringCharacterState = new LambdaState<RecognitionContext>(
-                StateNames.StringCharacters.ToString(),
-                RecognizeStringCharacters);
-
-            var escapeCharacterState = new LambdaState<RecognitionContext>(
-                StateNames.EscapeCharacters.ToString(),
-                RecognizeEscapeCharacters);
-
-            return new StateMachine<RecognitionContext>(
-                context,
-                StateNames.StartDelimiter.ToString(),
-                startDelimiterState,
-                endDelimiterState,
-                stringCharacterState,
-                escapeCharacterState);
-        }
-
-        private static string? RecognizeStartDelimiter(RecognitionContext context)
-        {
-            var position = context.TokenReader.Position;
-            if (!context.TokenReader.TryGetTokens(
-                context.Rule.StartDelimiter.Length,
-                out var tokens)
-                || !tokens.Equals(context.Rule.StartDelimiter))
+            matcher = null;
+            foreach (var m in matchers)
             {
-                context.TokenReader.Reset(position);
-                context.Error = UnrecognizedTokens.Of(
-                    context.ProductionPath,
-                    position);
-
-                return null;
+                _ = m.TryNextWindow(out bool isMatch);
+                matcher = isMatch && matcher is null ? m : matcher;
             }
-
-            context.AppendTokens(tokens);
-            return StateNames.StringCharacters.ToString();
-        }
-
-        private static string? RecognizeEndDelimiter(RecognitionContext context)
-        {
-            var position = context.TokenReader.Position;
-            if (!context.TokenReader.TryGetTokens(
-                context.Rule.EndDelimiter.Length,
-                out var tokens)
-                || !tokens.Equals(context.Rule.EndDelimiter))
-            {
-                context.TokenReader.Reset(position);
-                context.Error = PartiallyRecognizedTokens.Of(
-                    context.ProductionPath,
-                    position,
-                    context.Tokens);
-
-                return null;
-            }
-            else context.AppendTokens(tokens);
-
-            return null;
-        }
-
-        private static string? RecognizeStringCharacters(RecognitionContext context)
-        {
-            var tokenCount = context.LegalSequences.OrderedSequenceLengths[0];
-            while (true)
-            {
-                // read tokens
-                var position = context.TokenReader.Position;
-                if (!context.TokenReader.TryGetTokens(tokenCount, false, out var tokens))
-                {
-                    context.Error = PartiallyRecognizedTokens.Of(
-                        context.ProductionPath,
-                        position,
-                        context.Tokens);
-
-                    return null;
-                }
-
-                // legal tokens
-                if (!TryFindLegalSequence(context, tokens, out var legalSequenceTokens))
-                {
-                    context.TokenReader.Back(tokens.Count);
-                    return StateNames.EscapeCharacters.ToString();
-                }
-
-                // reset any excess tokens
-                if (tokens.Count > legalSequenceTokens.Count)
-                {
-                    context.TokenReader.Back(tokens.Count - legalSequenceTokens.Count);
-                    tokens = legalSequenceTokens;
-                }
-
-                // illegal sequence?
-                if (TryFindIllegalSequence(context, tokens, out var illegalSequenceTokens))
-                {
-                    context.TokenReader.Back(illegalLength);
-                    context.TokenBuffer.RemoveLast(illegalLength - tokens.Count);
-                    return StateNames.EscapeCharacters.ToString();
-                }
-
-                // finally, add the tokens
-                _ = context.TokenBuffer.Append(tokens);
-            }
-        }
-
-        private static string RecognizeEscapeCharacters(RecognitionContext context)
-        {
-            var position = context.TokenReader.Position;
-            var index = context.TokenBuffer.Length;
-
-            // no escape matchers?
-            if (context.Rule.EscapeMatchers.Count <= 0)
-                return StateNames.EndDelimiter.ToString();
-
-            // read escape delimiter
-            var delimLengths = context.Rule.EscapeMatchers.Keys
-                .Select(delim => delim.Length)
-                .OrderByDescending(l => l)
-                .Distinct()
-                .ToArray();
-
-            if (context.TokenReader.TryGetTokens(delimLengths[0], out var delimTokens, false)
-                && delimTokens.Length <= 0)
-            {
-                context.Result = new FailureResult(
-                    context.TokenReader.Position + 1,
-                    IReason.Of("EOF error. Expected escape tokens."));
-                context.TokenReader.Reset(position);
-                return null;
-            }
-
-            // find the matcher
-            var matcher = delimLengths
-                .Select(length => context.Rule.EscapeMatchers
-                    .TryGetValue(new string(delimTokens[..length]), out var _matcher)
-                    ? _matcher : null)
-                .FirstOrDefault(m => m is not null);
-
-            if (matcher is null)
-            {
-                context.TokenReader.Reset(position);
-                return StateNames.EndDelimiter.ToString();
-            }
-
-            while (true)
-            {
-                if (matcher.TryMatchEscapeArgument(context.TokenReader, out var argTokens))
-                {
-                    context.TokenBuffer.Append(delimTokens).Append(argTokens);
-                    context.EscapeSpan = new EscapeSpan(index, delimTokens.Length + argTokens.Length);
-                    return StateNames.StringCharacters.ToString();
-                }
-                else // fail
-                {
-                    var failedEscape = new StringBuilder()
-                        .Append(delimTokens)
-                        .Append(argTokens);
-
-                    context.Result = new FailureResult(
-                        context.TokenReader.Position + 1,
-                        IReason.Of($"Invalid escape characters: {failedEscape}"));
-                    context.TokenReader.Reset(position);
-                    return null;
-                }
-            }
+            return matcher is not null;
         }
 
         /// <summary>
-        /// verifies that the given <paramref name="tokens"/> contains at least one subset that is present in the LegalSequence set.
+        /// Convenience method for resetting the reader and returning a boolean value
         /// </summary>
-        /// <param name="context">the context</param>
-        /// <param name="tokens">the tokens</param>
-        /// <param name="legalSequenceTokens">the legal token sequence found</param>
-        /// <returns>true if a subset is found in LegalSequence, false otherwise</returns>
-        private static bool TryFindLegalSequence(
-            RecognitionContext context,
-            Tokens tokens,
-            out Tokens legalSequenceTokens)
+        internal static bool ResetReader(TokenReader reader, int position, bool returnValue)
         {
-            foreach (var length in context.LegalSequences.OrderedSequenceLengths)
-            {
-                legalSequenceTokens = tokens[..length];
-                if (context.LegalSequences.Matches(legalSequenceTokens))
-                    return true;
-            }
-
-            legalSequenceTokens = default;
-            return false;
+            _ = reader.Reset(position);
+            return returnValue;
         }
 
-        /// <summary>
-        /// verifies that the given concatenation of the <c>context.TokenBuffer</c> and the<paramref name="tokens"/> contains at least one
-        /// right-most subset that is present in the IllegalSequence set.
-        /// <para>
-        /// Note that concatenation begins from the end of the last escape sequence in the buffer, or the beginning of the buffer.
-        /// </para>
-        /// </summary>
-        /// <param name="context">the context</param>
-        /// <param name="tokens">the tokens</param>
-        /// <returns>true if no illegal subsets are found, false otherwise</returns>
-        private static bool TryFindIllegalSequence(
-            RecognitionContext context,
-            Tokens tokens,
-            out Tokens illegalSequenceTokens)
-        {
-            var lastEscapeEndIndex =
-                (context.EscapeSpan?.Index ?? 0)
-                + (context.EscapeSpan?.Length ?? 0);
-
-            var tbuff = context.TokenBuffer.ToString(lastEscapeEndIndex..) + new string(tokens);
-
-            foreach (var length in context.IllegalSequences.OrderedSequenceLengths)
-            {
-                if (tbuff.Length < length)
-                    continue;
-
-                var index = tbuff.Length - length;
-                var potentialIllegalSequence = tbuff[index..];
-
-                if (context.IllegalSequences.Matches(potentialIllegalSequence))
-                {
-                    illegalLength = length;
-                    return true;
-                }
-            }
-
-            illegalLength = -1;
-            return false;
-        }
         #endregion
 
         #region Nested types
@@ -539,23 +356,33 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             bool TryMatchEscapeArgument(TokenReader reader, out IResult<Tokens> tokens);
         }
 
-
-        public class SequenceMatcher
+        /// <summary>
+        /// Uses a RollingHash implementation to check if a moving window of the source string matches a given pattern.
+        /// </summary>
+        internal class SequenceMatcher
         {
             private int _cursor;
             private RollingHash.Hash _matchSequenceHash;
             private RollingHash? _sourceRollingHash;
 
-            public Tokens MatchSequence { get; }
+            /// <summary>
+            /// The pattern to find within the source string
+            /// </summary>
+            public Tokens Pattern { get; }
 
+            /// <summary>
+            /// The source string
+            /// </summary>
             public string Source { get; }
 
+            /// <summary>
+            /// The start offset in the source string from which matches are to be found
+            /// </summary>
             public int StartOffset { get; }
-
 
             public SequenceMatcher(Tokens sequence, string source, int startOffset)
             {
-                MatchSequence = sequence.ThrowIf(
+                Pattern = sequence.ThrowIf(
                     seq => seq.IsEmpty || seq.IsDefault,
                     new ArgumentException($"Invalid {nameof(sequence)}: default/empty"));
 
@@ -570,14 +397,21 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                         $"Value '{startOffset}' is < 0 or > {nameof(source)}.Length"));
 
                 _sourceRollingHash = null;
-                _matchSequenceHash = RollingHash.ComputeHash(
-                    MatchSequence.Source,
-                    MatchSequence.Offset,
-                    MatchSequence.Count);
+                _matchSequenceHash = RollingHash
+                    .Of(Pattern.Source,
+                        Pattern.Offset,
+                        Pattern.Count)
+                    .WindowHash;
             }
 
+            public static SequenceMatcher Of(
+                Tokens sequence,
+                string source,
+                int startOffset)
+                => new(sequence, source, startOffset);
+
             /// <summary>
-            /// Consumes the next token from the source, from the current offset, then attempts to match the new window with the <see cref="SequenceMatcher.MatchSequence"/>.
+            /// Consumes the next token from the source, from the current offset, then attempts to match the new window with the <see cref="SequenceMatcher.Pattern"/>.
             /// </summary>
             /// <param name="isMatch">True if the match succeeded, false otherwise</param>
             /// <returns>True if a new token could be consumed, false otherwise</returns>
@@ -590,12 +424,12 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                     return false;
 
                 _cursor = newCursor;
-                if (_cursor - StartOffset < MatchSequence.Count)
+                if (_cursor - StartOffset < Pattern.Count)
                     return true;
 
-                if(_sourceRollingHash is null)
+                if (_sourceRollingHash is null)
                 {
-                    _sourceRollingHash = new RollingHash(Source, StartOffset, MatchSequence.Count);
+                    _sourceRollingHash = RollingHash.Of(Source, StartOffset, Pattern.Count);
                     isMatch = _sourceRollingHash.WindowHash.Equals(_matchSequenceHash);
                 }
                 else
@@ -606,297 +440,6 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 }
 
                 return true;
-            }
-        }
-
-
-        /// <summary>
-        /// Parses a comma-separated list of strings or ranges.
-        /// <para/>PS: Move this type into the language project
-        /// </summary>
-        internal static class SequenceParser
-        {
-            internal static bool TryParseSequences(
-                TokenReader reader,
-                out IResult<(HashSet<string> Sequences, HashSet<CharRange> Ranges)> sequencesResult)
-            {
-                ArgumentNullException.ThrowIfNull(reader);
-                var productionPath = ProductionPath.Of("sequences");
-
-                var position = reader.Position;
-                var sequences = new List<object>();
-                _ = TryParseWhitespaces(reader, productionPath, out _);
-
-                if (TryParseRange(reader, productionPath, out var rangeResult))
-                    sequences.Add(rangeResult.Resolve());
-
-                else if (TryParseSequence(reader, productionPath, out var sequenceResult))
-                    sequences.Add(rangeResult.Resolve());
-
-                else
-                {
-                    sequencesResult = UnrecognizedTokens
-                        .Of(productionPath, position)
-                        .ApplyTo(Result.Of<IEnumerable<object>>);
-                    return false;
-                }
-
-                // remaining, comma-separated sequences
-                while (true)
-                {
-                    // consume whitepsaces
-                    _ = TryParseWhitespaces(reader, productionPath, out _);
-
-                    // comma
-                    if (!reader.TryGetToken(out var commaToken))
-                        break;
-
-                    else if (',' != commaToken[0])
-                    {
-                        sequencesResult = PartiallyRecognizedTokens
-                            .Of(productionPath, position, Tokens.Empty)
-                            .ApplyTo(Result.Of<IEnumerable<object>>);
-                        return false;
-                    }
-
-                    // consume whitespaces
-                    _ = TryParseWhitespaces(reader, productionPath, out _);
-
-                    if (TryParseRange(reader, productionPath, out rangeResult))
-                        sequences.Add(rangeResult.Resolve());
-
-                    else if (TryParseSequence(reader, productionPath, out var sequenceResult))
-                        sequences.Add(rangeResult.Resolve());
-
-                    else
-                    {
-                        sequencesResult = PartiallyRecognizedTokens
-                            .Of(productionPath, position, Tokens.Empty)
-                            .ApplyTo(Result.Of<IEnumerable<object>>);
-                        return false;
-                    };
-                }
-
-                sequencesResult = Result.Of<IEnumerable<object>>(sequences);
-                return true;
-            }
-
-            internal static bool TryParseRange(
-                TokenReader reader,
-                ProductionPath parentPath,
-                out IResult<CharRange> rangeResult)
-            {
-                ArgumentNullException.ThrowIfNull(reader);
-                ArgumentNullException.ThrowIfNull(parentPath);
-
-                var position = reader.Position;
-                var productionPath = parentPath.Next("char-range");
-
-                if (!reader.TryGetToken(out var delimToken)
-                    || delimToken[0] != '[')
-                {
-                    rangeResult = UnrecognizedTokens
-                        .Of(productionPath, position)
-                        .ApplyTo(Result.Of<CharRange>);
-                    return false;
-                }
-
-                if (!TryParseChar(reader, productionPath, out var startCharTokenResult))
-                {
-                    rangeResult = PartiallyRecognizedTokens
-                        .Of(productionPath, position, delimToken)
-                        .ApplyTo(Result.Of<CharRange>);
-                    return false;
-                }
-
-                if (!reader.TryGetToken(out var dashToken)
-                    || dashToken[0] != '-')
-                {
-                    rangeResult = startCharTokenResult
-                        .Map(start => delimToken
-                            .CombineWith(start.Tokens))
-                        .Map(tokens => PartiallyRecognizedTokens
-                            .Of(productionPath, position, tokens))
-                        .MapAs<CharRange>();
-                    return false;
-                }
-
-                if (!TryParseChar(reader, productionPath, out var endCharTokenResult))
-                {
-                    rangeResult = startCharTokenResult
-                        .Map(start => delimToken
-                            .CombineWith(start.Tokens)
-                            .CombineWith(dashToken))
-                        .Map(tokens => PartiallyRecognizedTokens
-                            .Of(productionPath, position, tokens))
-                        .MapAs<CharRange>();
-                    return false;
-                }
-
-                if (!reader.TryGetToken(out delimToken)
-                    || delimToken[0] != ']')
-                {
-                    rangeResult = startCharTokenResult
-                        .Combine(endCharTokenResult, (start, end) => (start, end))
-                        .Map(tuple => delimToken
-                            .CombineWith(tuple.start.Tokens)
-                            .CombineWith(dashToken)
-                            .CombineWith(tuple.end.Tokens))
-                        .Map(tokens => PartiallyRecognizedTokens
-                            .Of(productionPath, position, tokens))
-                        .MapAs<CharRange>();
-                    return false;
-                }
-
-                rangeResult = startCharTokenResult.Combine(
-                    endCharTokenResult,
-                    (start, end) => new CharRange(start.Char, end.Char));
-                return rangeResult.IsDataResult();
-            }
-
-            internal static bool TryParseSequence(
-                TokenReader reader,
-                ProductionPath parentPath,
-                out IResult<string> sequenceResult)
-            {
-                ArgumentNullException.ThrowIfNull(reader);
-                var productionPath = parentPath.Next("sequence");
-
-                var position = reader.Position;
-                var sb = new StringBuilder();
-                IResult<(char Char, Tokens Tokens)> charResult;
-                while (TryParseChar(reader, productionPath, out charResult))
-                {
-                    sb.Append(charResult.Resolve().Char);
-                }
-
-                if (sb.Length > 0)
-                {
-                    sequenceResult = Result.Of(sb.ToString());
-                    return true;
-                }
-
-                reader.Reset(position);
-                sequenceResult = charResult.MapAs<string>();
-                return false;
-            }
-
-            internal static bool TryParseChar(
-                TokenReader reader,
-                ProductionPath parentPath,
-                out IResult<(char Char, Tokens Tokens)> charResult)
-            {
-                ArgumentNullException.ThrowIfNull(reader);
-                ArgumentNullException.ThrowIfNull(parentPath);
-
-                var position = reader.Position;
-                var productionPath = parentPath.Next("character");
-                charResult = Result
-                    .Of(() => reader.GetTokens(1, true))
-                    .Map(token =>
-                    {
-                        var @char = token[0];
-                        if (@char == '\\')
-                        {
-                            var escapeToken = reader.GetTokens(1, true);
-                            var escapeChar = escapeToken[0];
-
-                            if (char.ToLower(escapeChar) == 'u')
-                                return reader
-                                    .GetTokens(4, true)
-                                    .ApplyTo(_tokens =>
-                                    {
-                                        if (!ushort.TryParse(
-                                            _tokens.AsSpan(),
-                                            NumberStyles.HexNumber,
-                                            null, out var value))
-                                            throw new PartiallyRecognizedTokens(
-                                                productionPath, position, token.CombineWith(escapeToken));
-
-                                        return (
-                                            @char: value,
-                                            tokens: _tokens);
-                                    })
-                                    .ApplyTo(_value => (
-                                        (char)_value.@char,
-                                        token.CombineWith(escapeToken).CombineWith(_value.tokens)));
-
-                            else if (char.ToLower(escapeChar) == 'x')
-                                return reader
-                                    .GetTokens(2, true)
-                                    .ApplyTo(_tokens =>
-                                    {
-                                        if (!byte.TryParse(
-                                            _tokens.AsSpan(),
-                                            NumberStyles.HexNumber,
-                                            null, out var value))
-                                            throw new PartiallyRecognizedTokens(
-                                                productionPath, position, token.CombineWith(escapeToken));
-
-                                        return (
-                                            @char: value,
-                                            tokens: _tokens);
-                                    })
-                                    .ApplyTo(_value => (
-                                        (char)_value.@char,
-                                        token.CombineWith(escapeToken).CombineWith(_value.tokens)));
-
-                            else if (escapeChar == '\\')
-                                return ('\\', token.CombineWith(escapeToken));
-
-                            else if (escapeChar == ',')
-                                return (',', token.CombineWith(escapeToken));
-
-                            else if (escapeChar == '[')
-                                return ('[', token.CombineWith(escapeToken));
-
-                            else if (escapeChar == ']')
-                                return (']', token.CombineWith(escapeToken));
-                        }
-
-                        else if (@char == ','
-                            || @char == '['
-                            || @char == ']'
-                            || char.IsWhiteSpace(@char))
-                            throw new FormatException($"Invalid sequence char: {@char}");
-
-                        return (@char, token);
-                    });
-
-                if (charResult.IsErrorResult())
-                    reader.Reset(position);
-
-                return charResult.IsDataResult();
-            }
-
-            internal static bool TryParseWhitespaces(
-                TokenReader reader,
-                ProductionPath parentPath,
-                out IResult<Tokens> tokensResult)
-            {
-                ArgumentNullException.ThrowIfNull(reader);
-                ArgumentNullException.ThrowIfNull(parentPath);
-
-                Tokens tokens = Tokens.Empty;
-                var productionPath = parentPath.Next("whitespaces");
-                var position = reader.Position;
-                while (reader.TryGetToken(out var token))
-                {
-                    if (char.IsWhiteSpace(token[0]))
-                        tokens = tokens.CombineWith(token);
-
-                    else
-                    {
-                        reader.Back();
-                        break;
-                    }
-                }
-
-                tokensResult = tokens.Count > 0
-                    ? Result.Of(tokens)
-                    : Result.Of<Tokens>(UnrecognizedTokens.Of(productionPath, position));
-
-                return tokensResult.IsDataResult();
             }
         }
 

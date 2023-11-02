@@ -3,22 +3,15 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Axis.Pulsar.Core.Utils
 {
-    internal class RollingHash
+    abstract public class RollingHash
     {
-        private static readonly long _Base1 = 0;
-        private static readonly long _Base2 = 0;
-        private static readonly long _Mod1 = 0;
-        private static readonly long _Mod2 = 0;
+        protected readonly string _source;
+        protected readonly int _length;
+        protected int _offset;
 
-        private readonly string _string;
-        private readonly long _factor1;
-        private readonly long _factor2;
-        private readonly int _length;
-        private int _offset;
+        public Hash WindowHash { get; protected set; }
 
-        public Hash WindowHash { get; private set; }
-
-        public RollingHash(string @string, int offset, int length)
+        protected RollingHash(string @string, int offset, int length)
         {
             if (string.IsNullOrEmpty(@string))
                 throw new ArgumentException($"Invalid string");
@@ -29,115 +22,25 @@ namespace Axis.Pulsar.Core.Utils
             if (_offset + _length > @string.Length)
                 throw new ArgumentOutOfRangeException(nameof(length));
 
-            _string = @string;
+            _source = @string;
             _offset = offset;
             _length = length;
-
-            _factor1 = ComputeFactor(_Base1, _Mod1, _length);
-            _factor2 = ComputeFactor(_Base2, _Mod2, _length);
-            WindowHash = ComputeHash(_string, _offset, _length);
         }
 
-        public bool TryNext(out Hash result)
+        public static RollingHash Of(string @string, int offset, int length)
         {
-            var newOffset = _offset + 1;
-            if (newOffset + _length > _string.Length)
-            {
-                result = default;
-                return false;
-            }
+            if (length == 1)
+                return new RollingValueHash(@string, offset, length);
 
-            WindowHash = result = NextHash(WindowHash, _string, _offset, _length, (_factor1, _factor2));
-            _offset = newOffset;
-            return true;
+            else return new RollingWindowHash(@string, offset, length);
         }
 
-        public bool TryNext(int count,  out Hash result)
-        {
-            var finalOffset = _offset + count;
-            if (finalOffset + _length > _string.Length)
-            {
-                result = default;
-                return false;
-            }
+        abstract public bool TryNext(out Hash result);
 
-            result = WindowHash = Enumerable
-                .Range(0, count)
-                .Aggregate(WindowHash, (hash, next) => NextHash(
-                    hash,
-                    _string, _offset + next,
-                    _length,
-                    (_factor1, _factor2)));
-            _offset = finalOffset;
-            return true;
-        }
-
-        public static Hash ComputeHash(string @string, int offset, int length)
-        {
-            return Hash.Of(
-                ComputeHash(@string, offset, length, _Mod1, _Base1),
-                ComputeHash(@string, offset, length, _Mod2, _Base2));
-        }
-
-        public static Hash NextHash(
-            Hash previous,
-            string @string,
-            int oldOffset,
-            int length,
-            (long factor1, long factor2) factors)
-        {
-            return Hash.Of(
-                NextHash(previous.Hash1, factors.factor1, @string, oldOffset, length, _Mod1, _Base1),
-                NextHash(previous.Hash2, factors.factor2, @string, oldOffset, length, _Mod2, _Base2));
-        }
-
-        private static long ComputeHash(
-            string @string,
-            int offset,
-            int length,
-            long mod,
-            long @base)
-        {
-            long hash = 0;
-            var limit = offset + length;
-            for (int index = offset; index < limit; index++)
-            {
-                hash = (@base * hash + @string[index]) % mod;
-            }
-            return hash;
-        }
-
-        private static long NextHash(
-            long previousHash,
-            long factor,
-            string @string,
-            int oldOffset,
-            int length,
-            long mod,
-            long @base)
-        {
-            // Remove hash of left-most character, and refactor hash
-            var hash = (previousHash + mod - factor * @string[oldOffset] % mod) % mod;
-
-            // Add hash of new right-most character
-            hash = (hash * @base + @string[oldOffset + length]) % mod;
-
-            return hash;
-        }
-
-        private static long ComputeFactor(long @base, long mod, long length)
-        {
-            var factor = 1L;
-            for (int cnt = 1; cnt < length; cnt++)
-            {
-                factor = (@base * factor) % mod;
-            }
-
-            return factor;
-        }
+        abstract public bool TryNext(int count, out Hash result);
 
         #region Nested types
-        internal readonly struct Hash :
+        public readonly struct Hash :
             IEquatable<Hash>,
             IDefaultValueProvider<Hash>
         {
@@ -174,6 +77,163 @@ namespace Axis.Pulsar.Core.Utils
 
             public static bool operator !=(Hash left, Hash right) => !(left == right);
         }
+
+        internal class RollingWindowHash : RollingHash
+        {
+            private static readonly long _Base1 = 0;
+            private static readonly long _Base2 = 0;
+            private static readonly long _Mod1 = 0;
+            private static readonly long _Mod2 = 0;
+
+            private readonly long _factor1;
+            private readonly long _factor2;
+
+            public RollingWindowHash(string @string, int offset, int length)
+            : base(@string, offset, length)
+            {
+                _factor1 = ComputeFactor(_Base1, _Mod1, _length);
+                _factor2 = ComputeFactor(_Base2, _Mod2, _length);
+                WindowHash = ComputeHash(_source, _offset, _length);
+            }
+
+            override public bool TryNext(out Hash result)
+            {
+                var newOffset = _offset + 1;
+                if (newOffset + _length > _source.Length)
+                {
+                    result = default;
+                    return false;
+                }
+
+                WindowHash = result = NextHash(WindowHash, _source, _offset, _length, (_factor1, _factor2));
+                _offset = newOffset;
+                return true;
+            }
+
+            override public bool TryNext(int count, out Hash result)
+            {
+                var finalOffset = _offset + count;
+                if (finalOffset + _length > _source.Length)
+                {
+                    result = default;
+                    return false;
+                }
+
+                result = WindowHash = Enumerable
+                    .Range(0, count)
+                    .Aggregate(WindowHash, (hash, next) => NextHash(
+                        hash,
+                        _source, _offset + next,
+                        _length,
+                        (_factor1, _factor2)));
+                _offset = finalOffset;
+                return true;
+            }
+
+            #region Static helpers
+            public static Hash ComputeHash(string @string, int offset, int length)
+            {
+                return Hash.Of(
+                    ComputeHash(@string, offset, length, _Mod1, _Base1),
+                    ComputeHash(@string, offset, length, _Mod2, _Base2));
+            }
+
+            public static Hash NextHash(
+                Hash previous,
+                string @string,
+                int oldOffset,
+                int length,
+                (long factor1, long factor2) factors)
+            {
+                return Hash.Of(
+                    NextHash(previous.Hash1, factors.factor1, @string, oldOffset, length, _Mod1, _Base1),
+                    NextHash(previous.Hash2, factors.factor2, @string, oldOffset, length, _Mod2, _Base2));
+            }
+
+            private static long ComputeHash(
+                string @string,
+                int offset,
+                int length,
+                long mod,
+                long @base)
+            {
+                long hash = 0;
+                var limit = offset + length;
+                for (int index = offset; index < limit; index++)
+                {
+                    hash = (@base * hash + @string[index]) % mod;
+                }
+                return hash;
+            }
+
+            private static long NextHash(
+                long previousHash,
+                long factor,
+                string @string,
+                int oldOffset,
+                int length,
+                long mod,
+                long @base)
+            {
+                // Remove hash of left-most character, and refactor hash
+                var hash = (previousHash + mod - factor * @string[oldOffset] % mod) % mod;
+
+                // Add hash of new right-most character
+                hash = (hash * @base + @string[oldOffset + length]) % mod;
+
+                return hash;
+            }
+
+            private static long ComputeFactor(long @base, long mod, long length)
+            {
+                var factor = 1L;
+                for (int cnt = 1; cnt < length; cnt++)
+                {
+                    factor = (@base * factor) % mod;
+                }
+
+                return factor;
+            }
+            #endregion
+        }
+
+        internal class RollingValueHash : RollingHash
+        {
+            internal RollingValueHash(string @string, int offset, int length)
+            : base(@string, offset, length)
+            {
+                WindowHash = Hash.Of(HashCode.Combine(_source[_offset]), 0);
+            }
+
+            public override bool TryNext(out Hash result)
+            {
+                var newOffset = _offset + 1;
+                if (newOffset + _length > _source.Length)
+                {
+                    result = default;
+                    return false;
+                }
+
+                WindowHash = result = Hash.Of(HashCode.Combine(_source[newOffset]), 0);
+                _offset = newOffset;
+                return true;
+            }
+
+            public override bool TryNext(int count, out Hash result)
+            {
+                var finalOffset = _offset + count;
+                if (finalOffset + _length > _source.Length)
+                {
+                    result = default;
+                    return false;
+                }
+
+                WindowHash = result = Hash.Of(HashCode.Combine(_source[finalOffset]), 0);
+                _offset = finalOffset;
+                return true;
+            }
+        }
+
         #endregion
     }
 }
