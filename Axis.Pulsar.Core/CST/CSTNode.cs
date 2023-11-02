@@ -18,10 +18,18 @@ namespace Axis.Pulsar.Core.CST
 
         public static ICSTNode Of(string name, NodeSequence nodes) => new NonTerminal(name, nodes);
 
+        [Obsolete]
         public static ICSTNode Of(Tokens tokens) => new Literal(tokens);
 
+        [Obsolete]
         public static ICSTNode Of(Regex regex, Tokens tokens) => new Pattern(regex, tokens);
 
+        /// <summary>
+        /// This should be the only way to create Terminal Nodes
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="tokens"></param>
+        /// <returns></returns>
         public static ICSTNode Of(string name, Tokens tokens) => new CustomTerminal(name, tokens);
         #endregion
 
@@ -68,6 +76,7 @@ namespace Axis.Pulsar.Core.CST
             }
         }
 
+        [Obsolete("Only a single Terminal node will be implemented for all Terminal rules")]
         public readonly struct Literal :
             ICSTNode,
             IDefaultValueProvider<Literal>
@@ -105,6 +114,7 @@ namespace Axis.Pulsar.Core.CST
             }
         }
 
+        [Obsolete("Only a single Terminal node will be implemented for all Terminal rules")]
         public readonly struct Pattern :
             ICSTNode,
             IDefaultValueProvider<Pattern>
@@ -154,6 +164,9 @@ namespace Axis.Pulsar.Core.CST
             }
         }
 
+        /// <summary>
+        /// This should be converted to a TerminalNode. Terminals all accept a "name" property now.
+        /// </summary>
         public readonly struct CustomTerminal :
             ICSTNode,
             IDefaultValueProvider<CustomTerminal>

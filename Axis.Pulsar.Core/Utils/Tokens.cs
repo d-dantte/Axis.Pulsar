@@ -21,6 +21,10 @@ namespace Axis.Misc.Pulsar.Utils
 
         public int Count => _count;
 
+        public int Offset => _offset;
+
+        public string Source => _source;
+
         public char this[int index]
         {
             get
@@ -115,7 +119,16 @@ namespace Axis.Misc.Pulsar.Utils
 
         public override int GetHashCode() => HashCode.Combine(_offset, _count, _valueHash?.Value ?? 0);
 
-        public override string? ToString() => _source?.Substring(_offset, _count);
+        public override string? ToString()
+        {
+            if (_source is null)
+                return null;
+
+            if (_offset == 0 && _count == _source.Length)
+                return _source;
+
+            else return _source.Substring(_offset, _count);
+        }
 
         /// <summary>
         /// <see cref="Tokens"/> instances can be combined if they are contiguous, or if the LHS segment is

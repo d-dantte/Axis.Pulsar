@@ -30,6 +30,8 @@ namespace Axis.Pulsar.Core.Grammar.Rules
     /// </summary>
     public class DelimitedString : IAtomicRule
     {
+        private string[] _orderedMatcherDelimiters;
+
         public ImmutableDictionary<string, IEscapeSequenceMatcher> EscapeMatchers { get; }
         public ImmutableHashSet<Tokens> IllegalSequences { get; }
         public ImmutableHashSet<Tokens> LegalSequences { get; }
@@ -44,11 +46,9 @@ namespace Axis.Pulsar.Core.Grammar.Rules
         /// </summary>
         /// <param name="startDelimiter"></param>
         /// <param name="endDelimiter"></param>
-        /// <param name="legalSequences">
-        ///     The collection of legal character sequences.
-        /// </param>
+        /// <param name="legalSequences">The collection of legal character sequences. Note: an empty collection means all sequences are legal</param>
         /// <param name="illegalSequences"></param>
-        /// <param name="legalRanges"></param>
+        /// <param name="legalRanges">The collection of legal character ranges. Note: an empty collection means all ranges are legal</param>
         /// <param name="illegalRanges"></param>
         /// <param name="escapeMatchers"></param>
         public DelimitedString(
@@ -66,6 +66,10 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 .ThrowIfNull(new ArgumentNullException(nameof(escapeMatchers)))
                 .ThrowIfAny(e => e is null, new ArgumentException("Invalid escape matcher: null"))
                 .ToImmutableDictionary(m => m.EscapeDelimiter, m => m);
+
+            _orderedMatcherDelimiters = EscapeMatchers.Keys
+                .OrderByDescending(delim => delim.Length)
+                .ToArray();
 
             StartDelimiter = startDelimiter.ThrowIf(
                 string.IsNullOrEmpty,
@@ -89,13 +93,178 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 .ThrowIfNull(new ArgumentNullException(nameof(illegalSequences)))
                 .ThrowIfAny(t => t.IsDefault || t.IsEmpty, new ArgumentException("Invalid legal sequence: default/empty"))
                 .ToImmutableHashSet();
+
+            // NOTE: Ensure that the escape delimiters do not clash with the Illegal ranges/sequences.
         }
 
+        #region Procedural implementation
         public bool TryRecognize(TokenReader reader, ProductionPath productionPath, out IResult<ICSTNode> result)
         {
-            throw new NotImplementedException();
+            var position = reader.Position;
+            var tokens = Tokens.Empty;
+
+            // Open Delimiter
+            if (!TryRecognizeStartDelimiter(reader, out var startDelimTokens))
+            {
+                reader.Reset(position);
+                result = UnrecognizedTokens
+                    .Of(productionPath, position)
+                    .ApplyTo(Result.Of<ICSTNode>);
+
+                return false;
+            }
+            tokens = tokens.CombineWith(startDelimTokens);
+
+            // String
+            if (!TryRecognizeString(reader, out var stringTokens))
+            {
+                reader.Reset(position);
+                result = PartiallyRecognizedTokens
+                    .Of(productionPath, position, tokens)
+                    .ApplyTo(Result.Of<ICSTNode>);
+
+                return false;
+            }
+            tokens = tokens.CombineWith(stringTokens);
+
+            // End Delimiter
+            if (!TryRecognizeEndDelimiter(reader, out var endDelimTokens))
+            {
+                reader.Reset(position);
+                result = PartiallyRecognizedTokens
+                    .Of(productionPath, position, tokens)
+                    .ApplyTo(Result.Of<ICSTNode>);
+
+                return false;
+            }
+            tokens = tokens.CombineWith(endDelimTokens);
+
+            result = ICSTNode
+                .Of(productionPath.Name, tokens)
+                .ApplyTo(Result.Of);
+            return true;
         }
 
+        internal bool TryRecognizeStartDelimiter(TokenReader reader, out Tokens tokens)
+        {
+            var position = reader.Position;
+
+            if (!reader.TryGetTokens(StartDelimiter.Length, true, out tokens)
+                || !tokens.Equals(StartDelimiter))
+            {
+                reader.Reset(position);
+                return false;
+            }
+
+            return true;
+        }
+
+        internal bool TryRecognizeEndDelimiter(TokenReader reader, out Tokens tokens)
+        {
+            var position = reader.Position;
+
+            if (!reader.TryGetTokens(EndDelimiter.Length, true, out tokens)
+                || !tokens.Equals(EndDelimiter))
+            {
+                reader.Reset(position);
+                return false;
+            }
+
+            return true;
+        }
+
+        internal bool TryRecognizeEscapeSequence(TokenReader reader, out Tokens tokens)
+        {
+            var position = reader.Position;
+            tokens = Tokens.Empty;
+
+            for (int index = 0; index < _orderedMatcherDelimiters.Length; index++)
+            {
+                var delim = _orderedMatcherDelimiters[index];
+                if (reader.TryGetTokens(delim.Length, true, out var escapeDelim)
+                    && escapeDelim.Equals(delim))
+                {
+                    tokens = tokens.CombineWith(escapeDelim);
+                    var matcher = EscapeMatchers[delim];
+
+                    if (matcher.TryMatchEscapeArgument(reader, out var argResult))
+                    {
+                        tokens = argResult
+                            .Map(tokens.CombineWith)
+                            .Resolve();
+                        return true;
+                    }
+
+                    reader.Reset(position);
+                    return false;
+                }
+
+                reader.Reset(position);
+            }
+
+            return false;
+        }
+
+        internal bool TryRecognizeString(TokenReader reader, out Tokens tokens)
+        {
+            var position = reader.Position;
+            tokens = Tokens.Empty;
+
+            // build sequence matchers
+            var escapeDelimMatchers = _orderedMatcherDelimiters
+                .Select(delim => new SequenceMatcher(delim, reader.Source, position))
+                .ToArray();
+
+            var illegalSequenceMatchers = IllegalSequences
+                .Select(seq => new SequenceMatcher(seq, reader.Source, position))
+                .ToArray();
+
+            var legalSequenceMatchers = LegalSequences
+                .Select(seq => new SequenceMatcher(seq, reader.Source, position))
+                .ToArray();
+
+            while (reader.TryGetToken(out var token))
+            {
+                #region Ranges
+                // illegal ranges
+                if (IllegalRanges.Any(range => range.Contains(token[0])))
+                    return false;
+
+                // legal ranges
+                if (!LegalRanges.IsEmpty
+                    && !LegalRanges.Any(range => range.Contains(token[0])))
+                    return false;
+                #endregion
+
+                #region Sequences
+                // escape sequences
+                foreach (var matcher in escapeDelimMatchers)
+                {
+                    if (matcher.TryNextWindow(out var isMatch) && isMatch)
+                    {
+                        var escapeDelimString = matcher.MatchSequence.ToString()!;
+                        var escapeMatcher = EscapeMatchers[escapeDelimString];
+
+                        if (!escapeMatcher.TryMatchEscapeArgument(reader, out var escapeArgs))
+                            return false;
+                        
+                        token = tokens.CombineWith(token).CombineWith(escapeArgs.Resolve());
+                    }
+                }
+
+                // illegal sequences
+
+                // legal sequences
+                #endregion
+            }
+
+            reader.Reset(position);
+            return false;
+        }
+
+        #endregion
+
+        #region State Machine Implementation
         private static StateMachine<RecognitionContext> CreateStateMachine(RecognitionContext context)
         {
             var startDelimiterState = new LambdaState<RecognitionContext>(
@@ -332,7 +501,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             illegalLength = -1;
             return false;
         }
-
+        #endregion
 
         #region Nested types
 
@@ -370,121 +539,73 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             bool TryMatchEscapeArgument(TokenReader reader, out IResult<Tokens> tokens);
         }
 
-        internal enum StateNames
+
+        public class SequenceMatcher
         {
-            StartDelimiter,
-            EndDelimiter,
-            StringCharacters,
-            EscapeCharacters
-        }
+            private int _cursor;
+            private RollingHash.Hash _matchSequenceHash;
+            private RollingHash? _sourceRollingHash;
 
-        internal class LambdaState<TData> : IState<TData> where TData : class
-        {
-            private readonly Func<TData, string> _act;
-            private readonly Action<string, TData>? _entering;
-            private readonly Action<string, TData>? _leaving;
+            public Tokens MatchSequence { get; }
 
-            public string StateName { get; }
+            public string Source { get; }
 
-            public LambdaState(
-                string stateName,
-                Func<TData, string> act,
-                Action<string, TData>? entering = null,
-                Action<string, TData>? leaving = null)
+            public int StartOffset { get; }
+
+
+            public SequenceMatcher(Tokens sequence, string source, int startOffset)
             {
-                StateName = stateName;
-                _act = act ?? throw new ArgumentNullException(nameof(act));
-                _entering = entering;
-                _leaving = leaving;
+                MatchSequence = sequence.ThrowIf(
+                    seq => seq.IsEmpty || seq.IsDefault,
+                    new ArgumentException($"Invalid {nameof(sequence)}: default/empty"));
+
+                Source = source.ThrowIf(
+                    string.IsNullOrEmpty,
+                    new ArgumentException($"Invalid {nameof(source)}: null/empty"));
+
+                StartOffset = startOffset.ThrowIf(
+                    offset => offset < 0 || offset >= source.Length,
+                    new ArgumentOutOfRangeException(
+                        nameof(startOffset),
+                        $"Value '{startOffset}' is < 0 or > {nameof(source)}.Length"));
+
+                _sourceRollingHash = null;
+                _matchSequenceHash = RollingHash.ComputeHash(
+                    MatchSequence.Source,
+                    MatchSequence.Offset,
+                    MatchSequence.Count);
             }
 
-            public string Act(TData data) => _act.Invoke(data);
-
-            public void Entering(string previousState, TData data) => _entering?.Invoke(previousState, data);
-
-            public void Leaving(string nextState, TData data) => _leaving?.Invoke(nextState, data);
-        }
-
-        /// <summary>
-        /// Specialized structure for recognizing sequences of tokens.
-        /// </summary>
-        internal record SequenceGroup
-        {
-            public ImmutableHashSet<Tokens> Sequences { get; }
-
-            public ImmutableArray<int> OrderedSequenceLengths { get; }
-
-            public bool HasSequences => !Sequences.IsEmpty;
-
-            internal SequenceGroup(ImmutableHashSet<Tokens> sequences)
+            /// <summary>
+            /// Consumes the next token from the source, from the current offset, then attempts to match the new window with the <see cref="SequenceMatcher.MatchSequence"/>.
+            /// </summary>
+            /// <param name="isMatch">True if the match succeeded, false otherwise</param>
+            /// <returns>True if a new token could be consumed, false otherwise</returns>
+            public bool TryNextWindow(out bool isMatch)
             {
-                Sequences = sequences ?? throw new ArgumentNullException(nameof(sequences));
+                isMatch = false;
+                var newCursor = _cursor + 1;
 
-                var lengths = sequences
-                    .Select(seq => seq.Count)
-                    .OrderByDescending(l => l)
-                    .Distinct()
-                    .ToImmutableArray();
+                if (newCursor >= Source.Length)
+                    return false;
 
-                OrderedSequenceLengths = lengths.Length == 0
-                    ? ImmutableArray.Create(1)
-                    : lengths;
-            }
-
-            internal static SequenceGroup Of(ImmutableHashSet<Tokens> sequences) => new(sequences);
-
-            public bool Matches(Tokens sequence)
-            {
-                if (Sequences.IsEmpty)
+                _cursor = newCursor;
+                if (_cursor - StartOffset < MatchSequence.Count)
                     return true;
 
-                return Sequences.Contains(sequence);
-            }
-        }
+                if(_sourceRollingHash is null)
+                {
+                    _sourceRollingHash = new RollingHash(Source, StartOffset, MatchSequence.Count);
+                    isMatch = _sourceRollingHash.WindowHash.Equals(_matchSequenceHash);
+                }
+                else
+                {
+                    isMatch =
+                        _sourceRollingHash.TryNext(out var hash)
+                        && hash.Equals(_matchSequenceHash);
+                }
 
-        internal record EscapeSpan(int Index, int Length);
-
-        internal record RecognitionContext
-        {
-            public Tokens Tokens { get; private set; }
-
-            public INodeError? Error { get; internal set; }
-
-            public TokenReader TokenReader { get; }
-
-            public DelimitedString Rule { get; }
-
-            public ProductionPath ProductionPath { get; }
-
-            public SequenceGroup LegalSequences { get; }
-
-            public SequenceGroup IllegalSequences { get; }
-
-            public EscapeSpan? EscapeSpan { get; internal set; }
-
-            public RecognitionContext(
-                ProductionPath productionPath,
-                DelimitedString rule,
-                TokenReader tokenReader)
-            {
-                Rule = rule;
-                TokenReader = tokenReader ?? throw new ArgumentNullException(nameof(tokenReader));
-                ProductionPath = productionPath ?? throw new ArgumentNullException(nameof(productionPath));
-
-                IllegalSequences = new SequenceInfo(rule.IllegalSequences
-                    .Append(rule.EndDelimiter)
-                    .Concat(rule.EscapeMatchers.Values.Select(m => m.EscapeDelimiter))
-                    .ToArray());
-
-                // null represents "any character", meaning all characters are valid
-                LegalSequences = new SequenceInfo(rule.LegalSequences.Length == 0
-                    ? new string?[] { null }
-                    : rule.LegalSequences);
-            }
-
-            public void AppendTokens(Tokens tokens)
-            {
-                Tokens = Tokens.CombineWith(tokens);
+                return true;
             }
         }
 
