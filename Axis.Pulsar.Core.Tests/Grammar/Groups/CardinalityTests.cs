@@ -1,5 +1,4 @@
 ﻿using Axis.Luna.Common.Results;
-using Axis.Misc.Pulsar.Utils;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Exceptions;
 using Axis.Pulsar.Core.Grammar;
@@ -126,7 +125,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                     ProductionPath path,
                     out IResult<NodeSequence> result) =>
                 {
-                    result = Result.Of(NodeSequence.Of(ICSTNode.Of(Tokens.Of("source"))));
+                    result = Result.Of(NodeSequence.Of(ICSTNode.Of("dummy", Tokens.Of("source"))));
                     return true;
                 }));
 
@@ -164,7 +163,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 {
                     while (passCount-- > 0)
                     {
-                        result = Result.Of(NodeSequence.Of(ICSTNode.Of(Tokens.Of("source"))));
+                        result = Result.Of(NodeSequence.Of(ICSTNode.Of("dumy", Tokens.Of("source"))));
                         return true;
                     }
 

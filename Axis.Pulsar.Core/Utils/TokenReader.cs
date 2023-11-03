@@ -1,5 +1,4 @@
 ﻿using System.Text.RegularExpressions;
-using Axis.Pulsar.Utils;
 
 namespace Axis.Pulsar.Core.Utils
 {

@@ -1,7 +1,6 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Common.Utils;
 using Axis.Luna.Extensions;
-using Axis.Pulsar.Utils;
 using Axis.Pulsar.Core.Exceptions;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Utils;
@@ -551,8 +550,11 @@ namespace Axis.Pulsar.Core.CST
         internal static readonly string NodeName_Path = "path";
         internal static readonly string NodeName_Segment = "segment";
         internal static readonly string NodeName_Filter = "filter";
+        internal static readonly string NodeName_Filter_Type = "filter-type";
+        internal static readonly string NodeName_Symbol_Name = "symbol-name";
+        internal static readonly string NodeName_Tokens = "tokens";
 
-        private static readonly HashSet<char> FilterTypeCharacters = new HashSet<char>
+        private static readonly HashSet<char> FilterTypeCharacters = new()
         {
             't', 'n', 'u'
         };
@@ -581,9 +583,9 @@ namespace Axis.Pulsar.Core.CST
         }
 
         #region Converters
-        internal static Path ToPath(ICSTNode node)
+        internal static Path ToPath(ICSTNode pathNode)
         {
-            return node switch
+            return pathNode switch
             {
                 ICSTNode.NonTerminal root => root.Nodes
                     .Where(n => n.Name.Equals(NodeName_Segment))
@@ -591,13 +593,13 @@ namespace Axis.Pulsar.Core.CST
                     .ToArray()
                     .ApplyTo(Path.Of),
 
-                _ => throw new ArgumentException($"Invalid node: {node?.GetType().ToString() ?? "null"}")
+                _ => throw new ArgumentException($"Invalid node: {pathNode?.GetType().ToString() ?? "null"}")
             };
         }
 
-        internal static Segment ToSegment(ICSTNode node)
+        internal static Segment ToSegment(ICSTNode segmentNode)
         {
-            return node switch
+            return segmentNode switch
             {
                 ICSTNode.NonTerminal root => root.Nodes
                     .Where(n => n.Name.Equals(NodeName_Filter))
@@ -605,13 +607,55 @@ namespace Axis.Pulsar.Core.CST
                     .ToArray()
                     .ApplyTo(Segment.Of),
 
-                _ => throw new ArgumentException($"Invalid node: {node?.GetType().ToString() ?? "null"}")
+                _ => throw new ArgumentException($"Invalid node: {segmentNode?.GetType().ToString() ?? "null"}")
             };
         }
-        
-        internal static NodeFilter ToNodeFilter(ICSTNode node)
-        {
 
+        internal static NodeFilter ToNodeFilter(ICSTNode filterNode)
+        {
+            if (filterNode is not ICSTNode.NonTerminal filterNTNode)
+                throw new ArgumentException($"Invalid node: {filterNode?.GetType().ToString() ?? "null"}");
+
+            return NodeFilter.Of(
+                ToNodeType(filterNTNode.Nodes.First(n => NodeName_Filter_Type.Equals(n.Name))),
+                ToSymbolName(filterNTNode.Nodes.FirstOrDefault(n => NodeName_Symbol_Name.Equals(n.Name))),
+                ToTokens(filterNTNode.Nodes.FirstOrDefault(n => NodeName_Tokens.Equals(n.Name))));
+        }
+
+        internal static NodeType ToNodeType(ICSTNode filterTypeNode)
+        {
+            ArgumentNullException.ThrowIfNull(filterTypeNode);
+
+            if (filterTypeNode.Tokens.IsEmpty)
+                return NodeType.Unspecified;
+
+            else return filterTypeNode.Tokens[1] switch
+            {
+                'u' => NodeType.Unspecified,
+                't' => NodeType.Terminal,
+                'n' => NodeType.NonTerminal,
+                _ => throw new InvalidOperationException(
+                    $"Invalid filter type character: '{filterTypeNode.Tokens[1]}'")
+            };
+        }
+
+        internal static string? ToSymbolName(ICSTNode? symbolNameNode)
+        {
+            if (symbolNameNode is null)
+                return null;
+
+            var tokens = symbolNameNode.Tokens;
+            return tokens[0] == ':'
+                ? tokens[1..].ToString()
+                : tokens.ToString();
+        }
+
+        internal static string? ToTokens(ICSTNode? tokenNode)
+        {
+            if (tokenNode is null)
+                return null;
+
+            return tokenNode.Tokens[1..^1].ToString();
         }
         #endregion
 
@@ -647,7 +691,7 @@ namespace Axis.Pulsar.Core.CST
                     {
                         if ('\\'.Equals(token[0]))
                         {
-                            tokens = tokens.CombineWith(token);
+                            tokens = tokens.Join(token);
                             isEscaping = true;
                         }
                         else if ('>'.Equals(token[0]))
@@ -655,13 +699,13 @@ namespace Axis.Pulsar.Core.CST
                             reader.Back(1);
                             break;
                         }
-                        else tokens = tokens.CombineWith(token);
+                        else tokens = tokens.Join(token);
                     }
                     else
                     {
                         if ('\\'.Equals(token[0]) || '>'.Equals(token[0]))
                         {
-                            tokens = tokens.CombineWith(token);
+                            tokens = tokens.Join(token);
                             isEscaping = false;
                         }
                         else
@@ -670,7 +714,7 @@ namespace Axis.Pulsar.Core.CST
                             result = Result.Of<ICSTNode>(new PartiallyRecognizedTokens(
                                 tokensPath,
                                 position,
-                                openDelim.CombineWith(tokens)));
+                                openDelim.Join(tokens)));
                             return false;
                         }
                     }
@@ -685,14 +729,14 @@ namespace Axis.Pulsar.Core.CST
                     result = Result.Of<ICSTNode>(new PartiallyRecognizedTokens(
                         tokensPath,
                         position,
-                        openDelim.CombineWith(tokens)));
+                        openDelim.Join(tokens)));
                     return false;
                 }
                 #endregion
 
                 result = openDelim
-                    .CombineWith(tokens)
-                    .CombineWith(closeDelim)
+                    .Join(tokens)
+                    .Join(closeDelim)
                     .ApplyTo(tokens => ICSTNode.Of(tokensPath.Name, tokens))
                     .ApplyTo(Result.Of);
                 return true;
@@ -761,7 +805,7 @@ namespace Axis.Pulsar.Core.CST
                 #endregion
 
                 result = delimiter
-                    .CombineWith(symbolName)
+                    .Join(symbolName)
                     .ApplyTo(tokens => ICSTNode.Of(symbolNamePath.Name, tokens))
                     .ApplyTo(Result.Of<ICSTNode>);
                 return true;
@@ -817,7 +861,7 @@ namespace Axis.Pulsar.Core.CST
                 #endregion
 
                 result = delim
-                    .CombineWith(typeChar)
+                    .Join(typeChar)
                     .ApplyTo(tokens => ICSTNode.Of(filterTypePath.Name, tokens))
                     .ApplyTo(Result.Of<ICSTNode>);
                 return true;
@@ -851,44 +895,33 @@ namespace Axis.Pulsar.Core.CST
                 var tempPosition = reader.Position;
                 if (!TryRecognizeSymbolName(reader, filterPath, out var symbolName))
                 {
-                    reader.Reset(position);
-                    result = symbolName.AsError().MapNodeError(
-                        ute => PartiallyRecognizedTokens.Of(
-                            filterPath,
-                            tempPosition,
-                            Tokens.Of(reader.Source, position, tempPosition - position)),
-                        pte => pte);
-                    return false;
+                    reader.Reset(tempPosition);
+                    if (symbolName.AsError().ActualCause() is PartiallyRecognizedTokens)
+                    {
+                        result = symbolName;
+                        return false;
+                    }
+                    symbolName = Result.Of((ICSTNode)null!);
                 }
 
                 tempPosition = reader.Position;
                 if (!TryRecognizeTokens(reader, filterPath, out var tokens))
                 {
                     reader.Reset(position);
-                    result = symbolName.AsError().MapNodeError(
-                        ute => PartiallyRecognizedTokens.Of(
-                            filterPath,
-                            tempPosition,
-                            Tokens.Of(reader.Source, position, tempPosition - position)),
-                        pte => pte);
-                    return false;
-                }
-
-                // both symbol name and tokens are empty
-                if (symbolName
-                    .Combine(tokens, (s, t) => s.Tokens.Count + t.Tokens.Count == 0)
-                    .Resolve())
-                {
-                    result = PartiallyRecognizedTokens
-                        .Of(filterPath, position, filterType.Resolve().Tokens)
-                        .ApplyTo(Result.Of<ICSTNode>);
-                    return false;
+                    if (tokens.AsError().ActualCause() is PartiallyRecognizedTokens)
+                    {
+                        result = tokens;
+                        return false;
+                    }
+                    tokens = Result.Of((ICSTNode)null!);
                 }
 
                 result = filterType
                     .Combine(symbolName, (type, name) => (type, name))
-                    .Combine(tokens, (tuple, tokens) => (tuple.type, tuple.name, tokens))
-                    .Map(tuple => ICSTNode.Of(filterPath.Name, tuple.type, tuple.name, tuple.tokens));
+                    .Combine(tokens, (tuple, tokens) => ArrayUtil
+                        .Of(tuple.type, tuple.name, tokens)
+                        .Where(n => n is not null))
+                    .Map(nodes => ICSTNode.Of(filterPath.Name, nodes.ToArray()));
                 return true;
             }
             catch (Exception e)
@@ -1003,5 +1036,17 @@ namespace Axis.Pulsar.Core.CST
             }
         }
         #endregion
+    
+        private static FormatException ToFormatException(IResult<ICSTNode>.ErrorResult errorResult)
+        {
+            ArgumentNullException.ThrowIfNull(errorResult);
+
+            return errorResult.ActualCause() switch
+            {
+                INodeError ne => new FormatException(
+                    $"Invalid path format: error detected at position {ne.Position}"),
+                _ => new FormatException($"Invalid path format: unknown error")
+            };
+        }
     }
 }

@@ -1,14 +1,15 @@
 ﻿using Axis.Luna.Common;
 using Axis.Luna.Common.Utils;
+using Axis.Luna.Extensions;
 
-namespace Axis.Pulsar.Utils
+namespace Axis.Pulsar.Core.Utils
 {
     public readonly struct Tokens :
         IEquatable<Tokens>,
         IReadonlyIndexer<int, char>,
         IDefaultValueProvider<Tokens>
     {
-        private readonly string _source;
+        private readonly string? _source;
         private readonly int _offset;
         private readonly int _count;
 
@@ -23,16 +24,19 @@ namespace Axis.Pulsar.Utils
 
         public int Offset => _offset;
 
-        public string Source => _source;
+        public string? Source => _source;
 
         public char this[int index]
         {
             get
             {
+                if (IsDefault)
+                    throw new InvalidOperationException($"Invalid token instance: default");
+
                 if (index < 0 || index >= _count)
                     throw new IndexOutOfRangeException();
 
-                return _source[_offset + index];
+                return _source![_offset + index];
             }
         }
 
@@ -110,11 +114,11 @@ namespace Axis.Pulsar.Utils
         public Tokens Slice(
             int offset,
             int length)
-            => new(_source, offset + _offset, length);
+            => new(_source!, offset + _offset, length);
 
         public Tokens Slice(
             int offset)
-            => new(_source, offset + _offset, _count - offset);
+            => new(_source!, offset + _offset, _count - offset);
         #endregion
 
         public override int GetHashCode() => HashCode.Combine(_offset, _count, _valueHash?.Value ?? 0);
@@ -130,35 +134,56 @@ namespace Axis.Pulsar.Utils
             else return _source.Substring(_offset, _count);
         }
 
-        /// <summary>
-        /// <see cref="Tokens"/> instances can be combined if they are contiguous, or if the LHS segment is
-        /// the default-empty segment (see <see cref="Empty"/>).
-        /// </summary>
-        /// <param name="other"></param>
-        /// <returns></returns>
-        private bool CanCombine(Tokens other)
+        public char[]? ToArray()
         {
-            if (other.IsDefault)
-                return false;
-
-            if (IsConsecutiveTo(other))
-                return true;
-
-            if (IsEmpty && (_source.Length == 0 || IsSourceEqual(other)))
-                return true;
-
-            return false;
+            return !IsDefault
+                ? AsSpan().ToArray()
+                : null;
         }
 
         /// <summary>
-        /// Combines two consecutive <see cref="Tokens"/> instances, or when the current instance is empty and the second isn't default, returns the second instance.
+        /// Merge two intersecting <see cref="Tokens"/> instances.
         /// </summary>
-        /// <param name="other"></param>
+        /// <param name="other">The token instance to merge with</param>
         /// <returns></returns>
-        /// <exception cref="InvalidOperationException"></exception>
-        public Tokens CombineWith(Tokens other)
+        public Tokens Merge(Tokens other)
         {
-            if (!CanCombine(other))
+            if (IsDefault || other.IsDefault)
+                throw new ArgumentException("Cannot merge default tokens");
+
+            if (IsEmpty)
+                return other;
+
+            if (other.IsEmpty)
+                return this;
+
+            if (!IntersectsWith(other))
+                throw new ArgumentException("Cannot merge non-intersecting tokens");
+
+            var newOffset = Math.Min(_offset, other._offset);
+            var newCount = Math.Max(_offset + _count, other._offset + other._count) - newOffset;
+            return Of(_source!, newOffset, newCount);
+        }
+
+        /// <summary>
+        /// Joins two consecutive <see cref="Tokens"/> instances, non-default instances. See <see cref="Tokens.IsConsecutiveTo(Tokens)"/>
+        /// <para/>Note that this method is commutative. i.e:
+        /// <code>
+        /// Token x = ...;
+        /// Token y = ...;
+        /// 
+        /// // assume both are consecutive.
+        /// Token z1 = x.Join(y);
+        /// Token z2 = y.Join(x);
+        /// z1.Equals(z2) // &lt;-- will be true.
+        /// </code>
+        /// </summary>
+        /// <param name="other">The token instance to concatenate</param>
+        /// <returns>The new token created from joining both tokens</returns>
+        /// <exception cref="InvalidOperationException">If the tokens cannot be joined</exception>
+        public Tokens Join(Tokens other)
+        {
+            if (!CanJoin(other))
                 throw new InvalidOperationException($"Invalid segment: non-combinable");
 
             if (IsEmpty)
@@ -167,32 +192,60 @@ namespace Axis.Pulsar.Utils
             if (other.IsEmpty)
                 return this;
 
-            return new Tokens(_source, _offset, _count + other._count);
+            return new Tokens(
+                _source!,
+                Math.Min(_offset, other._offset),
+                _count + other._count);
         }
 
-        public Tokens ExpandBy(int length) => new(_source, _offset, length + length);
+        /// <summary>
+        /// Expand this token by the given number of characters to the right
+        /// </summary>
+        /// <param name="count">Number of characters by which we will expand this token instance</param>
+        /// <returns></returns>
+        public Tokens ExpandBy(int count) => new(_source!, _offset, count + count);
 
         /// <summary>
         /// Returns a span representation of this token
         /// </summary>
         /// <returns></returns>
-        public ReadOnlySpan<char> AsSpan() => _source.AsSpan(_offset, _count);
+        public ReadOnlySpan<char> AsSpan()
+            => !IsDefault
+                ? _source.AsSpan(_offset, _count)
+                : default;
 
         /// <summary>
-        /// Calls <see cref="Tokens.CombineWith(Tokens)"/> on each consecutive items in the given sequence.
+        /// Calls <see cref="Tokens.Join(Tokens)"/> on each consecutive items in the given sequence.
         /// </summary>
         /// <param name="segmentTokens">A sequence of consecutively related <see cref="Tokens"/> instances</param>
         /// <returns>A new instance that is a combination of all the given consecutive instances</returns>
-        internal static Tokens Combine(IEnumerable<Tokens> segmentTokens)
+        internal static Tokens Join(IEnumerable<Tokens> segmentTokens)
         {
             ArgumentNullException.ThrowIfNull(segmentTokens);
 
             return segmentTokens.Aggregate(
                 Tokens.Empty,
-                (segmentToken, next) => segmentToken.CombineWith(next));
+                (segmentToken, next) => segmentToken.Join(next));
         }
 
         #region Relationship Checks
+
+        /// <summary>
+        /// Returns true if the tokens are consecutive, or either one is empty.
+        /// </summary>
+        private bool CanJoin(Tokens other)
+        {
+            if (IsDefault || other.IsDefault)
+                return false;
+
+            if (IsEmpty || other.IsEmpty)
+                return true;
+
+            if (IsConsecutiveTo(other) || other.IsConsecutiveTo(this))
+                return true;
+
+            return false;
+        }
 
         public bool IsSourceRefEqual(Tokens other) => ReferenceEquals(_source, other._source);
 
@@ -237,38 +290,41 @@ namespace Axis.Pulsar.Utils
         }
 
         /// <summary>
-        /// Checks if the current instance overlaps the given instance.
+        /// Checks if the current instance intersects with the given instance.
         /// <para/>
         /// To overlap:
         /// <list type="number">
+        /// <item>Either token may be empty. </item>
         /// <item>The source of both instances must be equal</item>
-        /// <item>The first instance (lhs) must have an offset less than or equal to the offset of the second instance (rhs).</item>
-        /// <item>The length + offset of the of the first instance (lhs) must be greater than or equal to the offset of the second instance (rhs).</item>
-        /// <item>The offset + length of the second instance (rhs) must be greater than or equal to the offset + length of the first instance (lhs).</item>
+        /// <item>Some element (index) of one instance must be found as an element in the other instance</item>
         /// </list>
         /// </summary>
-        /// <param name="other"></param>
-        /// <returns></returns>
-        public bool IsOverlapping(Tokens other)
+        /// <param name="other">The instance to check for intersection</param>
+        /// <returns>True if both instances intersect, false otherwise</returns>
+        public bool IntersectsWith(Tokens other)
         {
             if (IsDefault || other.IsDefault)
                 return false;
 
+            if (IsEmpty || other.IsEmpty)
+                return true;
+
             if (!IsSourceEqual(other))
                 return false;
 
-            if (_offset > other._offset)
-                return false;
+            if (_offset == other._offset)
+                return true;
 
-            var lhsEnd = _offset + _count;
-            if (lhsEnd < other._offset)
-                return false;
+            var lend = _offset + _count;
+            var rend = other._offset + other._count;
 
-            var rhsEnd = other._offset + other._count;
-            if (rhsEnd < lhsEnd)
-                return false;
+            if (_offset < other._offset && other._offset < lend)
+                return true;
 
-            return true;
+            if (other._offset < _offset && _offset < rend)
+                return true;
+
+            return false;
         }
 
         public override bool Equals(object? obj)
@@ -288,7 +344,7 @@ namespace Axis.Pulsar.Utils
                 return false;
 
             var comparer = EqualityComparer<string>.Default;
-            if (_count == _source.Length
+            if (_count == _source!.Length
                 && (ReferenceEquals(_source, value) || comparer.Equals(_source, value)))
                 return true;
 

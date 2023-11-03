@@ -3,7 +3,6 @@ using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Exceptions;
 using Axis.Pulsar.Core.Utils;
-using Axis.Pulsar.Utils;
 using System.Collections.Immutable;
 
 namespace Axis.Pulsar.Core.Grammar.Rules
@@ -111,7 +110,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
 
                 return false;
             }
-            tokens = tokens.CombineWith(startDelimTokens);
+            tokens = tokens.Join(startDelimTokens);
 
             // String
             if (!TryRecognizeString(reader, out var stringTokens))
@@ -123,7 +122,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
 
                 return false;
             }
-            tokens = tokens.CombineWith(stringTokens);
+            tokens = tokens.Join(stringTokens);
 
             // End Delimiter
             if (!TryRecognizeEndDelimiter(reader, out var endDelimTokens))
@@ -135,7 +134,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
 
                 return false;
             }
-            tokens = tokens.CombineWith(endDelimTokens);
+            tokens = tokens.Join(endDelimTokens);
 
             result = ICSTNode
                 .Of(productionPath.Name, tokens)
@@ -182,13 +181,13 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 if (reader.TryGetTokens(delim.Length, true, out var escapeDelim)
                     && escapeDelim.Equals(delim))
                 {
-                    tokens = tokens.CombineWith(escapeDelim);
+                    tokens = tokens.Join(escapeDelim);
                     var matcher = EscapeMatchers[delim];
 
                     if (matcher.TryMatchEscapeArgument(reader, out var argResult))
                     {
                         tokens = argResult
-                            .Map(tokens.CombineWith)
+                            .Map(tokens.Join)
                             .Resolve();
                         return true;
                     }
@@ -271,7 +270,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                     if (!escapeMatcher.TryMatchEscapeArgument(reader, out var escapeArgs))
                         return ResetReader(reader, tempPosition, false);
 
-                    tokens = tokens.CombineWith(token).CombineWith(escapeArgs.Resolve());
+                    tokens = tokens.Join(token).Join(escapeArgs.Resolve());
                     continue;
                 }
 
@@ -285,7 +284,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                     return ResetReader(reader, tempPosition, false);
                 #endregion
 
-                tokens = tokens.CombineWith(token);
+                tokens = tokens.Join(token);
             }
 
             reader.Reset(position);

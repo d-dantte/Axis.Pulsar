@@ -1,11 +1,10 @@
 ﻿using Axis.Luna.Extensions;
-using Axis.Misc.Pulsar.Utils;
 
 namespace Axis.Pulsar.Core.Utils
 {
     internal static class Extensions
     {
-        internal static Tokens Combine(this IEnumerable<Tokens> segmentTokens) => Tokens.Combine(segmentTokens);
+        internal static Tokens Join(this IEnumerable<Tokens> segmentTokens) => Tokens.Join(segmentTokens);
 
         internal static IEnumerable<CharRange> NormalizeRanges(this IEnumerable<CharRange> ranges) => CharRange.NormalizeRanges(ranges);
 

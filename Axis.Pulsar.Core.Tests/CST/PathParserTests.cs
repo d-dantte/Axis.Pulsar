@@ -1,5 +1,4 @@
 ﻿using Axis.Luna.Common.Results;
-using Axis.Misc.Pulsar.Utils;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Exceptions;
 using Axis.Pulsar.Core.Grammar;
@@ -273,14 +272,14 @@ namespace Axis.Pulsar.Core.Tests.CST
             var parsed = PathParser.TryRecognizeTokens(reader, path, out var result);
             Assert.IsTrue(parsed);
             Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual(Tokens.Of("<bleh bleh>"), result.MapAs<ICSTNode.Literal>().Resolve().Tokens);
+            Assert.AreEqual(Tokens.Of("<bleh bleh>"), result.MapAs<ICSTNode.Terminal>().Resolve().Tokens);
 
             reader = new TokenReader("<bleh \\> bleh>");
             path = ProductionPath.Of("dummy");
             parsed = PathParser.TryRecognizeTokens(reader, path, out result);
             Assert.IsTrue(parsed);
             Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual(Tokens.Of("<bleh \\> bleh>"), result.MapAs<ICSTNode.Literal>().Resolve().Tokens);
+            Assert.AreEqual(Tokens.Of("<bleh \\> bleh>"), result.MapAs<ICSTNode.Terminal>().Resolve().Tokens);
 
             reader = new TokenReader("no delimiter");
             path = ProductionPath.Of("dummy");

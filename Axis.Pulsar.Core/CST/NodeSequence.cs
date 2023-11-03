@@ -1,5 +1,4 @@
 ﻿using Axis.Luna.Extensions;
-using Axis.Misc.Pulsar.Utils;
 using Axis.Pulsar.Core.Utils;
 using System.Collections;
 
@@ -46,7 +45,7 @@ namespace Axis.Pulsar.Core.CST
 
             _nodes = nodes;
             _parent = parent;
-            _tokens = new Lazy<Tokens>(() => this.Select(node => node.Tokens).Combine());
+            _tokens = new Lazy<Tokens>(() => this.Select(node => node.Tokens).Join());
         }
 
         public static NodeSequence Of(

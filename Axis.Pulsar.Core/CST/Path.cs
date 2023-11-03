@@ -114,19 +114,23 @@ namespace Axis.Pulsar.Core.CST
 
     public record NodeFilter
     {
-        private Lazy<string> _text;
+        private readonly Lazy<string> _text;
 
-        public string SymbolName { get; }
+        public string? SymbolName { get; }
 
-        public string Tokens { get; }
+        public string? Tokens { get; }
 
         public NodeType NodeType { get; }
 
-        public NodeFilter(NodeType nodeType, string symbolName, string tokens)
+        public NodeFilter(NodeType nodeType, string? symbolName, string? tokens)
         {
             NodeType = nodeType;
             SymbolName = symbolName;
             Tokens = tokens;
+
+            if (symbolName is null && tokens is null && nodeType == NodeType.Unspecified)
+                throw new ArgumentException(
+                    $"Invalid arguments: '{nameof(symbolName)}' & '{nameof(tokens)}' cannot both be null");
 
             _text = new Lazy<string>(() =>
             {
@@ -143,6 +147,12 @@ namespace Axis.Pulsar.Core.CST
                 return sb.ToString();
             });
         }
+
+        public static NodeFilter Of(
+            NodeType nodeType,
+            string? symbolName,
+            string? tokens)
+            => new(nodeType, symbolName, tokens);
 
         public bool Matches(ICSTNode node)
         {

@@ -1,7 +1,7 @@
 ﻿using Axis.Luna.Common;
 using Axis.Luna.Extensions;
-using Axis.Pulsar.Utils;
 using Axis.Pulsar.Core.Grammar;
+using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.CST
 {
@@ -37,6 +37,7 @@ namespace Axis.Pulsar.Core.CST
         {
             private readonly string _name;
             private readonly NodeSequence _nodes;
+            private readonly Lazy<string> _text;
 
             #region DefaultValueProvider
             public static NonTerminal Default => default;
@@ -54,16 +55,19 @@ namespace Axis.Pulsar.Core.CST
             {
                 _name = name.ThrowIf(string.IsNullOrWhiteSpace, new ArgumentNullException(nameof(name)));
                 _nodes = nodes.ThrowIfNull(new ArgumentNullException(nameof(nodes)));
+
+                var node = this;
+                _text = new Lazy<string>(() =>
+                {
+                    var tokenString = node.Tokens.Count > 20
+                        ? $"{node.Tokens[..20]}..."
+                        : node.Tokens.ToString();
+
+                    return $"[@N name:{node.Name}; NodeCount:{node.Nodes.Count}; Tokens:{tokenString}]";
+                });
             }
 
-            public override string ToString()
-            {
-                var tokenString = Tokens.Count > 20
-                    ? $"{Tokens[..20].ToString()}..."
-                    : Tokens.ToString();
-
-                return $"[@N name:{Name}; NodeCount:{_nodes.Count}; Tokens:{tokenString}]";
-            }
+            public override string ToString() => _text?.Value!;
         }
 
         /// <summary>
