@@ -1,4 +1,4 @@
-﻿using Axis.Pulsar.Core.Grammar;
+using Axis.Pulsar.Core.Grammar;
 
 namespace Axis.Pulsar.Core.Lang
 {
