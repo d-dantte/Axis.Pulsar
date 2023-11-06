@@ -6,7 +6,17 @@ using System.Text.RegularExpressions;
 
 namespace Axis.Pulsar.Core.Grammar
 {
-    public class Production
+    public interface IProduction
+    {
+        bool TryProcessRule(
+            TokenReader reader,
+            ProductionPath? parentPath,
+            out IResult<ICSTNode> result);
+
+        string Symbol { get; }
+    }
+
+    public class Production: IProduction
     {
         /// <summary>
         /// The symbol name pattern
@@ -16,7 +26,7 @@ namespace Axis.Pulsar.Core.Grammar
             RegexOptions.Compiled);
 
 
-        private IRule _rule;
+        private readonly IRule _rule;
 
         /// <summary>
         /// The symbol name for this production

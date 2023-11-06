@@ -1,9 +1,10 @@
 ﻿using Axis.Pulsar.Core.Utils;
+using System.Text.RegularExpressions;
 
 namespace Axis.Pulsar.Core.Tests.Utils
 {
     [TestClass]
-    public class TokenReaderTests
+    public partial class TokenReaderTests
     {
         [TestMethod]
         public void Construction_Tests()
@@ -72,7 +73,58 @@ namespace Axis.Pulsar.Core.Tests.Utils
             Assert.AreEqual(43, reader.Position);
 
             reader.Reset(0);
-            Assert.ThrowsException<InvalidOperationException>(() => reader.GetTokens(100, true));
+            Assert.ThrowsException<EndOfStreamException>(() => reader.GetTokens(100, true));
+
+            reader = "something";
+            success = reader.TryGetTokens("some", out tokens);
+            Assert.IsTrue(success);
+            Assert.IsTrue(tokens.Equals("some"));
+
+            var position = reader.Position;
+            success = reader.TryGetTokens("thyne", out tokens);
+            Assert.IsFalse(success);
+            Assert.AreEqual(position, reader.Position);
+
+            reader.Reset(0);
+            var regex = MyRegex();
+            success = reader.TryGetPattern(regex, out tokens);
+            Assert.IsTrue(success);
+            Assert.IsTrue(tokens.Equals("som"));
         }
+
+        [TestMethod]
+        public void Back_Tests()
+        {
+            var reader = new TokenReader("something");
+            _ = reader.GetTokens(3, true);
+            Assert.AreEqual(3, reader.Position);
+
+            reader.Back();
+            Assert.AreEqual(2, reader.Position);
+
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => reader.Back(-1));
+
+            reader.Back(2);
+            Assert.AreEqual(0, reader.Position);
+
+            Assert.ThrowsException<InvalidOperationException>(() => reader.Back(1));
+        }
+
+        [TestMethod]
+        public void Reset_Tests()
+        {
+            var reader = new TokenReader("something");
+            _ = reader.GetTokens(3, true);
+            Assert.AreEqual(3, reader.Position);
+
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => reader.Reset(20));
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() => reader.Reset(-1));
+
+            reader.Reset(2);
+            Assert.AreEqual(2, reader.Position);
+        }
+
+        [GeneratedRegex("[a-zA-Z]{1,3}")]
+        private static partial Regex MyRegex();
     }
 }

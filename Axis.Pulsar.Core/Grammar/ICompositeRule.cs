@@ -10,7 +10,7 @@ namespace Axis.Pulsar.Core.Grammar
     /// tokens, e.g a CLASSIC c# string literal. The recognition threshold will be 1, because if the initial double-quote
     /// is recognized, we are fairly certain we are meant to recognize a string literal.
     /// </summary>
-    public interface IAggregateRule : IRule
+    public interface ICompositeRule : IRule
     {
         /// <summary>
         /// The primary group

@@ -6,7 +6,7 @@ using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar.Rules
 {
-    public class NonTerminal : IAggregateRule
+    public class NonTerminal : ICompositeRule
     {
         public IGroupElement RuleGroup { get; }
 
@@ -18,13 +18,22 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             RecognitionThreshold = recognitionThreshold;
         }
 
+        public static NonTerminal Of(
+            uint recognitionThreshold,
+            IGroupElement element)
+            => new(recognitionThreshold, element);
+
+        public static NonTerminal Of(
+            IGroupElement element)
+            => new(1, element);
+
         public bool TryRecognize(TokenReader reader, ProductionPath productionPath, out IResult<ICSTNode> result)
         {
             ArgumentNullException.ThrowIfNull(nameof(reader));
             ArgumentNullException.ThrowIfNull(nameof(productionPath));
 
             var position = reader.Position;
-            if (!RuleGroup.Cardinality.TryRecognize(reader, productionPath, RuleGroup, out var groupResult))
+            if (!RuleGroup.Cardinality.TryRepeat(reader, productionPath, RuleGroup, out var groupResult))
             {
                 result = groupResult.AsError().MapNodeError(
                     (ge, ute) => MapUnrecognizedTokensError(ge, ute, productionPath, RecognitionThreshold),

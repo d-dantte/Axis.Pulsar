@@ -99,7 +99,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
         /// <param name="element">The element to apply cardinality recognition to</param>
         /// <param name="result">The result of applying cardinality recognition</param>
         /// <returns></returns>
-        public bool TryRecognize(
+        public bool TryRepeat(
             TokenReader reader,
             ProductionPath productionPath,
             IGroupElement element,

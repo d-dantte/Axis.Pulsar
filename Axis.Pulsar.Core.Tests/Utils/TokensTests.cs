@@ -203,7 +203,7 @@ namespace Axis.Pulsar.Core.Tests.Utils
         }
 
         [TestMethod]
-        public void IsOverlapping_Tests()
+        public void Intersects_Tests()
         {
             var @string = "1234567890";
             var string2 = new StringBuilder("1234567890").ToString();
@@ -216,30 +216,30 @@ namespace Axis.Pulsar.Core.Tests.Utils
             var empty2 = Tokens.Of(string2, 8, 0);
             var def = Tokens.Default;
 
-            Assert.IsTrue(token.IntersectsWith(token2));
-            Assert.IsTrue(token.IntersectsWith(token3));
-            Assert.IsFalse(token2.IntersectsWith(token3));
+            Assert.IsTrue(Tokens.Intersects(token, token2));
+            Assert.IsTrue(Tokens.Intersects(token, token3));
+            Assert.IsFalse(Tokens.Intersects(token2, token3));
 
-            Assert.IsTrue(token.IntersectsWith(empty));
-            Assert.IsTrue(token.IntersectsWith(empty1));
-            Assert.IsTrue(token.IntersectsWith(empty2));
+            Assert.IsTrue(Tokens.Intersects(token, empty));
+            Assert.IsTrue(Tokens.Intersects(token, empty1));
+            Assert.IsTrue(Tokens.Intersects(token, empty2));
 
-            Assert.IsTrue(token2.IntersectsWith(empty));
-            Assert.IsTrue(token2.IntersectsWith(empty1));
-            Assert.IsTrue(token2.IntersectsWith(empty2));
+            Assert.IsTrue(Tokens.Intersects(token2, empty));
+            Assert.IsTrue(Tokens.Intersects(token2, empty1));
+            Assert.IsTrue(Tokens.Intersects(token2, empty2));
 
-            Assert.IsTrue(token3.IntersectsWith(empty));
-            Assert.IsTrue(token3.IntersectsWith(empty1));
-            Assert.IsTrue(token3.IntersectsWith(empty2));
+            Assert.IsTrue(Tokens.Intersects(token3, empty));
+            Assert.IsTrue(Tokens.Intersects(token3, empty1));
+            Assert.IsTrue(Tokens.Intersects(token3, empty2));
 
-            Assert.IsFalse(def.IntersectsWith(default));
-            Assert.IsFalse(token.IntersectsWith(def));
-            Assert.IsFalse(token2.IntersectsWith(def));
-            Assert.IsFalse(token3.IntersectsWith(def));
+            Assert.IsFalse(Tokens.Intersects(def, default(Tokens)));
+            Assert.IsFalse(Tokens.Intersects(token, def));
+            Assert.IsFalse(Tokens.Intersects(token2, def));
+            Assert.IsFalse(Tokens.Intersects(token3, def));
 
-            Assert.IsFalse(empty.IntersectsWith(def));
-            Assert.IsFalse(empty1.IntersectsWith(def));
-            Assert.IsFalse(empty2.IntersectsWith(def));
+            Assert.IsFalse(Tokens.Intersects(empty, def));
+            Assert.IsFalse(Tokens.Intersects(empty1, def));
+            Assert.IsFalse(Tokens.Intersects(empty2, def));
         }
 
         [TestMethod]

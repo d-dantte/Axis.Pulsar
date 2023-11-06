@@ -21,12 +21,20 @@ namespace Axis.Pulsar.Core.Exceptions
             ArgumentNullException.ThrowIfNull(error);
             ArgumentNullException.ThrowIfNull(nodes);
 
+            if (error is not Exception)
+                throw new ArgumentException("Invalid error: not an exception");
+
             Nodes = nodes;
         }
 
         internal static GroupError Of(
             INodeError error,
-            NodeSequence nodes) => new(error, nodes);
+            NodeSequence nodes)
+            => new(error, nodes);
+
+        internal static GroupError Of(
+            INodeError error)
+            => new(error, NodeSequence.Empty);
 
         public GroupError Prepend(NodeSequence nodes)
         {

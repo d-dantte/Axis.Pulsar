@@ -33,6 +33,12 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                     new ArgumentException($"Invalid {nameof(productionSymbol)}: production not found"));
         }
 
+        public static ProductionRef Of(
+            string productionSymbol,
+            Cardinality cardinality,
+            IGrammar grammar)
+            => new(productionSymbol, cardinality, grammar);
+
         public bool TryRecognize(
             TokenReader reader,
             ProductionPath parentPath,

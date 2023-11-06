@@ -11,16 +11,15 @@ namespace Axis.Pulsar.Core.Utils
 
         public Hash WindowHash { get; protected set; }
 
+        public int Length => _length;
+
+        public int Offset => _offset;
+
+        public string Source => _source;
+
         protected RollingHash(string @string, int offset, int length)
         {
-            if (string.IsNullOrEmpty(@string))
-                throw new ArgumentException($"Invalid string");
-
-            if (_offset < 0 || _offset >= @string.Length)
-                throw new ArgumentOutOfRangeException(nameof(offset));
-
-            if (_offset + _length > @string.Length)
-                throw new ArgumentOutOfRangeException(nameof(length));
+            Validate(@string, offset, length);
 
             _source = @string;
             _offset = offset;
@@ -38,6 +37,20 @@ namespace Axis.Pulsar.Core.Utils
         abstract public bool TryNext(out Hash result);
 
         abstract public bool TryNext(int count, out Hash result);
+
+        abstract public Hash ComputeHash(string @string, int offset, int length);
+
+        protected static void Validate(string @string, int offset, int length)
+        {
+            if (string.IsNullOrEmpty(@string))
+                throw new ArgumentException($"Invalid string: null/empty");
+
+            if (offset < 0 || offset >= @string.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            if (offset + length > @string.Length)
+                throw new ArgumentOutOfRangeException(nameof(length));
+        }
 
         #region Nested types
         public readonly struct Hash :
@@ -80,10 +93,10 @@ namespace Axis.Pulsar.Core.Utils
 
         internal class RollingWindowHash : RollingHash
         {
-            private static readonly long _Base1 = 0;
-            private static readonly long _Base2 = 0;
-            private static readonly long _Mod1 = 0;
-            private static readonly long _Mod2 = 0;
+            private static readonly long _Base1 = 65537;
+            private static readonly long _Base2 = 65539;
+            private static readonly long _Mod1 = 1000000007;
+            private static readonly long _Mod2 = 1000000009;
 
             private readonly long _factor1;
             private readonly long _factor2;
@@ -130,13 +143,16 @@ namespace Axis.Pulsar.Core.Utils
                 return true;
             }
 
-            #region Static helpers
-            public static Hash ComputeHash(string @string, int offset, int length)
+            override public Hash ComputeHash(string @string, int offset, int length)
             {
+                Validate(@string, offset, length);
+
                 return Hash.Of(
                     ComputeHash(@string, offset, length, _Mod1, _Base1),
                     ComputeHash(@string, offset, length, _Mod2, _Base2));
             }
+
+            #region Static helpers
 
             public static Hash NextHash(
                 Hash previous,
@@ -202,10 +218,10 @@ namespace Axis.Pulsar.Core.Utils
             internal RollingValueHash(string @string, int offset, int length)
             : base(@string, offset, length)
             {
-                WindowHash = Hash.Of(HashCode.Combine(_source[_offset]), 0);
+                WindowHash = ComputeHash(@string, offset, length);
             }
 
-            public override bool TryNext(out Hash result)
+            override public bool TryNext(out Hash result)
             {
                 var newOffset = _offset + 1;
                 if (newOffset + _length > _source.Length)
@@ -214,12 +230,12 @@ namespace Axis.Pulsar.Core.Utils
                     return false;
                 }
 
-                WindowHash = result = Hash.Of(HashCode.Combine(_source[newOffset]), 0);
+                WindowHash = result = ComputeHash(_source, newOffset, _length);
                 _offset = newOffset;
                 return true;
             }
 
-            public override bool TryNext(int count, out Hash result)
+            override public bool TryNext(int count, out Hash result)
             {
                 var finalOffset = _offset + count;
                 if (finalOffset + _length > _source.Length)
@@ -228,9 +244,18 @@ namespace Axis.Pulsar.Core.Utils
                     return false;
                 }
 
-                WindowHash = result = Hash.Of(HashCode.Combine(_source[finalOffset]), 0);
+                WindowHash = result = ComputeHash(_source, finalOffset, _length);
                 _offset = finalOffset;
                 return true;
+            }
+
+            override public Hash ComputeHash(string @string, int offset, int length)
+            {
+                Validate(@string, offset, length);
+
+                return Hash.Of(
+                    @string[offset..(offset + 1)][0],
+                    0);
             }
         }
 

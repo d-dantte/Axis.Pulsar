@@ -94,6 +94,20 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             throw new NotImplementedException("NOTE: Ensure that the escape delimiters do not clash with the Illegal ranges/sequences");
         }
 
+        public static DelimitedString Of(
+            bool acceptsEmptyString,
+            string startDelimiter,
+            string endDelimiter,
+            IEnumerable<Tokens> legalSequences,
+            IEnumerable<Tokens> illegalSequences,
+            IEnumerable<CharRange> legalRanges,
+            IEnumerable<CharRange> illegalRanges,
+            IEnumerable<IEscapeSequenceMatcher> escapeMatchers)
+            => new(acceptsEmptyString, startDelimiter, endDelimiter,
+                legalSequences, illegalSequences,
+                legalRanges, illegalRanges,
+                escapeMatchers);
+
         #region Procedural implementation
         public bool TryRecognize(TokenReader reader, ProductionPath productionPath, out IResult<ICSTNode> result)
         {
@@ -352,7 +366,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             /// <param name="reader">the token reader</param>
             /// <param name="tokens">returns the matched arguments if sucessful, or the unmatched tokens</param>
             /// <returns>true if matched, otherwise false</returns>
-            bool TryMatchEscapeArgument(TokenReader reader, out IResult<Tokens> tokens);
+            bool TryMatchEscapeArgument(TokenReader reader, out Tokens tokens);
         }
 
         /// <summary>

@@ -12,16 +12,6 @@ namespace Axis.Pulsar.Core.Lang
         /// </summary>
         /// <param name="inputTokens"></param>
         /// <returns></returns>
-        Grammar.IGrammar ImportGrammar(string inputTokens);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="customRuleName"></param>
-        /// <param name="customRuleFactory"></param>
-        /// <returns></returns>
-        ILanguageImporter RegisterCustomRuleFactory(
-            string customRuleName,
-            Func<IDictionary<string, string>, IAtomicRule> customRuleFactory);
+        IGrammar ImportGrammar(string inputTokens);
     }
 }

@@ -9,27 +9,27 @@ namespace Axis.Pulsar.Core.CST
     /// </summary>
     public class NodeSequence : IEnumerable<ICSTNode>
     {
-        private ICollection<ICSTNode> _nodes;
-        private NodeSequence? _parent;
-        private Lazy<Tokens> _tokens;
+        private readonly ICollection<ICSTNode> _nodes;
+        private readonly NodeSequence? _parent;
+        private readonly Lazy<Tokens> _tokens;
 
         /// <summary>
-        /// 
+        /// The parent node sequence
         /// </summary>
         public NodeSequence? Parent => _parent;
 
         /// <summary>
-        /// 
+        /// The number of nodes in this sequence, including that of the parent if available.
         /// </summary>
         public int Count => _nodes.Count + (_parent?.Count ?? 0);
 
         /// <summary>
-        /// 
+        /// Concatenated tokens of all contained nodes.
         /// </summary>
         public Tokens Tokens => _tokens.Value;
 
         /// <summary>
-        /// 
+        /// Returns an empty node sequence
         /// </summary>
         public static NodeSequence Empty { get; } = new NodeSequence();
 
@@ -85,7 +85,7 @@ namespace Axis.Pulsar.Core.CST
         /// <returns></returns>
         public IEnumerable<ICSTNode> Enumerate()
         {
-            var prev = _parent?.AsEnumerable() ?? Enumerable.Empty<ICSTNode>();
+            var prev = _parent?.Enumerate() ?? Enumerable.Empty<ICSTNode>();
             return prev.Concat(_nodes);
         }
 

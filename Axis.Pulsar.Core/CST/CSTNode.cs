@@ -63,7 +63,7 @@ namespace Axis.Pulsar.Core.CST
                         ? $"{node.Tokens[..20]}..."
                         : node.Tokens.ToString();
 
-                    return $"[@N name:{node.Name}; NodeCount:{node.Nodes.Count}; Tokens:{tokenString}]";
+                    return $"[@N name: {node.Name}; NodeCount: {node.Nodes.Count}; Tokens: {tokenString}]";
                 });
             }
 
@@ -113,7 +113,7 @@ namespace Axis.Pulsar.Core.CST
 
             public override int GetHashCode() => HashCode.Combine(_tokens, _name);
 
-            public override string ToString() => $"[@T Name:{Name}; Tokens:{Tokens}]";
+            public override string ToString() => $"[@T Name: {Name}; Tokens: {Tokens}]";
         }
     }
 }

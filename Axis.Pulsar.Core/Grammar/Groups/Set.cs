@@ -26,6 +26,11 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                 .ApplyTo(ImmutableArray.CreateRange);
         }
 
+        public static Set Of(
+            Cardinality cardinality,
+            params IGroupElement[] elements)
+            => new(cardinality, elements);        
+        
         public bool TryRecognize(
             TokenReader reader,
             ProductionPath parentPath,
@@ -37,56 +42,67 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             var position = reader.Position;
             var elementList = new List<IGroupElement>(Elements);
             var results = new List<IResult<NodeSequence>>();
-            for (int cnt = 0; cnt < elementList.Count; cnt++)
+            bool isElementConsumed = false;
+            do
             {
-                var element = elementList[cnt];
-                var tempPosition = reader.Position;
-
-                if (!element.Cardinality.TryRecognize(reader, parentPath, element, out var elementResult))
+                isElementConsumed = false;
+                foreach (var elt in elementList)
                 {
-                    reader.Reset(tempPosition);
+                    if (elt.Cardinality.TryRepeat(reader, parentPath, elt, out var groupResult))
+                    {
+                        results.Add(groupResult);
+                        elementList.Remove(elt);
+                        isElementConsumed = true;
+                        break;
+                    }
+                    else if (groupResult.IsErrorResult(out GroupError ge))
+                    {
+                        if (ge.NodeError is UnrecognizedTokens)
+                            continue;
 
-                    if (elementResult.IsErrorResult(out GroupError error, ge => ge.NodeError is UnrecognizedTokens))
-                        continue;
-
+                        else if (ge.NodeError is PartiallyRecognizedTokens)
+                        {
+                            result = groupResult;
+                            return false;
+                        }
+                        else
+                        {
+                            result = RecognitionRuntimeError
+                                .Of((Exception)ge.NodeError)
+                                .ApplyTo(Result.Of<NodeSequence>);
+                            return false;
+                        }
+                    }
                     else
                     {
-                        reader.Reset(position);
-                        result = elementResult.AsError().MapGroupError(
-                            (ge, ute) => throw new InvalidOperationException("Unknown Error"),
-                            (ge, pte) => results
-                                .FoldInto(v => v.Fold())
-                                .Map(ns => ge.Prepend(ns))
-                                .Resolve());
-
+                        var error = !groupResult.IsErrorResult(out RecognitionRuntimeError rre)
+                            ? RecognitionRuntimeError.Of(groupResult.AsError().ActualCause())
+                            : rre;
+                        result = Result.Of<NodeSequence>(error);
                         return false;
                     }
                 }
-
-                results.Add(elementResult);
-                elementList.RemoveAt(cnt);
-                cnt = 0;
-                continue;
             }
+            while (isElementConsumed);
 
-            if (results.Count == elementList.Count)
+            if (results.Count == Elements.Length)
             {
                 result = results.FoldInto(_results => _results.Fold());
                 return true;
             }
             else
             {
-                var nodeSequence = results
+                var partialSequence = results
                     .FoldInto(_results => _results.Fold())
                     .Resolve();
 
-                result = UnrecognizedTokens
-                    .Of(parentPath, position)
-                    .ApplyTo(ire => (ire, nodeSequence))
-                    .ApplyTo(GroupError.Of)
-                    .ApplyTo(Result.Of<NodeSequence>);
+                INodeError nodeError = results.Count <= 0
+                    ? UnrecognizedTokens.Of(parentPath, position)
+                    : PartiallyRecognizedTokens.Of(parentPath, position, partialSequence.Tokens);
 
-                reader.Reset(position);
+                result = GroupError
+                    .Of(nodeError, partialSequence)
+                    .ApplyTo(Result.Of<NodeSequence>);
                 return false;
             }
         }

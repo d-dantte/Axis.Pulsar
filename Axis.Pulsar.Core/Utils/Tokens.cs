@@ -157,7 +157,7 @@ namespace Axis.Pulsar.Core.Utils
             if (other.IsEmpty)
                 return this;
 
-            if (!IntersectsWith(other))
+            if (!Intersects(this, other))
                 throw new ArgumentException("Cannot merge non-intersecting tokens");
 
             var newOffset = Math.Min(_offset, other._offset);
@@ -299,32 +299,22 @@ namespace Axis.Pulsar.Core.Utils
         /// <item>Some element (index) of one instance must be found as an element in the other instance</item>
         /// </list>
         /// </summary>
-        /// <param name="other">The instance to check for intersection</param>
+        /// <param name="second">The instance to check for intersection</param>
         /// <returns>True if both instances intersect, false otherwise</returns>
-        public bool IntersectsWith(Tokens other)
+        public static bool Intersects(Tokens first, Tokens second)
         {
-            if (IsDefault || other.IsDefault)
+            if (first.IsDefault || second.IsDefault)
                 return false;
 
-            if (IsEmpty || other.IsEmpty)
+            if (first.IsEmpty || second.IsEmpty)
                 return true;
 
-            if (!IsSourceEqual(other))
+            if (!first.IsSourceEqual(second))
                 return false;
 
-            if (_offset == other._offset)
-                return true;
-
-            var lend = _offset + _count;
-            var rend = other._offset + other._count;
-
-            if (_offset < other._offset && other._offset < lend)
-                return true;
-
-            if (other._offset < _offset && _offset < rend)
-                return true;
-
-            return false;
+            return Extensions.Intersects(
+                (first._offset, first._offset + first._count - 1),
+                (second._offset, second._offset + second._count - 1));
         }
 
         public override bool Equals(object? obj)
@@ -334,27 +324,32 @@ namespace Axis.Pulsar.Core.Utils
 
         public bool Equals(string? value)
         {
-            if (this.IsDefault && value is null)
-                return true;
+            //if (this.IsDefault && value is null)
+            //    return true;
 
-            else if (this.IsDefault ^ value is null)
-                return false;
+            //else if (this.IsDefault ^ value is null)
+            //    return false;
 
-            if (value!.Length != _count)
-                return false;
+            //if (value!.Length != _count)
+            //    return false;
 
-            var comparer = EqualityComparer<string>.Default;
-            if (_count == _source!.Length
-                && (ReferenceEquals(_source, value) || comparer.Equals(_source, value)))
-                return true;
+            //var comparer = EqualityComparer<string>.Default;
+            //if (_count == _source!.Length && IsSourceEqual())
+            //    return true;
 
-            for (int cnt = 0; cnt < _count; cnt++)
-            {
-                if (this[cnt] != value[cnt])
-                    return false;
-            }
+            //for (int cnt = 0; cnt < _count; cnt++)
+            //{
+            //    if (this[cnt] != value[cnt])
+            //        return false;
+            //}
 
-            return true;
+            //return true;
+
+            var other = value is null
+               ? Tokens.Default
+               : Tokens.Of(value!);
+
+            return Equals(other);
         }
 
         public bool Equals(char value) => Equals(new[] { value });

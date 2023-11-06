@@ -93,22 +93,17 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
 
             var cardinality = Cardinality.Occurs(1, 1);
 
-            Assert.ThrowsException<ArgumentNullException>(() => cardinality.TryRecognize(
+            Assert.ThrowsException<ArgumentNullException>(() => cardinality.TryRepeat(
                 null, ProductionPath.Of("stuff"), mockElement, out _));
 
-            Assert.ThrowsException<ArgumentNullException>(() => cardinality.TryRecognize(
+            Assert.ThrowsException<ArgumentNullException>(() => cardinality.TryRepeat(
                 "tokens", null, mockElement, out _));
 
-            Assert.ThrowsException<ArgumentNullException>(() => cardinality.TryRecognize(
+            Assert.ThrowsException<ArgumentNullException>(() => cardinality.TryRepeat(
                 "tokens", ProductionPath.Of("stuff"), null, out _));
 
 
         }
-
-        delegate bool TryRecognizeCallback(
-            TokenReader reader,
-            ProductionPath parentPath,
-            out IResult<NodeSequence> result);
 
         [TestMethod]
         public void Recognition_WithValidArgs_Tests()
@@ -120,9 +115,9 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                     It.IsAny<TokenReader>(),
                     It.IsAny<ProductionPath>(),
                     out It.Ref<IResult<NodeSequence>>.IsAny))
-                .Returns(new TryRecognizeCallback((
+                .Returns(new TryRecognizeNodeSequence((
                     TokenReader reader,
-                    ProductionPath path,
+                    ProductionPath? path,
                     out IResult<NodeSequence> result) =>
                 {
                     result = Result.Of(NodeSequence.Of(ICSTNode.Of("dummy", Tokens.Of("source"))));
@@ -135,9 +130,9 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                     It.IsAny<TokenReader>(),
                     It.IsAny<ProductionPath>(),
                     out It.Ref<IResult<NodeSequence>>.IsAny))
-                .Returns(new TryRecognizeCallback((
+                .Returns(new TryRecognizeNodeSequence((
                     TokenReader reader,
-                    ProductionPath path,
+                    ProductionPath? path,
                     out IResult<NodeSequence> result) =>
                 {
                     result = Result.Of<NodeSequence>(
@@ -156,9 +151,9 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                     It.IsAny<TokenReader>(),
                     It.IsAny<ProductionPath>(),
                     out It.Ref<IResult<NodeSequence>>.IsAny))
-                .Returns(new TryRecognizeCallback((
+                .Returns(new TryRecognizeNodeSequence((
                     TokenReader reader,
-                    ProductionPath path,
+                    ProductionPath? path,
                     out IResult<NodeSequence> result) =>
                 {
                     while (passCount-- > 0)
@@ -182,9 +177,9 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                     It.IsAny<TokenReader>(),
                     It.IsAny<ProductionPath>(),
                     out It.Ref<IResult<NodeSequence>>.IsAny))
-                .Returns(new TryRecognizeCallback((
+                .Returns(new TryRecognizeNodeSequence((
                     TokenReader reader,
-                    ProductionPath path,
+                    ProductionPath? path,
                     out IResult<NodeSequence> result) =>
                 {
                     result = Result.Of<NodeSequence>(new Exception());
@@ -193,7 +188,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
 
 
             var cardinality = Cardinality.Occurs(1, 1);
-            var recognized = cardinality.TryRecognize(
+            var recognized = cardinality.TryRepeat(
                 "stuff",
                 ProductionPath.Of("root"),
                 passingElementMock.Object,
@@ -201,7 +196,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
             Assert.AreEqual(1, result.Resolve().Count);
 
             cardinality = Cardinality.Occurs(1, 21);
-            recognized = cardinality.TryRecognize(
+            recognized = cardinality.TryRepeat(
                 "stuff",
                 ProductionPath.Of("root"),
                 passingElementMock.Object,
@@ -209,7 +204,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
             Assert.AreEqual(21, result.Resolve().Count);
 
             cardinality = Cardinality.Occurs(1, 21);
-            recognized = cardinality.TryRecognize(
+            recognized = cardinality.TryRepeat(
                 "stuff",
                 ProductionPath.Of("root"),
                 unrecognizedElementMock.Object,
@@ -219,7 +214,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
             Assert.AreEqual(0, ns.Count);
 
             cardinality = Cardinality.Occurs(1, 21);
-            recognized = cardinality.TryRecognize(
+            recognized = cardinality.TryRepeat(
                 "stuff",
                 ProductionPath.Of("root"),
                 runtimeFailureElementMock.Object,
@@ -230,7 +225,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 typeof(RecognitionRuntimeError));
 
             cardinality = Cardinality.Occurs(0, 21);
-            recognized = cardinality.TryRecognize(
+            recognized = cardinality.TryRepeat(
                 "stuff",
                 ProductionPath.Of("root"),
                 unrecognizedElementMock.Object,
@@ -240,7 +235,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
 
             cardinality = Cardinality.Occurs(3, 21);
             passCount = 2;
-            recognized = cardinality.TryRecognize(
+            recognized = cardinality.TryRepeat(
                 "stuff",
                 ProductionPath.Of("root"),
                 conditionedFailureElementMock.Object,

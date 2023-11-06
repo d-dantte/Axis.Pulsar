@@ -60,14 +60,17 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             var position = reader.Position;
             if (reader.TryGetTokens(matchType.MaxMatch, out var tokens))
             {
-                var matchRange = matchType.MaxMatch - matchType.MinMatch;
-                for (int cnt = 0; cnt <= matchRange; cnt++)
+                //var matchRange = matchType.MaxMatch - matchType.MinMatch;
+                for (int length = matchType.MaxMatch; length >= matchType.MinMatch; length--)
                 {
-                    var subtokens = tokens[0..^cnt];
+                    var match = pattern.Match(
+                        tokens.Source!,
+                        tokens.Offset,
+                        length);
 
-                    if (pattern.IsMatch(subtokens.AsSpan()))
+                    if (match.Success && match.Length == length)
                         return ICSTNode
-                            .Of(productionPath.Name, subtokens)
+                            .Of(productionPath.Name, tokens[..length])
                             .ApplyTo(Result.Of<ICSTNode>);
                 }
             }

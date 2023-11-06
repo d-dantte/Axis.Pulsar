@@ -5,10 +5,10 @@ namespace Axis.Pulsar.Core.CST
     public static class CSTNodeUtil
     {
         /// <summary>
-        /// 
+        /// Find all nodes using the search path
         /// </summary>
-        /// <param name="searchPath"></param>
-        /// <returns></returns>
+        /// <param name="searchPath">The search path</param>
+        /// <returns>A collection of nodes found at the given path, or an empty enumerable</returns>
         public static IEnumerable<ICSTNode> FindNodes(this ICSTNode root, Path searchPath)
         {
             return searchPath.Segments
@@ -25,13 +25,12 @@ namespace Axis.Pulsar.Core.CST
                 });
         }
 
-
         /// <summary>
         /// Finds all Nodes having the given name. Note that not all nodes have a "name". 
         /// These are excluded from the search
         /// </summary>
         /// <param name="nodeName"></param>
-        /// <returns></returns>
+        /// <returns>A collection of nodes found in the node tree, having the given name, or an empty enumerable</returns>
         public static IEnumerable<ICSTNode> FindAllNodes(this ICSTNode root, string symbolName)
         {
             var nodes = new List<ICSTNode>();

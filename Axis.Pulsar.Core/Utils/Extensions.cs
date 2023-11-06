@@ -22,5 +22,16 @@ namespace Axis.Pulsar.Core.Utils
             this IEnumerable<TItem> items,
             Func<TItem, Exception> exceptionMapper)
             => items.ThrowIfAny(item => item is null, exceptionMapper);
+
+        internal static bool Intersects(
+            this (int lower, int upper) first,
+            (int lower, int upper) second)
+        {
+            (var less, var greater) = first.lower <= second.lower
+                ? (first, second)
+                : (second, first);
+
+            return less.upper >= greater.lower;
+        }
     }
 }

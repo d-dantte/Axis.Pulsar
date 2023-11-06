@@ -10,7 +10,7 @@ using Axis.Luna.Extensions;
 namespace Axis.Pulsar.Core.Tests.Grammar.Groups
 {
     [TestClass]
-    public class SequenceTests
+    public class ChoiceTests
     {
         [TestMethod]
         public void TryRecognize_Tests()
@@ -84,39 +84,67 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                         return false;
                     })));
 
-            var seq = Sequence.Of(
+            var runtimeErrorElementMock = new Mock<IGroupElement>();
+            runtimeErrorElementMock
+                .With(mock => mock
+                    .Setup(m => m.Cardinality)
+                    .Returns(Cardinality.OccursOnly(1)))
+                .With(mock => mock
+                    .Setup(m => m.TryRecognize(
+                        It.IsAny<TokenReader>(),
+                        It.IsAny<ProductionPath>(),
+                        out It.Ref<IResult<NodeSequence>>.IsAny))
+                    .Returns(new TryRecognizeNodeSequence((
+                        TokenReader reader,
+                        ProductionPath? path,
+                        out IResult<NodeSequence> result) =>
+                    {
+                        result = RecognitionRuntimeError
+                            .Of(new Exception())
+                            .ApplyTo(Result.Of<NodeSequence>);
+                        return false;
+                    })));
+
+            var ch = Choice.Of(
                 Cardinality.OccursOnly(1),
                 passingElementMock.Object,
                 passingElementMock.Object);
-            var success = seq.TryRecognize("dummy", "dummy", out var result);
+            var success = ch.TryRecognize("dummy", "dummy", out var result);
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             var nseq = result.Resolve();
-            Assert.AreEqual(2, nseq.Count);
+            Assert.AreEqual(1, nseq.Count);
 
-            seq = Sequence.Of(
+            ch = Choice.Of(
                 Cardinality.OccursOnly(1),
-                passingElementMock.Object,
-                unrecognizedElementMock.Object);
-            success = seq.TryRecognize("dummy", "dummy", out result);
+                unrecognizedElementMock.Object,
+                passingElementMock.Object);
+            success = ch.TryRecognize("dummy", "dummy", out result);
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            nseq = result.Resolve();
+            Assert.AreEqual(1, nseq.Count);
+
+            ch = Choice.Of(
+                Cardinality.OccursOnly(1),
+                partiallyRecognizedElementMock.Object,
+                passingElementMock.Object);
+            success = ch.TryRecognize("dummy", "dummy", out result);
             Assert.IsFalse(success);
             Assert.IsTrue(result.IsErrorResult());
             Assert.IsInstanceOfType<GroupError>(result.AsError().ActualCause());
             var ge = result.AsError().ActualCause() as GroupError;
-            Assert.IsInstanceOfType<UnrecognizedTokens>(ge.NodeError);
-            Assert.AreEqual(1, ge.Nodes.Count);
+            Assert.IsInstanceOfType<PartiallyRecognizedTokens>(ge.NodeError);
+            Assert.AreEqual(0, ge.Nodes.Count);
 
-            seq = Sequence.Of(
+            ch = Choice.Of(
                 Cardinality.OccursOnly(1),
-                passingElementMock.Object,
-                partiallyRecognizedElementMock.Object);
-            success = seq.TryRecognize("dummy", "dummy", out result);
+                runtimeErrorElementMock.Object,
+                passingElementMock.Object);
+            success = ch.TryRecognize("dummy", "dummy", out result);
             Assert.IsFalse(success);
             Assert.IsTrue(result.IsErrorResult());
-            Assert.IsInstanceOfType<GroupError>(result.AsError().ActualCause());
-            ge = result.AsError().ActualCause() as GroupError;
-            Assert.IsInstanceOfType<PartiallyRecognizedTokens>(ge.NodeError);
-            Assert.AreEqual(1, ge.Nodes.Count);
+            Assert.IsInstanceOfType<RecognitionRuntimeError>(result.AsError().ActualCause());
         }
     }
 }

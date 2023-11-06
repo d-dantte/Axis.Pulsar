@@ -1,18 +1,26 @@
 namespace Axis.Pulsar.Core.Utils;
 
+using Axis.Luna.Common;
 using Axis.Luna.Extensions;
+using System.Diagnostics.CodeAnalysis;
 
 
 /// <summary>
 /// Represents a range of characters as an inclusive lower and uppoer bound.
 /// </summary>
-public readonly struct CharRange
+public readonly struct CharRange:
+    IDefaultValueProvider<CharRange>,
+    IEquatable<CharRange>
 {
     public readonly char LowerBound { get; }
 
     public readonly char UpperBound { get; }
 
     public bool IsRange => LowerBound != UpperBound;
+
+    public bool IsDefault => LowerBound == UpperBound && LowerBound == '\0';
+
+    public static CharRange Default => default;
 
     public CharRange(char lowerBound, char upperBound)
     {
@@ -30,29 +38,114 @@ public readonly struct CharRange
 
     public static implicit operator CharRange(string input) => Parse(input);
 
-    public static (CharRange lower, CharRange higher) SortLowerBounds(CharRange first, CharRange second)
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="range"></param>
+    /// <param name="mergeDisjointedRanges"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    public CharRange MergeWith(CharRange range, bool mergeDisjointedRanges = false)
     {
-        if (first.LowerBound <= second.LowerBound)
-            return (first, second);
+        if (TryMergeWith(range, mergeDisjointedRanges, out var merged))
+            return merged;
 
-        return (second, first);
+        throw new InvalidOperationException($"Invalid merge: disjointed ranges.");
     }
 
-    public static (CharRange lower, CharRange higher) SortUpperBounds(CharRange first, CharRange second)
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="range"></param>
+    /// <param name="mergeDisjointedRanges"></param>
+    /// <param name="merged"></param>
+    /// <returns></returns>
+    public bool TryMergeWith(CharRange range, bool mergeDisjointedRanges, out CharRange merged)
     {
-        if (first.UpperBound >= second.UpperBound)
-            return (first, second);
+        try
+        {
+            if (Intersects(this, range) || mergeDisjointedRanges)
+            {
+                merged = new CharRange(
+                    Min(LowerBound, range.LowerBound),
+                    Max(UpperBound, range.UpperBound));
+                return true;
+            }
 
-        return (second, first);
+            merged = default;
+            return false;
+        }
+        catch
+        {
+            merged = default;
+            return false;
+        }
     }
 
-    public static bool IsOverlapping(CharRange first, CharRange second)
-    {
-        var (lower, upper) = SortLowerBounds(first, second);
+    public bool TryMergeWith(
+        CharRange range,
+        out CharRange merged)
+        => TryMergeWith(range, false, out merged);
 
-        return lower.UpperBound > upper.LowerBound;
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="char"></param>
+    /// <returns></returns>
+    public bool Contains(char @char)
+    {
+        return LowerBound <= @char && UpperBound >= @char;
     }
 
+    public override string ToString() => IsRange ? $"{LowerBound}-{UpperBound}" : LowerBound.ToString();
+
+    public bool Equals(CharRange other)
+    {
+        return LowerBound == other.LowerBound
+            && UpperBound == other.UpperBound;
+    }
+
+    public override bool Equals([NotNullWhen(true)] object? obj)
+    {
+        return obj is CharRange other && Equals(other);
+    }
+
+    public override int GetHashCode() => HashCode.Combine(UpperBound, LowerBound);
+
+    public static bool operator ==(CharRange left, CharRange right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(CharRange left, CharRange right)
+    {
+        return !(left == right);
+    }
+
+    private static char Min(char first, char second) => first < second ? first : second;
+
+    private static char Max(char first, char second) => first > second ? first : second;
+
+    #region Static Helpers
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="first"></param>
+    /// <param name="second"></param>
+    /// <returns></returns>
+    public static bool Intersects(CharRange first, CharRange second)
+    {
+        return Extensions.Intersects(
+            (first.LowerBound, first.UpperBound),
+            (second.LowerBound, second.UpperBound));
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="input"></param>
+    /// <returns></returns>
+    /// <exception cref="FormatException"></exception>
     public static CharRange Parse(string input)
     {
         return input
@@ -74,20 +167,26 @@ public readonly struct CharRange
             });
     }
 
-    public static char ParseChar(string chars)
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="charString"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
+    public static char ParseChar(string charString)
     {
-        if (chars.Length > 2 && chars[0] == '\\'
-            && (char.ToLower(chars[1]) == 'u' || char.ToLower(chars[1]) == 'x'))
-            return (char)ushort.Parse(chars[2..], System.Globalization.NumberStyles.HexNumber);
+        if (charString.Length > 2 && charString[0] == '\\'
+            && (char.ToLower(charString[1]) == 'u' || char.ToLower(charString[1]) == 'x'))
+            return (char)ushort.Parse(charString[2..], System.Globalization.NumberStyles.HexNumber);
 
-        else if (chars.Length == 2 && chars[0] == '\\'
-            && (chars[1] == '\\' || chars[1] == '\''))
-            return chars[1];
+        else if (charString.Length == 2 && charString[0] == '\\'
+            && (charString[1] == '\\' || charString[1] == '\''))
+            return charString[1];
 
-        else if (chars.Length == 1)
-            return chars[0];
+        else if (charString.Length == 1)
+            return charString[0];
 
-        else throw new ArgumentException($"Invalid character text: {chars}");
+        else throw new ArgumentException($"Invalid character text: {charString}");
     }
 
     /// <summary>
@@ -118,52 +217,5 @@ public readonly struct CharRange
                 return list;
             });
     }
-
-    private static char Min(char first, char second) => first < second ? first : second;
-
-    private static char Max(char first, char second) => first > second ? first : second;
-
-    public bool IsOverlappingWith(CharRange range) => IsOverlapping(this, range);
-
-    public CharRange MergeWith(CharRange range, bool mergeDisjointedRanges = false)
-    {
-        if (TryMergeWith(range, mergeDisjointedRanges, out var merged))
-            return merged;
-
-        throw new InvalidOperationException($"Invalid merge: disjointed ranges.");
-    }
-
-    public bool TryMergeWith(CharRange range, bool mergeDisjointedRanges, out CharRange merged)
-    {
-        try
-        {
-            if (IsOverlappingWith(range) || mergeDisjointedRanges)
-            {
-                merged = new CharRange(
-                    Min(LowerBound, range.LowerBound),
-                    Max(UpperBound, range.UpperBound));
-                return true;
-            }
-
-            merged = default;
-            return false;
-        }
-        catch
-        {
-            merged = default;
-            return false;
-        }
-    }
-
-    public bool TryMergeWith(
-        CharRange range,
-        out CharRange merged)
-        => TryMergeWith(range, false, out merged);
-
-    public bool Contains(char @char)
-    {
-        return LowerBound <= @char && UpperBound >= @char;
-    }
-
-    public override string ToString() => IsRange ? $"{LowerBound}-{UpperBound}" : LowerBound.ToString();
+    #endregion
 }

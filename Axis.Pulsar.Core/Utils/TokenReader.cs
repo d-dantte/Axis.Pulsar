@@ -83,7 +83,12 @@ namespace Axis.Pulsar.Core.Utils
             tokens = Tokens.Empty;
             while (TryPeekTokens(count, true, out var _tokens))
             {
-                if (regex.IsMatch(_tokens.AsSpan()))
+                var match = regex.Match(
+                    _tokens.Source!,
+                    _tokens.Offset,
+                    _tokens.Count);
+
+                if (match.Success && match.Length > tokens.Count)
                 {
                     tokens = _tokens;
                     count++;

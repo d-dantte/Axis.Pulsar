@@ -5,30 +5,31 @@ namespace Axis.Pulsar.Core.Grammar
     public class ProductionPath
     {
         private readonly ProductionPath? _parent;
-        private readonly string _content;
+        private readonly string _name;
 
-        public string Name => _content;
+        public string Name => _name;
 
         public ProductionPath? Parent => _parent;
 
-        internal ProductionPath(string content, ProductionPath? parent = null)
+        internal ProductionPath(string name, ProductionPath? parent = null)
         {
             _parent = parent;
-            _content = content.ThrowIf(
+            _name = name.ThrowIf(
                 string.IsNullOrWhiteSpace,
-                new ArgumentNullException(nameof(content)));
+                new ArgumentNullException(nameof(name)));
         }
 
-        internal static ProductionPath Of(string content, ProductionPath? parent = null) => new(content, parent);
+        internal static ProductionPath Of(string name, ProductionPath? parent = null) => new(name, parent);
 
+        public static implicit operator ProductionPath(string name) => new(name, null);
 
-        public override int GetHashCode() => HashCode.Combine(_parent, _content);
+        public override int GetHashCode() => HashCode.Combine(_parent, _name);
 
         public override bool Equals(object? obj)
         {
             return obj is ProductionPath other
                 && EqualityComparer<ProductionPath>.Default.Equals(_parent, other._parent)
-                && EqualityComparer<string>.Default.Equals(_content, other._content);
+                && EqualityComparer<string>.Default.Equals(_name, other._name);
         }
 
         public override string ToString()
@@ -37,7 +38,7 @@ namespace Axis.Pulsar.Core.Grammar
                 ? $"{_parent}/"
                 : "";
 
-            return $"{parentText}{_content}";
+            return $"{parentText}{_name}";
         }
 
         public ProductionPath Next(string content) => new(content, this);

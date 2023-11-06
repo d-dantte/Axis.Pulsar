@@ -26,6 +26,11 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                 .ApplyTo(ImmutableArray.CreateRange);
         }
 
+        public static Choice Of(
+            Cardinality cardinality,
+            params IGroupElement[] elements)
+            => new(cardinality, elements);
+
         public bool TryRecognize(
             TokenReader reader,
             ProductionPath parentPath,
@@ -37,7 +42,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             var position = reader.Position;
             foreach(var element in Elements)
             {
-                if (element.Cardinality.TryRecognize(reader, parentPath, element, out result))
+                if (element.Cardinality.TryRepeat(reader, parentPath, element, out result))
                     return true;
 
                 reader.Reset(position);
