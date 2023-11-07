@@ -10,10 +10,20 @@ namespace Axis.Pulsar.Core.Grammar.Rules
     {
         public string Tokens { get; }
 
-        public TerminalLiteral(string tokens)
+        public bool IsCaseInsensitive { get; }
+
+        public TerminalLiteral(string tokens, bool isCaseInsensitive)
         {
             Tokens = tokens ?? throw new ArgumentNullException(nameof(tokens));
+            IsCaseInsensitive = isCaseInsensitive;
         }
+
+        public TerminalLiteral(string tokens)
+        : this(tokens, true)
+        {
+        }
+
+        public static TerminalLiteral Of(string tokens, bool isCaseInensitive) => new(tokens, isCaseInensitive);
 
         public bool TryRecognize(
             TokenReader reader,
@@ -25,7 +35,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             var position = reader.Position;
 
             if (reader.TryGetTokens(Tokens.Length, true, out var tokens)
-                && tokens.Equals(Tokens))
+                && tokens.Equals(Tokens, !IsCaseInsensitive))
             {
                 result = ICSTNode
                     .Of(productionPath.Name, tokens)

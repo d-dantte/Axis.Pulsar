@@ -1,25 +1,32 @@
 ﻿using System.Collections.Immutable;
-using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar;
 
 namespace Axis.Pulsar.Core.XBNF;
 
 public class ParsingContext
 {
-    public ImmutableDictionary<string, IAtomicRuleFactory> AtomicFactoryMap{ get; }
+    public ImmutableDictionary<string, IAtomicRuleFactory> AtomicFactoryMap { get; }
 
-    public ParsingContext(
-        IDictionary<string, IAtomicRuleFactory> factoryMap)
+    public ImmutableDictionary<AtomicContentDelimiterType, string> AtomicContentDelimiterMap { get; }
+
+    public ParsingContext(IDictionary<string, IAtomicRuleFactory> factoryMap)
     {
-        AtomicFactoryMap = factoryMap
-            .ThrowIfNull(new ArgumentNullException(nameof(factoryMap)))
-            .ThrowIfAny(kvp => 
-                !Production.SymbolPattern.IsMatch(kvp.Key)
-                || kvp.Value is not null)
-            .ToImmutableDictionary(
-                kvp => kvp.Key,
-                kvp => kvp.Value);
+        var delimiterMap = new Dictionary<AtomicContentDelimiterType, string>();
+        foreach (var kvp in factoryMap)
+        {
+            if (!Production.SymbolPattern.IsMatch(kvp.Key))
+                throw new FormatException($"Invalid symbol format: '{kvp.Key}'");
 
+            if (kvp.Value is null)
+                throw new ArgumentException($"Invalid factory instance: null");
+
+            if (kvp.Value is IDelimitedContentAtomicRuleFactory dcarf
+                && !delimiterMap.TryAdd(dcarf.ContentDelimiterType, kvp.Key))
+                throw new ArgumentException($"Duplicate ContentDelimiterType: {dcarf.ContentDelimiterType}");
+        }
+
+        AtomicFactoryMap = factoryMap.ToImmutableDictionary();
+        AtomicContentDelimiterMap = delimiterMap.ToImmutableDictionary();
     }
 }
 

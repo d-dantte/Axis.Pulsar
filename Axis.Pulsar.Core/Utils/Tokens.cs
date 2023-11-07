@@ -324,32 +324,33 @@ namespace Axis.Pulsar.Core.Utils
 
         public bool Equals(string? value)
         {
-            //if (this.IsDefault && value is null)
-            //    return true;
-
-            //else if (this.IsDefault ^ value is null)
-            //    return false;
-
-            //if (value!.Length != _count)
-            //    return false;
-
-            //var comparer = EqualityComparer<string>.Default;
-            //if (_count == _source!.Length && IsSourceEqual())
-            //    return true;
-
-            //for (int cnt = 0; cnt < _count; cnt++)
-            //{
-            //    if (this[cnt] != value[cnt])
-            //        return false;
-            //}
-
-            //return true;
-
             var other = value is null
                ? Tokens.Default
                : Tokens.Of(value!);
 
             return Equals(other);
+        }
+
+        public bool Equals(string? value, bool isCaseSensitive)
+        {
+            if (isCaseSensitive)
+                return Equals(value);
+
+            if (IsDefault && value is null)
+                return true;
+
+            if (IsEmpty && string.IsNullOrEmpty(value))
+                return true;
+
+            if (value!.Length != _count)
+                return false;
+
+            for(int index = 0; index < _count; index++)
+            {
+                if (char.ToLowerInvariant(value[index]) != char.ToLowerInvariant(this[index]))
+                    return false;
+            }
+            return true;
         }
 
         public bool Equals(char value) => Equals(new[] { value });

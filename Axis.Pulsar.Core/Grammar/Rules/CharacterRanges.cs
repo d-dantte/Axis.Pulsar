@@ -22,7 +22,11 @@ namespace Axis.Pulsar.Core.Grammar.Rules
         /// </summary>
         public ImmutableArray<CharRange> ExcludeList { get; }
 
-
+        /// <summary>
+        /// Use IEnumerables
+        /// </summary>
+        /// <param name="includes"></param>
+        /// <param name="excludes"></param>
         public CharacterRanges(CharRange[] includes, CharRange[] excludes)
         {
             ArgumentNullException.ThrowIfNull(includes);

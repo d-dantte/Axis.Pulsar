@@ -20,6 +20,11 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             MatchType = matchType ?? throw new ArgumentNullException(nameof(matchType));
         }
 
+        public static TerminalPattern Of(
+            Regex pattern,
+            IMatchType matchType)
+            => new(pattern, matchType);
+
         public bool TryRecognize(
             TokenReader reader,
             ProductionPath productionPath,

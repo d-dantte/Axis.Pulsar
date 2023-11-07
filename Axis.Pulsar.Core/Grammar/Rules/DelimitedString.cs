@@ -200,9 +200,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
 
                     if (matcher.TryMatchEscapeArgument(reader, out var argResult))
                     {
-                        tokens = argResult
-                            .Map(tokens.Join)
-                            .Resolve();
+                        tokens = tokens.Join(argResult);
                         return true;
                     }
 
@@ -284,7 +282,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                     if (!escapeMatcher.TryMatchEscapeArgument(reader, out var escapeArgs))
                         return ResetReader(reader, tempPosition, false);
 
-                    tokens = tokens.Join(token).Join(escapeArgs.Resolve());
+                    tokens = tokens.Join(token).Join(escapeArgs);
                     continue;
                 }
 

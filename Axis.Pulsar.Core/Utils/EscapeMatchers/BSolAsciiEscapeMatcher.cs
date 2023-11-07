@@ -42,7 +42,7 @@ namespace Axis.Pulsar.Core.Utils.EscapeMatchers
                 throw new FormatException("Invalid Ascii sequence: must be a single character");
 
             var @byte = (ushort)rawSequence[0];
-            return Tokens.Of($"\\x{@byte:x}"); //<-- make sure the string encodes to 2 digits
+            return Tokens.Of($"\\x{@byte:x2}"); // <-- make sure the string encodes to 2 digits
         }
         #endregion
     }

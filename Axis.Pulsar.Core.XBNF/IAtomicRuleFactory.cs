@@ -9,6 +9,21 @@ namespace Axis.Pulsar.Core.XBNF;
 
 public interface IAtomicRuleFactory
 {
+    #region Special Arguments
+
+    /// <summary>
+    /// When presented in "content" form, AtomicRules will be passed the content via an argument named "content"
+    /// </summary>
+    public static readonly Argument ContentArgument = "content";
+
+    /// <summary>
+    /// Applied both in "content" and "regular" form, the flags argument is used to pass a finite series of 62 flags
+    /// into the AtomicRuleFactory. Each flag is designated a case sensitive alphabet or numeric digit.
+    /// </summary>
+    public static readonly Argument FlagsArgument = "flags";
+
+    #endregion
+
     /// <summary>
     /// Creates a new <see cref="IAtomicRule"/> instance given a list of arguments.
     /// </summary>
@@ -24,11 +39,6 @@ public interface IAtomicRuleFactory
         internal static readonly Regex ArgumentPattern = new Regex(
             "^[a-zA-Z_][a-zA-Z0-9-_]*\\z",
             RegexOptions.Compiled);
-
-        /// <summary>
-        /// The default argument name, given to an argument in the only instance where a name not specified is allowed.
-        /// </summary>
-        public static readonly string DefaultArgumentKey = "content";
 
         private readonly string _key;
 
