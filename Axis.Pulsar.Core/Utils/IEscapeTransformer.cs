@@ -3,17 +3,17 @@
     public interface IEscapeTransformer
     {
         /// <summary>
-        /// Given a raw sequence of characters, convert it into the escaped format
+        /// Given a string of raw characters, encode every occurence of escapable characters
         /// </summary>
-        /// <param name="rawSequence">The raw sequence of characters to encode</param>
-        /// <returns>The encoded sequence of characters</returns>
-        Tokens Encode(Tokens rawSequence);
+        /// <param name="rawString">The raw string to encode</param>
+        /// <returns>The encoded string of characters</returns>
+        string Encode(string rawString);
 
         /// <summary>
-        /// Given a sequence of encoded characters, converts it into the raw format
+        /// Given a string containing escaped characters, decode every occurence of the escaped characters
         /// </summary>
-        /// <param name="escapeSequence">The encoded sequence of characters to decode</param>
-        /// <returns>The raw sequence of characters</returns>
-        Tokens Decode(Tokens escapeSequence);
+        /// <param name="escapedString">The encoded string of characters</param>
+        /// <returns>The raw string of characters</returns>
+        string Decode(string escapedString);
     }
 }

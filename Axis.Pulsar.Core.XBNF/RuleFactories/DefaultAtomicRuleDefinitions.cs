@@ -26,14 +26,14 @@ namespace Axis.Pulsar.Core.XBNF.RuleFactories
         {
             public string Symbol { get; }
 
-            public AtomicContentDelimiterType ContentDelimiterType { get; }
+            public IDelimitedContentAtomicRuleFactory Factory { get; }
 
-            public IAtomicRuleFactory Factory { get; }
+            public AtomicContentDelimiterType ContentDelimiterType { get; }
 
             internal RuleDefinition(
                 string symbol,
                 AtomicContentDelimiterType contentDelimiterType,
-                IAtomicRuleFactory factory)
+                IDelimitedContentAtomicRuleFactory factory)
             {
                 ContentDelimiterType = contentDelimiterType;
                 Factory = factory.ThrowIfNull(new ArgumentNullException(nameof(factory)));
@@ -45,7 +45,7 @@ namespace Axis.Pulsar.Core.XBNF.RuleFactories
             internal static RuleDefinition Of(
                 string symbol,
                 AtomicContentDelimiterType contentDelimiterType,
-                IAtomicRuleFactory factory)
+                IDelimitedContentAtomicRuleFactory factory)
                 => new(symbol, contentDelimiterType, factory);
         }
         #endregion

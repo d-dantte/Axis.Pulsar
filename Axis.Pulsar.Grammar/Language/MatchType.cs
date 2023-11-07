@@ -52,16 +52,16 @@ namespace Axis.Pulsar.Grammar.Language
                 AllowsEmptyTokens = allowsEmptyTokens;
             }
 
-            public override int GetHashCode() => HashCode.Combine(MaxMismatch, AllowsEmptyTokens);
+            public override readonly int GetHashCode() => HashCode.Combine(MaxMismatch, AllowsEmptyTokens);
 
-            public override bool Equals(object obj)
+            public override readonly bool Equals(object obj)
             {
                 return obj is Open other
                     && other.MaxMismatch.Equals(MaxMismatch)
                     && other.AllowsEmptyTokens.Equals(AllowsEmptyTokens);
             }
 
-            public override string ToString() => $"{MaxMismatch},{(AllowsEmptyTokens ? "*" : "+")}";
+            public override readonly string ToString() => $"{MaxMismatch},{(AllowsEmptyTokens ? "*" : "+")}";
 
             public static bool operator ==(Open first, Open second) => first.Equals(second);
             public static bool operator !=(Open first, Open second) => !first.Equals(second);
@@ -72,7 +72,7 @@ namespace Axis.Pulsar.Grammar.Language
         /// In this case, at most <see cref="Closed.MaxMatch"/> number of tokens are pulled in, and matched, 
         /// counting backwards to <see cref="Closed.MinMatch"/>, or till a match is found.
         /// </summary>
-        public struct Closed : MatchType
+        public readonly struct Closed : MatchType
         {
             public static readonly Closed DefaultMatch = new Closed(1, 1);
 

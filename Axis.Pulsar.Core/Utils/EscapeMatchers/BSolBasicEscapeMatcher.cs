@@ -1,4 +1,4 @@
-﻿using Axis.Luna.Common.Results;
+﻿using System.Text.RegularExpressions;
 using static Axis.Pulsar.Core.Grammar.Rules.DelimitedString;
 
 namespace Axis.Pulsar.Core.Utils.EscapeMatchers
@@ -7,6 +7,14 @@ namespace Axis.Pulsar.Core.Utils.EscapeMatchers
         IEscapeSequenceMatcher,
         IEscapeTransformer
     {
+        internal static Regex EscapeSequencePattern = new Regex(
+            "^\\\\[\'\"\\nrfbtv0a]\\z",
+            RegexOptions.Compiled);
+
+        internal static Regex RawSequencePattern = new Regex(
+            "^[\'\"\\\\\n\r\f\b\t\v\0\a]\\z",
+            RegexOptions.Compiled);
+
         public string EscapeDelimiter => "\\";
 
         public bool TryMatchEscapeArgument(TokenReader reader, out Tokens tokens)
@@ -37,84 +45,51 @@ namespace Axis.Pulsar.Core.Utils.EscapeMatchers
         }
 
         #region Escape Transformer
-        public Tokens Decode(Tokens escapeSequence)
+
+        public string Encode(string rawString)
         {
-            if (escapeSequence.Count != 2)
-                throw new FormatException($"Invalid basic escape sequence: '{escapeSequence}'");
+            if (rawString is null)
+                return rawString!;
 
-            if (escapeSequence.Equals("\\\\"))
-                return "\\";
-
-            if (escapeSequence.Equals("\\\""))
-                return "\"";
-
-            if (escapeSequence.Equals("\\\'"))
-                return "\'";
-
-            if (escapeSequence.Equals("\\n"))
-                return "\n";
-
-            if (escapeSequence.Equals("\\r"))
-                return "\r";
-
-            if (escapeSequence.Equals("\\f"))
-                return "\f";
-
-            if (escapeSequence.Equals("\\b"))
-                return "\b";
-
-            if (escapeSequence.Equals("\\t"))
-                return "\t";
-
-            if (escapeSequence.Equals("\\v"))
-                return "\v";
-
-            if (escapeSequence.Equals("\\0"))
-                return "\0";
-
-            if (escapeSequence.Equals("\\a"))
-                return "\a";
-
-            throw new FormatException($"Invalid basic escape sequence: '{escapeSequence}'");
+            return RawSequencePattern.Replace(rawString, match => match.Value switch
+            {
+                "\'" => "\\\'",
+                "\"" => "\\\"",
+                "\\" => "\\\\",
+                "\n" => "\\n",
+                "\r" => "\\r",
+                "\f" => "\\f",
+                "\b" => "\\b",
+                "\t" => "\\t",
+                "\v" => "\\v",
+                "\0" => "\\0",
+                "\a" => "\\a",
+                _ => throw new InvalidOperationException($"Invalid basic escapable sequence: '{match.ValueSpan}'")
+            });
         }
 
-        public Tokens Encode(Tokens rawSequence)
+        public string Decode(string escapedString)
         {
-            if (rawSequence.Equals("\\"))
-                return "\\\\";
+            if (escapedString is null)
+                return escapedString!;
 
-            if (rawSequence.Equals("\""))
-                return "\\\"";
-
-            if (rawSequence.Equals("\'"))
-                return "\\\'";
-
-            if (rawSequence.Equals("\n"))
-                return "\\\n";
-
-            if (rawSequence.Equals("\r"))
-                return "\\\r";
-
-            if (rawSequence.Equals("\f"))
-                return "\\\f";
-
-            if (rawSequence.Equals("\b"))
-                return "\\\b";
-
-            if (rawSequence.Equals("\t"))
-                return "\\\t";
-
-            if (rawSequence.Equals("\v"))
-                return "\\\v";
-
-            if (rawSequence.Equals("\0"))
-                return "\\\0";
-
-            if (rawSequence.Equals("\a"))
-                return "\\\a";
-
-            throw new FormatException($"Invalid raw sequence: '{rawSequence}'");
+            return EscapeSequencePattern.Replace(escapedString, match => match.Value switch
+            {
+                "\\\'" => "\'",
+                "\\\"" => "\"",
+                "\\\\" => "\\",
+                "\\n" => "\n",
+                "\\r" => "\r",
+                "\\f" => "\f",
+                "\\b" => "\b",
+                "\\t" => "\t",
+                "\\v" => "\v",
+                "\\0" => "\0",
+                "\\a" => "\a",
+                _ => throw new InvalidOperationException($"Invalid basic escapabled sequence: '{match.ValueSpan}'")
+            });
         }
+
         #endregion
     }
 }

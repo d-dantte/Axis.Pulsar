@@ -32,6 +32,7 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
     /// Accepts empty argument
     /// </summary>
     public static Argument AcceptsEmptyArgument => Argument.Of("accepts-empty");
+    
     #endregion
 
     public IAtomicRule NewRule(ImmutableDictionary<Argument, string> arguments)

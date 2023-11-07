@@ -16,12 +16,6 @@ public interface IAtomicRuleFactory
     /// </summary>
     public static readonly Argument ContentArgument = "content";
 
-    /// <summary>
-    /// Applied both in "content" and "regular" form, the flags argument is used to pass a finite series of 62 flags
-    /// into the AtomicRuleFactory. Each flag is designated a case sensitive alphabet or numeric digit.
-    /// </summary>
-    public static readonly Argument FlagsArgument = "flags";
-
     #endregion
 
     /// <summary>

@@ -1,4 +1,7 @@
-﻿using System.Globalization;
+﻿using System.Collections.Immutable;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Axis.Luna.Extensions;
 using static Axis.Pulsar.Core.Grammar.Rules.DelimitedString;
 
 namespace Axis.Pulsar.Core.Utils.EscapeMatchers
@@ -7,6 +10,10 @@ namespace Axis.Pulsar.Core.Utils.EscapeMatchers
         IEscapeSequenceMatcher,
         IEscapeTransformer
     {
+        internal static Regex EscapeSequencePattern = new Regex(
+            "^\\\\u[a-fA-F0-9]{4}\\z",
+            RegexOptions.Compiled);
+
         public string EscapeDelimiter => "\\u";
 
         public bool TryMatchEscapeArgument(TokenReader reader, out Tokens tokens)
@@ -14,35 +21,50 @@ namespace Axis.Pulsar.Core.Utils.EscapeMatchers
             if (!reader.TryGetTokens(4, out tokens))
                 return false;
 
-            if (!ushort.TryParse(tokens.AsSpan(), NumberStyles.HexNumber, null, out _))
+            if (!short.TryParse(tokens.AsSpan(), NumberStyles.HexNumber, null, out _))
                 reader.Back();
 
             return true;
         }
 
         #region Escape Transformer
-        public Tokens Decode(Tokens escapeSequence)
+        public string Encode(string rawString)
         {
-            if (escapeSequence.Count != 6
-                || !escapeSequence[0..2].Equals("\\u"))
-                throw new FormatException($"Invalid ascii escape sequence: '{escapeSequence}'");
+            if (rawString is null)
+                return rawString!;
 
-            if (ushort.TryParse(
-                escapeSequence[2..].AsSpan(),
-                NumberStyles.HexNumber,
-                null, out var @charByte))
-                return Tokens.Of(((char)charByte).ToString());
 
-            throw new FormatException($"Invalid utf-16 escape sequence: '{escapeSequence}'");
+            var substrings = new List<Tokens>();
+            var offset = 0;
+            for (int index = 0; index < rawString.Length; index++)
+            {
+                if (BSolAsciiEscapeMatcher.UnprintableAsciiChars.Contains(rawString[index])
+                    || rawString[index] > 255)
+                {
+                    var prev = Tokens.Of(rawString, offset, index - offset);
+                    if (!prev.IsEmpty)
+                        substrings.Add(prev);
+
+                    offset = index + 1;
+                    substrings.Add(Tokens.Of($"\\u{(int)rawString[index]:x4}"));
+                }
+            }
+
+            return substrings
+                .Select(s => s.ToString())
+                .JoinUsing("");
         }
 
-        public Tokens Encode(Tokens rawSequence)
+        public string Decode(string escapedString)
         {
-            if (rawSequence.Count != 1)
-                throw new FormatException("Invalid Ascii sequence: must be a single character");
-
-            var @byte = (ushort)rawSequence[0];
-            return Tokens.Of($"\\u{@byte:x4}"); // <-- make sure the string encodes to 2 digits
+            return EscapeSequencePattern.Replace(escapedString, match =>
+            {
+                    var asciiCode = short.Parse(
+                        match.Value.AsSpan(2),
+                        NumberStyles.HexNumber);
+                    var @char = (char)asciiCode;
+                    return @char.ToString();
+            });
         }
         #endregion
     }

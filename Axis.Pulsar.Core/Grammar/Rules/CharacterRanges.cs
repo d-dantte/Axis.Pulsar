@@ -27,7 +27,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
         /// </summary>
         /// <param name="includes"></param>
         /// <param name="excludes"></param>
-        public CharacterRanges(CharRange[] includes, CharRange[] excludes)
+        public CharacterRanges(IEnumerable<CharRange> includes, IEnumerable<CharRange> excludes)
         {
             ArgumentNullException.ThrowIfNull(includes);
             ArgumentNullException.ThrowIfNull(excludes);
@@ -41,7 +41,10 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 .ToImmutableArray();
         }
 
-        public static CharacterRanges Of(CharRange[] includes, CharRange[] excludes) => new(includes, excludes);
+        public static CharacterRanges Of(
+            IEnumerable<CharRange> includes,
+            IEnumerable<CharRange> excludes)
+            => new(includes, excludes);
         public static CharacterRanges Of(params CharRange[] includes) => new(includes, Array.Empty<CharRange>());
 
         public bool TryRecognize(

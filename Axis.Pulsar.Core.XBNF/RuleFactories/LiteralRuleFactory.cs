@@ -10,33 +10,29 @@ namespace Axis.Pulsar.Core.XBNF;
 /// <para/>
 /// Note that without the case-insensitive flag, this factory generates a case-sensitive rule.
 /// </summary>
-public class LiteralRuleFactory : IDelimitedContentAtomicRuleFactory<LiteralRuleFactory>
+public class LiteralRuleFactory : IAtomicRuleFactory
 {
     #region Arguments
 
     /// <summary>
     /// The content argument holds the literal string to be matched. The 
     /// </summary>
-    public static Argument ContentArgument => IAtomicRuleFactory.ContentArgument;
+    public static Argument LiteralArgument => IAtomicRuleFactory.ContentArgument;
 
     /// <summary>
     /// Flags recognizes a single flag, 'i', which turns on case-insensitivity.
     /// </summary>
-    public static Argument FlagsArgument => IAtomicRuleFactory.FlagsArgument;
+    public static Argument CaseInsensitiveArgument => Argument.Of("case-insensitive");
+
     #endregion
-
-    public AtomicContentDelimiterType ContentDelimiterType => AtomicContentDelimiterType.DoubleQuote;
-
-    public static ImmutableArray<Argument> ContentArgumentList { get; }
-        = ImmutableArray.Create(FlagsArgument);
 
     public IAtomicRule NewRule(ImmutableDictionary<Argument, string> arguments)
     {
         ValidateArgs(arguments);
 
         return TerminalLiteral.Of(
-            arguments[ContentArgument],
-            arguments.TryGetValue(FlagsArgument, out var flags) && flags.Contains('i'));
+            arguments[LiteralArgument],
+            arguments.TryGetValue(CaseInsensitiveArgument, out _));
     }
 
     /// <summary>
@@ -47,7 +43,7 @@ public class LiteralRuleFactory : IDelimitedContentAtomicRuleFactory<LiteralRule
         if (arguments is null)
             throw new ArgumentNullException(nameof(arguments));
 
-        if (!arguments.ContainsKey(ContentArgument))
-            throw new ArgumentException($"Invalid arguments: 'content' argument is missing");
+        if (!arguments.ContainsKey(LiteralArgument))
+            throw new ArgumentException($"Invalid arguments: 'content' is missing");
     }
 }
