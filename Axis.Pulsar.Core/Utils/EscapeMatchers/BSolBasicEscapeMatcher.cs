@@ -8,7 +8,7 @@ namespace Axis.Pulsar.Core.Utils.EscapeMatchers
         IEscapeTransformer
     {
         internal static Regex EscapeSequencePattern = new Regex(
-            "^\\\\[\'\"\\nrfbtv0a]\\z",
+            "^\\\\[\\\\\'\"\\nrfbtv0a]\\z",
             RegexOptions.Compiled);
 
         internal static Regex RawSequencePattern = new Regex(

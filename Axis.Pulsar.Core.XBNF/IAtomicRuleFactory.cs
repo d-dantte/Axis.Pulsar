@@ -7,6 +7,19 @@ using Axis.Pulsar.Core.Grammar;
 
 namespace Axis.Pulsar.Core.XBNF;
 
+/// <summary>
+/// Implementations of this interfaces are charged with producing instances of the <see cref="IAtomicRule"/> interface,
+/// given a list of parameters.
+/// 
+/// Syntax: <para/>
+/// <code>
+/// @name-form-with-params{param: 'value', param-2: 'value 2', flag-param}
+/// @name-form-without-params
+/// 
+/// 'content form with params'{param: 'value', param-2: 'value 2'}
+/// 'content form without params'
+/// </code>
+/// </summary>
 public interface IAtomicRuleFactory
 {
     #region Special Arguments

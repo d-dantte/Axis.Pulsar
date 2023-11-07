@@ -1,7 +1,9 @@
 ﻿using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Rules;
 using Axis.Pulsar.Core.Utils;
+using Axis.Pulsar.Core.Utils.EscapeMatchers;
 using System.Collections.Immutable;
+using System.Text.RegularExpressions;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
 namespace Axis.Pulsar.Core.XBNF;
@@ -48,11 +50,40 @@ public class CharRangeRuleFactory : IAtomicRuleFactory
     }
 
     #region Nested types
+
+    /// <summary>
+    /// Implementation is identical to <see cref="Axis.Pulsar.Core.Utils.EscapeMatchers.BSolUTFEscapeMatcher"/>, with
+    /// the addition of escaping the following characters:
+    /// <list type="number">
+    /// <item> ' </item>
+    /// <item> ^ </item>
+    /// <item> - </item>
+    /// <item> , </item>
+    /// <item> \ </item>
+    /// </list>
+    /// </summary>
     internal class RangesEscapeTransformer : IEscapeTransformer
     {
+
         public string Decode(string escapedString)
         {
-            throw new NotImplementedException();
+            if (escapedString is null)
+                return null;
+
+            var substrings = new List<Tokens>();
+            var offset = 0;
+
+            do
+            {
+                var newOffset = escapedString.IndexOf("\\", offset);
+
+                if (newOffset < 0)
+                    substrings.Add(Tokens.Of(escapedString, offset));
+
+                else if(newOffset)
+            }
+            while ();
+            
         }
 
         public string Encode(string rawString)

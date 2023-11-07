@@ -10,7 +10,7 @@ namespace Axis.Pulsar.Core.Utils.EscapeMatchers
         IEscapeSequenceMatcher,
         IEscapeTransformer
     {
-        internal static Regex EscapeSequencePattern = new Regex(
+        internal static Regex EscapeSequencePattern = new(
             "^\\\\u[a-fA-F0-9]{4}\\z",
             RegexOptions.Compiled);
 
@@ -28,11 +28,15 @@ namespace Axis.Pulsar.Core.Utils.EscapeMatchers
         }
 
         #region Escape Transformer
+
+        /// <summary>
+        /// Transforms Ascii unprintable xters, and all xter > 255 into the \uffff format.
+        /// </summary>
+        /// <param name="rawString"></param>
         public string Encode(string rawString)
         {
             if (rawString is null)
                 return rawString!;
-
 
             var substrings = new List<Tokens>();
             var offset = 0;
@@ -55,15 +59,20 @@ namespace Axis.Pulsar.Core.Utils.EscapeMatchers
                 .JoinUsing("");
         }
 
+        /// <summary>
+        /// Transforms sequences in the \uffff format into the actual utf characters
+        /// </summary>
+        /// <param name="escapedString"></param>
         public string Decode(string escapedString)
         {
             return EscapeSequencePattern.Replace(escapedString, match =>
             {
-                    var asciiCode = short.Parse(
-                        match.Value.AsSpan(2),
-                        NumberStyles.HexNumber);
-                    var @char = (char)asciiCode;
-                    return @char.ToString();
+                var utfCode = short.Parse(
+                    match.Value.AsSpan(2),
+                    NumberStyles.HexNumber);
+                var @char = (char)utfCode;
+
+                return @char.ToString();
             });
         }
         #endregion
