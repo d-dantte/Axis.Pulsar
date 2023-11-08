@@ -32,16 +32,29 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
     /// Accepts empty argument
     /// </summary>
     public static Argument AcceptsEmptyArgument => Argument.Of("accepts-empty");
-    
+
+    /// <summary>
+    /// Escape matchers argument
+    /// </summary>
+    public static Argument EscapeMatchersArgument => Argument.Of("escape-matchers");
+
     #endregion
 
     public IAtomicRule NewRule(ImmutableDictionary<Argument, string> arguments)
     {
-        throw new NotImplementedException();
+        ValidateArgs(arguments);
+
+
     }
 
     private static void ValidateArgs(ImmutableDictionary<Argument, string> arguments)
     {
+        ArgumentNullException.ThrowIfNull(arguments);
 
+        if (!arguments.ContainsKey(StartDelimArgument))
+            throw new ArgumentException($"Invalid arguments: '{StartDelimArgument}' is missing");
+
+        if (!arguments.ContainsKey(EscapeMatchersArgument))
+            throw new ArgumentException($"Invalid arguments: '{EscapeMatchersArgument}' is missing");
     }
 }

@@ -1,59 +1,83 @@
 ﻿using System.Collections.Immutable;
-using Axis.Pulsar.Core.Grammar;
+using Axis.Luna.Extensions;
 
 namespace Axis.Pulsar.Core.XBNF;
 
 public class ParsingContext
 {
-    public ImmutableDictionary<string, IAtomicRuleFactory> AtomicFactoryMap { get; }
+    public ImmutableDictionary<string, AtomicRuleDefinition> AtomicFactoryMap { get; }
 
-    public ImmutableDictionary<AtomicContentDelimiterType, string> AtomicContentDelimiterMap { get; }
+    public ImmutableDictionary<string, EscapeMatcherDefinition> EscapeMatcherMap { get; }
 
-    public ParsingContext(IDictionary<string, IAtomicRuleFactory> factoryMap)
+    private ParsingContext(
+        IEnumerable<AtomicRuleDefinition> factoryMap,
+        IEnumerable<EscapeMatcherDefinition> matcherMap)
     {
-        var delimiterMap = new Dictionary<AtomicContentDelimiterType, string>();
-        foreach (var kvp in factoryMap)
+        AtomicFactoryMap = factoryMap
+            .ThrowIfNull(new ArgumentNullException(nameof(factoryMap)))
+            .ThrowIfAny(
+                item => item is null,
+                new ArgumentException($"Invalid factory definition: null"))
+            .ToImmutableDictionary(
+                item => item.Symbol,
+                item => item);
+
+        EscapeMatcherMap = matcherMap
+            .ThrowIfNull(new ArgumentNullException(nameof(matcherMap)))
+            .ThrowIfAny(
+                item => item is null,
+                new ArgumentException($"Invalid matcher definition: null"))
+            .ToImmutableDictionary(
+                item => item.Name,
+                item => item);
+    }
+
+    public class Builder
+    {
+        private readonly Dictionary<string, AtomicRuleDefinition> _atomicFactoryMap = new();
+        private readonly Dictionary<string, EscapeMatcherDefinition> _matcherMap = new();
+
+        public Builder()
         {
-            if (!Production.SymbolPattern.IsMatch(kvp.Key))
-                throw new FormatException($"Invalid symbol format: '{kvp.Key}'");
-
-            if (kvp.Value is null)
-                throw new ArgumentException($"Invalid factory instance: null");
-
-            if (kvp.Value is IDelimitedContentAtomicRuleFactory dcarf
-                && !delimiterMap.TryAdd(dcarf.ContentDelimiterType, kvp.Key))
-                throw new ArgumentException($"Duplicate ContentDelimiterType: {dcarf.ContentDelimiterType}");
         }
 
-        AtomicFactoryMap = factoryMap.ToImmutableDictionary();
-        AtomicContentDelimiterMap = delimiterMap.ToImmutableDictionary();
-    }
-}
+        public static Builder NewBuilder() => new();
 
-public class ParsingContextBuilder
-{
-    private readonly Dictionary<string, IAtomicRuleFactory> _atomicFactoryMap = new();
+        #region AtomicFactory
+        public Builder WithAtomicRuleDefinition(AtomicRuleDefinition ruleDefinition)
+        {
+            ArgumentNullException.ThrowIfNull(ruleDefinition);
 
-    public ParsingContextBuilder()
-    {        
-    }
+            _atomicFactoryMap[ruleDefinition.Symbol] = ruleDefinition;
+            return this;
+        }
 
-    public static ParsingContextBuilder NewBuilder() => new();
+        public bool ContainsRuleDefinitionFor(string productionSymbol)
+        {
+            return _atomicFactoryMap.ContainsKey(productionSymbol);
+        }
+        #endregion
 
-    #region AtomicFactory
-    public ParsingContextBuilder WithAtomicFactory(string productionSymbol, IAtomicRuleFactory factory)
-    {
-        _atomicFactoryMap[productionSymbol] = factory;
-        return this;
-    }
-    public bool ContainsAtomicFactoryFor(string productionSymbol)
-    {
-        return _atomicFactoryMap.ContainsKey(productionSymbol);
-    }
-    #endregion
+        #region EscapeMatcher
+        public Builder WithEscapeMatcherDefinition(EscapeMatcherDefinition matcherDefinition)
+        {
+            ArgumentNullException.ThrowIfNull(matcherDefinition);
 
-    public ParsingContext Build()
-    {
-        return new ParsingContext(_atomicFactoryMap);
+            _matcherMap[matcherDefinition.Name] = matcherDefinition;
+            return this;
+        }
+
+        public bool ContainsEscapeMatcherDefinitionFor(string name)
+        {
+            return _matcherMap.ContainsKey(name);
+        }
+        #endregion
+
+        public ParsingContext Build()
+        {
+            return new ParsingContext(
+                _atomicFactoryMap.Values,
+                _matcherMap.Values);
+        }
     }
 }

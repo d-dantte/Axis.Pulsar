@@ -42,7 +42,7 @@ namespace Axis.Pulsar.Core.Utils.EscapeMatchers
             var offset = 0;
             for (int index = 0; index < rawString.Length; index++)
             {
-                if (BSolAsciiEscapeMatcher.UnprintableAsciiChars.Contains(rawString[index])
+                if (BSolAsciiEscapeMatcher.UnprintableAsciiCharCodes.Contains(rawString[index])
                     || rawString[index] > 255)
                 {
                     var prev = Tokens.Of(rawString, offset, index - offset);

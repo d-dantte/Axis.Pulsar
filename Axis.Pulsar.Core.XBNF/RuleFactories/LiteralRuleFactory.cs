@@ -44,6 +44,6 @@ public class LiteralRuleFactory : IAtomicRuleFactory
             throw new ArgumentNullException(nameof(arguments));
 
         if (!arguments.ContainsKey(LiteralArgument))
-            throw new ArgumentException($"Invalid arguments: 'content' is missing");
+            throw new ArgumentException($"Invalid arguments: '{LiteralArgument}' is missing");
     }
 }

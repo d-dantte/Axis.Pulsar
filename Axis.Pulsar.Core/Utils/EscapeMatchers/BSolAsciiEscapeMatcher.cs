@@ -10,11 +10,11 @@ namespace Axis.Pulsar.Core.Utils.EscapeMatchers
         IEscapeSequenceMatcher,
         IEscapeTransformer
     {
-        internal static Regex EscapeSequencePattern = new Regex(
+        internal static Regex EscapeSequencePattern = new(
             "^\\\\x[a-fA-F0-9]{2}\\z",
             RegexOptions.Compiled);
 
-        internal static ImmutableHashSet<int> UnprintableAsciiChars = ImmutableHashSet.Create(
+        public readonly static ImmutableHashSet<int> UnprintableAsciiCharCodes = ImmutableHashSet.Create(
             1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
             11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
             21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
@@ -44,7 +44,7 @@ namespace Axis.Pulsar.Core.Utils.EscapeMatchers
             var offset = 0;
             for (int index = 0; index < rawString.Length; index++)
             {
-                if (UnprintableAsciiChars.Contains(rawString[index]))
+                if (UnprintableAsciiCharCodes.Contains(rawString[index]))
                 {
                     var prev = Tokens.Of(rawString, offset, index - offset);
                     if (!prev.IsEmpty)
