@@ -1,6 +1,6 @@
 ﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar;
-using static Axis.Pulsar.Core.Grammar.Rules.DelimitedString;
+using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.XBNF
 {
@@ -23,10 +23,9 @@ namespace Axis.Pulsar.Core.XBNF
                 new FormatException($"Invalid escape name: '{name}'"));
         }
 
-        public static AtomicRuleDefinition Of(
-            string symbol,
-            AtomicContentDelimiterType contentDelimiterType,
-            IAtomicRuleFactory factory)
-            => new(symbol, contentDelimiterType, factory);
+        public static EscapeMatcherDefinition Of(
+            string name,
+            IEscapeSequenceMatcher matcher)
+            => new(name, matcher);
     }
 }

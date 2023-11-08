@@ -34,9 +34,12 @@ public interface IAtomicRuleFactory
     /// <summary>
     /// Creates a new <see cref="IAtomicRule"/> instance given a list of arguments.
     /// </summary>
+    /// <param name="context"></param>
     /// <param name="arguments"></param>
     /// <returns></returns>
-    IAtomicRule NewRule(ImmutableDictionary<Argument, string> arguments);
+    IAtomicRule NewRule(
+        LanguageContext context,
+        ImmutableDictionary<Argument, string> arguments);
 
     #region Nested Types
     public readonly struct Argument:

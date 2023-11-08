@@ -43,6 +43,11 @@ namespace Axis.Pulsar.Core.Grammar
             ValidateGrammar();
         }
 
+        public static IGrammar Of(
+            string root,
+            IEnumerable<IProduction> productions)
+            => new Grammar(root, productions);
+
         public bool ContainsProduction(string symbolName) => _productions.ContainsKey(symbolName);
 
         public IProduction GetProduction(string name) => this[name];

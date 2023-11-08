@@ -47,7 +47,9 @@ public class PatternRuleFactory : IAtomicRuleFactory
 
     #endregion
 
-    public IAtomicRule NewRule(ImmutableDictionary<Argument, string> arguments)
+    public IAtomicRule NewRule(
+        LanguageContext context,
+        ImmutableDictionary<Argument, string> arguments)
     {
         ValidateArgs(arguments);
 

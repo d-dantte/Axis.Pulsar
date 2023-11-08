@@ -11,10 +11,21 @@ using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 namespace Axis.Pulsar.Core.XBNF;
 
 /// <summary>
+/// RANGES - Syntax
+/// <para/>
 /// content accepts both excluded and included ranges in the same content. I.e
 /// <code>
 /// 'a-e, ^t-w, ^z, x, y'
 /// </code>
+/// <list type="number">
+/// <item>Whitespaces are ignored</item>
+/// <item>Commas signify the start of another sequence</item>
+/// <item>Special Escaped characters include: "'", ",", "\", "^", "-", " ". Single space is escaped with "\s".</item>
+/// <item>Regular Escaped characters are recognized: "\n", "\t", "\b", etc</item>
+/// <item>Utf escape is recognized for all characters: \uffff</item>
+/// <item> </item>
+/// <item> </item>
+/// </list>
 /// </summary>
 public class CharRangeRuleFactory : IAtomicRuleFactory
 {
@@ -29,11 +40,13 @@ public class CharRangeRuleFactory : IAtomicRuleFactory
 
     private static readonly IEscapeTransformer Transformer = new RangesEscapeTransformer();
 
-    public IAtomicRule NewRule(ImmutableDictionary<Argument, string> arguments)
+    public IAtomicRule NewRule(
+        LanguageContext context,
+        ImmutableDictionary<Argument, string> arguments)
     {
         ValidateArgs(arguments);
 
-        var ranges = ParseRanges(arguments);
+        var ranges = ParseRanges(arguments[RangesArgument]);
         return CharacterRanges.Of(
             ranges.Includes,
             ranges.Excludes);
@@ -47,17 +60,46 @@ public class CharRangeRuleFactory : IAtomicRuleFactory
             throw new ArgumentException("Invalid arguments: 'content' is missing");
     }
 
-    private static (IEnumerable<CharRange> Includes, IEnumerable<CharRange> Excludes) ParseRanges(
-        ImmutableDictionary<Argument, string> arguments)
+    internal static (IEnumerable<CharRange> Includes, IEnumerable<CharRange> Excludes) ParseRanges(
+        string rangeText)
     {
         var includes = new List<CharRange>();
         var excludes = new List<CharRange>();
-        arguments[RangesArgument]
+        var primedRanges = rangeText
+            .Replace("\\,", "\\u002c")
+            .Replace("\\-", "\\u002d")
+            .Split(',')
+            .Select(range => range.Trim())
+            .Select(range => range.Replace("\\u002c", ","))
+            .ThrowIfAny(
+                string.Empty.Equals,
+                new FormatException($"Invalid range: {rangeText}"));
+
+        return (
+            primedRanges
+                .Where(sequence => !'^'.Equals(sequence[0]))
+                .Select(Transformer.Decode)
+                .Select(CharRange.Parse)
+                .ToArray(),
+            primedRanges
+                .Where(sequence => '^'.Equals(sequence[0]))
+                .Select(range => range[1..])
+                .Select(Transformer.Decode)
+                .Select(CharRange.Parse)
+                .ToArray());
+    }
+
+    internal static (IEnumerable<CharRange> Includes, IEnumerable<CharRange> Excludes) ParseRanges_(
+        string rangeText)
+    {
+        var includes = new List<CharRange>();
+        var excludes = new List<CharRange>();
+        rangeText
             .Split(',')
             .ForAll(range =>
             {
                 if (string.Empty.Equals(range))
-                    throw new FormatException($"Invalid range: {arguments[RangesArgument]}");
+                    throw new FormatException($"Invalid range: {rangeText}");
 
                 range = Transformer.Decode(range.Trim());
 
@@ -88,7 +130,6 @@ public class CharRangeRuleFactory : IAtomicRuleFactory
     /// </summary>
     internal class RangesEscapeTransformer : IEscapeTransformer
     {
-
         private static readonly HashSet<char> EscapeArgs = new HashSet<char>
         {
             '\'', '\\', '^', '-', ',', ' '

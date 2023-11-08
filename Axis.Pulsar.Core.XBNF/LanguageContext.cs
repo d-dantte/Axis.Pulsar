@@ -1,15 +1,16 @@
 ﻿using System.Collections.Immutable;
 using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.XBNF.RuleFactories;
 
 namespace Axis.Pulsar.Core.XBNF;
 
-public class ParsingContext
+public class LanguageContext
 {
     public ImmutableDictionary<string, AtomicRuleDefinition> AtomicFactoryMap { get; }
 
     public ImmutableDictionary<string, EscapeMatcherDefinition> EscapeMatcherMap { get; }
 
-    private ParsingContext(
+    private LanguageContext(
         IEnumerable<AtomicRuleDefinition> factoryMap,
         IEnumerable<EscapeMatcherDefinition> matcherMap)
     {
@@ -44,6 +45,7 @@ public class ParsingContext
         public static Builder NewBuilder() => new();
 
         #region AtomicFactory
+
         public Builder WithAtomicRuleDefinition(AtomicRuleDefinition ruleDefinition)
         {
             ArgumentNullException.ThrowIfNull(ruleDefinition);
@@ -56,9 +58,19 @@ public class ParsingContext
         {
             return _atomicFactoryMap.ContainsKey(productionSymbol);
         }
+        
+        public Builder WithDefaultAtomicRuleDefinitions()
+        {
+            return this
+                .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.Literal)
+                .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.Pattern)
+                .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.CharacterRanges);
+        }
+        
         #endregion
 
         #region EscapeMatcher
+
         public Builder WithEscapeMatcherDefinition(EscapeMatcherDefinition matcherDefinition)
         {
             ArgumentNullException.ThrowIfNull(matcherDefinition);
@@ -71,11 +83,20 @@ public class ParsingContext
         {
             return _matcherMap.ContainsKey(name);
         }
+        
+        public Builder WithDefaultEscapeMatcherDefinitions()
+        {
+            return this
+                .WithEscapeMatcherDefinition(DefaultEscapeMatcherDefinitions.BSolBasic)
+                .WithEscapeMatcherDefinition(DefaultEscapeMatcherDefinitions.BSolAscii)
+                .WithEscapeMatcherDefinition(DefaultEscapeMatcherDefinitions.BSolUTF);
+        }
+        
         #endregion
 
-        public ParsingContext Build()
+        public LanguageContext Build()
         {
-            return new ParsingContext(
+            return new LanguageContext(
                 _atomicFactoryMap.Values,
                 _matcherMap.Values);
         }
