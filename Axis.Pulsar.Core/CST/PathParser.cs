@@ -3,6 +3,7 @@ using Axis.Luna.Common.Utils;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Exceptions;
 using Axis.Pulsar.Core.Grammar;
+using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.CST
@@ -267,7 +268,7 @@ namespace Axis.Pulsar.Core.CST
                 #endregion
 
                 #region Name
-                if (!reader.TryGetPattern(Production.SymbolPattern, out var symbolName))
+                if (!reader.TryGetPattern(IProduction.SymbolPattern, out var symbolName))
                 {
                     if (!hasDelimiter)
                         result = Result.Of<ICSTNode>(new UnrecognizedTokens(

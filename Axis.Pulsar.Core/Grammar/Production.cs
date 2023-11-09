@@ -8,16 +8,6 @@ namespace Axis.Pulsar.Core.Grammar
 {
     public interface IProduction
     {
-        bool TryProcessRule(
-            TokenReader reader,
-            ProductionPath? parentPath,
-            out IResult<ICSTNode> result);
-
-        string Symbol { get; }
-    }
-
-    public class Production: IProduction
-    {
         /// <summary>
         /// The symbol name pattern
         /// </summary>
@@ -25,7 +15,17 @@ namespace Axis.Pulsar.Core.Grammar
             "^[a-zA-Z]([a-zA-Z0-9-])*\\z",
             RegexOptions.Compiled);
 
+        bool TryProcessRule(
+            TokenReader reader,
+            ProductionPath? parentPath,
+            ILanguageContext context,
+            out IResult<ICSTNode> result);
 
+        string Symbol { get; }
+    }
+
+    public class Production: IProduction
+    {
         private readonly IRule _rule;
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace Axis.Pulsar.Core.Grammar
         {
             _rule = rule ?? throw new ArgumentNullException(nameof(rule));
             Symbol = symbol.ThrowIfNot(
-                SymbolPattern.IsMatch,
+                IProduction.SymbolPattern.IsMatch,
                 new ArgumentException($"Invalid {nameof(symbol)}: {symbol}"));
         }
 
@@ -46,10 +46,11 @@ namespace Axis.Pulsar.Core.Grammar
         public bool TryProcessRule(
             TokenReader reader,
             ProductionPath? parentPath,
+            ILanguageContext context,
             out IResult<ICSTNode> result)
         {
             var productionPath = parentPath?.Next(Symbol) ?? ProductionPath.Of(Symbol);
-            return _rule.TryRecognize(reader, productionPath, out result);
+            return _rule.TryRecognize(reader, productionPath, context, out result);
         }
     }
 }

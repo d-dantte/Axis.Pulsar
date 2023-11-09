@@ -1,6 +1,6 @@
 ﻿using Axis.Pulsar.Core.CST;
 
-namespace Axis.Pulsar.Core.Exceptions
+namespace Axis.Pulsar.Core.Grammar.Errors
 {
     internal class GroupError : Exception
     {

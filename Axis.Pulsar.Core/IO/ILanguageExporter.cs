@@ -1,4 +1,4 @@
-﻿namespace Axis.Pulsar.Core.Lang
+﻿namespace Axis.Pulsar.Core.IO
 {
     /// <summary>
     /// 
@@ -10,6 +10,6 @@
         /// </summary>
         /// <param name="grammar"></param>
         /// <returns></returns>
-        string ExportGrammar(Grammar.IGrammar grammar);
+        string ExportLanguage(ILanguageContext context);
     }
 }

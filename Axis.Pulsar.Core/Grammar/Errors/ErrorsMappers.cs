@@ -2,7 +2,7 @@
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 
-namespace Axis.Pulsar.Core.Exceptions
+namespace Axis.Pulsar.Core.Grammar.Errors
 {
     internal static class NodeErrorMapper
     {
@@ -95,7 +95,7 @@ namespace Axis.Pulsar.Core.Exceptions
                     {
                         UnrecognizedTokens ute => unrecognizedTokensErrorMapper.Invoke(ge, ute),
                         PartiallyRecognizedTokens pte => partiallyRecognizedTokensErrorMapper.Invoke(ge, pte),
-                        _ => ((ge.NodeError as Exception) ?? new InvalidOperationException("null error")).Throw<INodeError>()
+                        _ => (ge.NodeError as Exception ?? new InvalidOperationException("null error")).Throw<INodeError>()
                     },
                     _ => result.ActualCause().Throw<INodeError>()
                 };
@@ -132,14 +132,14 @@ namespace Axis.Pulsar.Core.Exceptions
                     {
                         UnrecognizedTokens ute => unrecognizedTokensErrorMapper.Invoke(ge, ute),
                         PartiallyRecognizedTokens pte => partiallyRecognizedTokensErrorMapper.Invoke(ge, pte),
-                        _ => ((ge.NodeError as Exception) ?? new InvalidOperationException("null error")).Throw<GroupError>()
+                        _ => (ge.NodeError as Exception ?? new InvalidOperationException("null error")).Throw<GroupError>()
                     },
                     _ => result.ActualCause().Throw<GroupError>()
                 };
 
                 return Result.Of<NodeSequence>(groupError);
             }
-            catch(RecognitionRuntimeError rre)
+            catch (RecognitionRuntimeError rre)
             {
                 return Result.Of<NodeSequence>(rre);
             }

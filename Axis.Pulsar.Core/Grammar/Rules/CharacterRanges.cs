@@ -1,7 +1,7 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
-using Axis.Pulsar.Core.Exceptions;
+using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Utils;
 using System.Collections.Immutable;
 
@@ -50,6 +50,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
         public bool TryRecognize(
             TokenReader reader,
             ProductionPath productionPath,
+            ILanguageContext context,
             out IResult<ICSTNode> result)
         {
             ArgumentNullException.ThrowIfNull(reader);

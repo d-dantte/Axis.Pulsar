@@ -2,7 +2,7 @@
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Utils;
 
-namespace Axis.Pulsar.Core.Exceptions
+namespace Axis.Pulsar.Core.Grammar.Errors
 {
     /// <summary>
     /// 

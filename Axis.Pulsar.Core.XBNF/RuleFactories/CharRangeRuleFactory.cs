@@ -41,7 +41,7 @@ public class CharRangeRuleFactory : IAtomicRuleFactory
     private static readonly IEscapeTransformer Transformer = new RangesEscapeTransformer();
 
     public IAtomicRule NewRule(
-        LanguageContext context,
+        MetaContext context,
         ImmutableDictionary<Argument, string> arguments)
     {
         ValidateArgs(arguments);

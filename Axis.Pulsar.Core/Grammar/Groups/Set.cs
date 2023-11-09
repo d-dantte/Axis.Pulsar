@@ -1,7 +1,7 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
-using Axis.Pulsar.Core.Exceptions;
+using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Utils;
 using System.Collections.Immutable;
 
@@ -15,6 +15,12 @@ namespace Axis.Pulsar.Core.Grammar.Groups
         public ImmutableArray<IGroupElement> Elements { get; }
 
         public Cardinality Cardinality { get; }
+
+        /// <summary>
+        /// Minimum number of recognized items that can exist for this group to be deemed recognized.
+        /// Default value is <see cref="Set.Rules.Length"/>.
+        /// </summary>
+        public int? MinRecognitionCount { get;
 
 
         public Set(Cardinality cardinality, params IGroupElement[] elements)
@@ -34,6 +40,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
         public bool TryRecognize(
             TokenReader reader,
             ProductionPath parentPath,
+            ILanguageContext context,
             out IResult<NodeSequence> result)
         {
             ArgumentNullException.ThrowIfNull(reader);
@@ -48,7 +55,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                 isElementConsumed = false;
                 foreach (var elt in elementList)
                 {
-                    if (elt.Cardinality.TryRepeat(reader, parentPath, elt, out var groupResult))
+                    if (elt.Cardinality.TryRepeat(reader, parentPath, context, elt, out var groupResult))
                     {
                         results.Add(groupResult);
                         elementList.Remove(elt);

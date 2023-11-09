@@ -1,9 +1,9 @@
-﻿namespace Axis.Pulsar.Core.Exceptions
+﻿namespace Axis.Pulsar.Core.Grammar.Errors
 {
-    internal class RecognitionRuntimeError: Exception
+    internal class RecognitionRuntimeError : Exception
     {
         public RecognitionRuntimeError(Exception cause)
-        :base("See inner exception", cause)
+        : base("See inner exception", cause)
         {
             ArgumentNullException.ThrowIfNull(cause);
         }

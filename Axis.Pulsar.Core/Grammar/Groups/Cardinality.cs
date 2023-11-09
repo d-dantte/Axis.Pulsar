@@ -1,7 +1,7 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
-using Axis.Pulsar.Core.Exceptions;
+using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar.Groups
@@ -102,6 +102,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
         public bool TryRepeat(
             TokenReader reader,
             ProductionPath productionPath,
+            ILanguageContext context,
             IGroupElement element,
             out IResult<NodeSequence> result)
         {
@@ -117,7 +118,11 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             while (CanRepeat(occurence))
             {
                 var stepPosition = reader.Position;
-                if (element.TryRecognize(reader, productionPath, out elementResult))
+                if (element.TryRecognize(
+                    reader,
+                    productionPath,
+                    context,
+                    out elementResult))
                 {
                     results.Add(elementResult);
                     occurence++;

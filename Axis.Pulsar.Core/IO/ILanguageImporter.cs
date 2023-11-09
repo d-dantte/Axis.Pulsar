@@ -1,6 +1,6 @@
 using Axis.Pulsar.Core.Grammar;
 
-namespace Axis.Pulsar.Core.Lang
+namespace Axis.Pulsar.Core.IO
 {
     /// <summary>
     /// 
@@ -12,6 +12,6 @@ namespace Axis.Pulsar.Core.Lang
         /// </summary>
         /// <param name="inputTokens"></param>
         /// <returns></returns>
-        IGrammar ImportGrammar(string inputTokens);
+        ILanguageContext ImportLanguage(string inputTokens);
     }
 }

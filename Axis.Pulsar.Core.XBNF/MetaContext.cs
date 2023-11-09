@@ -4,13 +4,13 @@ using Axis.Pulsar.Core.XBNF.RuleFactories;
 
 namespace Axis.Pulsar.Core.XBNF;
 
-public class LanguageContext
+public class MetaContext
 {
     public ImmutableDictionary<string, AtomicRuleDefinition> AtomicFactoryMap { get; }
 
     public ImmutableDictionary<string, EscapeMatcherDefinition> EscapeMatcherMap { get; }
 
-    private LanguageContext(
+    private MetaContext(
         IEnumerable<AtomicRuleDefinition> factoryMap,
         IEnumerable<EscapeMatcherDefinition> matcherMap)
     {
@@ -94,9 +94,9 @@ public class LanguageContext
         
         #endregion
 
-        public LanguageContext Build()
+        public MetaContext Build()
         {
-            return new LanguageContext(
+            return new MetaContext(
                 _atomicFactoryMap.Values,
                 _matcherMap.Values);
         }

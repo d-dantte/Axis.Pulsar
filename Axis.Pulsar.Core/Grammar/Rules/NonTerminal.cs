@@ -1,6 +1,6 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Pulsar.Core.CST;
-using Axis.Pulsar.Core.Exceptions;
+using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Groups;
 using Axis.Pulsar.Core.Utils;
 
@@ -27,13 +27,22 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             IGroupElement element)
             => new(1, element);
 
-        public bool TryRecognize(TokenReader reader, ProductionPath productionPath, out IResult<ICSTNode> result)
+        public bool TryRecognize(
+            TokenReader reader,
+            ProductionPath productionPath,
+            ILanguageContext context,
+            out IResult<ICSTNode> result)
         {
             ArgumentNullException.ThrowIfNull(nameof(reader));
             ArgumentNullException.ThrowIfNull(nameof(productionPath));
 
             var position = reader.Position;
-            if (!RuleGroup.Cardinality.TryRepeat(reader, productionPath, RuleGroup, out var groupResult))
+            if (!RuleGroup.Cardinality.TryRepeat(
+                reader,
+                productionPath,
+                context,
+                RuleGroup,
+                out var groupResult))
             {
                 result = groupResult.AsError().MapNodeError(
                     (ge, ute) => MapUnrecognizedTokensError(ge, ute, productionPath, RecognitionThreshold),

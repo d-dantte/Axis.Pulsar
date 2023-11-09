@@ -1,7 +1,7 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
-using Axis.Pulsar.Core.Exceptions;
+using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Utils;
 using System.Collections.Immutable;
 
@@ -109,7 +109,11 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 escapeMatchers);
 
         #region Procedural implementation
-        public bool TryRecognize(TokenReader reader, ProductionPath productionPath, out IResult<ICSTNode> result)
+        public bool TryRecognize(
+            TokenReader reader,
+            ProductionPath productionPath,
+            ILanguageContext context,
+            out IResult<ICSTNode> result)
         {
             var position = reader.Position;
             var tokens = Tokens.Empty;

@@ -4,8 +4,8 @@ using Axis.Pulsar.Core.Grammar.Groups;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Utils;
 using Moq;
-using Axis.Pulsar.Core.Exceptions;
 using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.Grammar.Errors;
 
 namespace Axis.Pulsar.Core.Tests.Grammar.Groups
 {

@@ -1,7 +1,11 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.Exceptions;
 using Axis.Pulsar.Core.Grammar;
+using Axis.Pulsar.Core.Grammar.Groups;
+using Axis.Pulsar.Core.Grammar.Rules;
 using Axis.Pulsar.Core.Utils;
+using System.Text.RegularExpressions;
 
 namespace Axis.Pulsar.Core.XBNF;
 
@@ -9,7 +13,7 @@ public static class GrammarParser
 {
     public static bool TryParseGrammar(
         TokenReader reader,
-        LanguageContext context,
+        MetaContext context,
         out IResult<IGrammar> result)
     {
         var position = reader.Position;
@@ -22,16 +26,11 @@ public static class GrammarParser
                 // silent block
                 _ = TryParseSilentBlock(reader, context, out var sblockResult);
 
-                if (sblockResult.IsErrorResult(out UnknownError uke))
+                if (sblockResult.IsErrorResult(out UnknownError uke)
+                    || sblockResult.IsErrorResult(out FaultyMatchError fre))
                 {
                     reader.Reset(position);
-                    result = Result.Of<IGrammar>(uke);
-                    return false;
-                }
-                else if (sblockResult.IsErrorResult(out FailedRecognitionError fre))
-                {
-                    reader.Reset(position);
-                    result = Result.Of<IGrammar>(fre);
+                    result = sblockResult.MapAs<IGrammar>();
                     return false;
                 }
 
@@ -39,7 +38,7 @@ public static class GrammarParser
                 if (TryParseProduction(reader, context, out var productionResult))
                     productionResult.Consume(productions.Add);
 
-                else if (productionResult.IsErrorResult(out UnrecognizedError ure))
+                else if (productionResult.IsErrorResult(out UnmatchedError ure))
                     break;
 
                 else
@@ -68,7 +67,7 @@ public static class GrammarParser
 
     public static bool TryParseProduction(
         TokenReader reader,
-        LanguageContext context,
+        MetaContext context,
         out IResult<Production> result)
     {
         var position = reader.Position;
@@ -76,7 +75,7 @@ public static class GrammarParser
         try
         {
             // symbol name
-            if (!TryParseSymbolName(reader, context, out var symbolNameResult))
+            if (!TryParseCompositeSymbolName(reader, context, out var symbolNameResult))
             {
                 reader.Reset(position);
                 result = symbolNameResult.MapAs<Production>();
@@ -84,7 +83,7 @@ public static class GrammarParser
             }
 
             // space
-            if(!TryParseSilentBlock(reader, context, out _))
+            if (!TryParseSilentBlock(reader, context, out _))
             {
                 reader.Reset(position);
                 result = symbolNameResult.MapAs<Production>();
@@ -92,7 +91,7 @@ public static class GrammarParser
             }
 
             // =>
-            if(!TryParseMapOperator(reader, context, out _))
+            if (!TryParseMapOperator(reader, context, out _))
             {
                 reader.Reset(position);
                 result = symbolNameResult.MapAs<Production>();
@@ -100,7 +99,7 @@ public static class GrammarParser
             }
 
             // space
-            if(!TryParseSilentBlock(reader, context, out _))
+            if (!TryParseSilentBlock(reader, context, out _))
             {
                 reader.Reset(position);
                 result = symbolNameResult.MapAs<Production>();
@@ -108,7 +107,7 @@ public static class GrammarParser
             }
 
             // rule
-            if(!TryParseRule(reader, context, out var ruleResult))
+            if (!TryParseCompositeRule(reader, context, out var ruleResult))
             {
                 reader.Reset(position);
                 result = symbolNameResult.MapAs<Production>();
@@ -125,15 +124,37 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseSymbolName(
+    public static bool TryParseCompositeSymbolName(
         TokenReader reader,
-        LanguageContext context,
+        MetaContext context,
         out IResult<string> result)
     {
         var position = reader.Position;
 
         try
         {
+            if (!reader.TryGetToken(out var token)
+                || !'$'.Equals(token[0]))
+            {
+                reader.Reset(position);
+                result = Result.Of<string>(new UnmatchedError(
+                    "composite-symbol-name",
+                    position));
+                return false;
+            }
+
+            if (!reader.TryGetPattern(IProduction.SymbolPattern, out var tokens))
+            {
+                reader.Reset(position);
+                result = Result.Of<string>(new FaultyMatchError(
+                    "composite-symbol-name",
+                    reader.Position,
+                    reader.Position - position));
+                return false;
+            }
+
+            result = Result.Of(tokens.ToString()!);
+            return true;
         }
         catch (Exception e)
         {
@@ -142,39 +163,64 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseRule(
+    public static bool TryParseAtomicSymbolName(
         TokenReader reader,
-        LanguageContext context,
-        out IResult<IRule> result)
+        MetaContext context,
+        out IResult<string> result)
     {
         var position = reader.Position;
 
         try
         {
-            // Composite rule
-            if(TryParseCompositeRule(reader, context, out var compositeRuleResult))
+            if (!reader.TryGetToken(out var token)
+                || !'@'.Equals(token[0]))
             {
-                result = compositeRuleResult.MapAs<IRule>();
-                return true;
+                reader.Reset(position);
+                result = Result.Of<string>(new UnmatchedError(
+                    "atomic-symbol-name",
+                    position));
+                return false;
             }
-            else if(compositeRuleResult)
+
+            if (!reader.TryGetPattern(IProduction.SymbolPattern, out var tokens))
+            {
+                reader.Reset(position);
+                result = Result.Of<string>(new FaultyMatchError(
+                    "atomic-symbol-name",
+                    reader.Position,
+                    reader.Position - position));
+                return false;
+            }
+
+            result = Result.Of(tokens.ToString()!);
+            return true;
         }
         catch (Exception e)
         {
-            result = Result.Of<IRule>(new UnknownError(e));
+            result = Result.Of<string>(new UnknownError(e));
             return false;
         }
     }
 
     public static bool TryParseMapOperator(
         TokenReader reader,
-        LanguageContext context,
+        MetaContext context,
         out IResult<Tokens> result)
     {
         var position = reader.Position;
 
         try
         {
+            if (!reader.TryGetTokens("=>", out Tokens tokens))
+            {
+                result = Result.Of<Tokens>(new UnrecognizedTokens(
+                    "map-operator",
+                    position));
+                return false;
+            }
+
+            result = Result.Of(tokens);
+            return true;
         }
         catch (Exception e)
         {
@@ -185,7 +231,7 @@ public static class GrammarParser
 
     public static bool TryParseSilentBlock(
         TokenReader reader,
-        LanguageContext context,
+        MetaContext context,
         out IResult<ISilentBlock> result)
     {
         var position = reader.Position;
@@ -199,11 +245,186 @@ public static class GrammarParser
             return false;
         }
     }
-        
+
+    #region Composite
     public static bool TryParseCompositeRule(
         TokenReader reader,
-        LanguageContext context,
+        MetaContext context,
         out IResult<ICompositeRule> result)
+    {
+        var position = reader.Position;
+
+        try
+        {
+            if (!TryParseRecognitionThreshold(reader, context, out var thresholdResult)
+                && !thresholdResult.IsErrorResult(out UnmatchedError ume))
+            {
+                reader.Reset(position);
+                result = thresholdResult.MapAs<ICompositeRule>();
+                return false;
+            }
+            thresholdResult = thresholdResult.MapError(err => 1u);
+
+            if (!TryParseGroupElement(reader, context, out var elementResult))
+            {
+                reader.Reset(position);
+                result = elementResult.MapAs<ICompositeRule>();
+                return false;
+            }
+
+            result = thresholdResult
+                .Combine(elementResult, NonTerminal.Of)
+                .MapAs<ICompositeRule>();
+            return true;
+        }
+        catch (Exception e)
+        {
+            result = Result.Of<ICompositeRule>(new UnknownError(e));
+            return false;
+        }
+    }
+
+
+    private static readonly Regex DigitPattern = new Regex("^\\d+\\z", RegexOptions.Compiled);
+    public static bool TryParseRecognitionThreshold(
+        TokenReader reader,
+        MetaContext context,
+        out IResult<uint> result)
+    {
+        var position = reader.Position;
+
+        try
+        {
+            if (!reader.TryGetTokens(":", out var colonToken))
+            {
+                reader.Reset(position);
+                result = Result.Of<uint>(new UnmatchedError(
+                    "recognition-threshold",
+                    position));
+                return false;
+            }
+
+            if (!reader.TryGetPattern(DigitPattern, out var digitTokens))
+            {
+                result = Result.Of<uint>(new FaultyMatchError(
+                    "recognition-threshold",
+                    position,
+                    reader.Position - position));
+                reader.Reset(position);
+                return false;
+            }
+
+            result = uint
+                .Parse(digitTokens.AsSpan())
+                .ApplyTo(Result.Of);
+            return true;
+        }
+        catch (Exception e)
+        {
+            result = Result.Of<uint>(new UnknownError(e));
+            return false;
+        }
+    }
+
+    public static bool TryParseGroupElement(
+        TokenReader reader,
+        MetaContext context,
+        out IResult<IGroupElement> result)
+    {
+        var position = reader.Position;
+
+        try
+        {
+            #region Atomic Rule Ref
+            if (TryParseAtomicRuleRef(reader, context, out var atomicRuleRefResult))
+            {
+                result = atomicRuleRefResult.MapAs<IGroupElement>();
+                return true;
+            }
+            else if (atomicRuleRefResult.IsErrorResult(out FaultyMatchError fme)
+                || atomicRuleRefResult.IsErrorResult(out UnknownError uke))
+            {
+                result = atomicRuleRefResult.MapAs<IGroupElement>();
+                reader.Reset(position);
+                return false;
+            }
+            #endregion
+
+            #region or Production Ref
+            if (TryParseProductionRef(reader, context, out var productionRefResult))
+            {
+                result = productionRefResult.MapAs<IGroupElement>();
+                return true;
+            }
+            else if (productionRefResult.IsErrorResult(out FaultyMatchError fme)
+                || productionRefResult.IsErrorResult(out UnknownError uke))
+            {
+                result = productionRefResult.MapAs<IGroupElement>();
+                reader.Reset(position);
+                return false;
+            }
+            #endregion
+
+            #region or Group
+            if (TryParseGroup(reader, context, out var groupResult))
+            {
+                result = groupResult.MapAs<IGroupElement>();
+                return true;
+            }
+            else
+            {
+                result = groupResult.MapAs<IGroupElement>();
+                reader.Reset(position);
+                return false;
+            }
+            #endregion
+        }
+        catch (Exception e)
+        {
+            result = Result.Of<IGroupElement>(new UnknownError(e));
+            return false;
+        }
+    }
+
+    public static bool TryParseAtomicRuleRef(
+        TokenReader reader,
+        MetaContext context,
+        out IResult<AtomicRuleRef> result)
+    {
+        var position = reader.Position;
+
+        try
+        {
+            if (!TryParseAtomicRule(reader, context, out var atomicRuleResult))
+            {
+                result = atomicRuleResult.MapAs<AtomicRuleRef>();
+                reader.Reset(position);
+                return false;
+            }
+
+            if (!TryParseCardinality(reader, context, out var cardinalityResult))
+            {
+                result = atomicRuleResult.MapAs<AtomicRuleRef>();
+                reader.Reset(position);
+                return false;
+            }
+
+            result = cardinalityResult.Combine(
+                atomicRuleResult,
+                AtomicRuleRef.Of);
+            return true;
+        }
+        catch (Exception e)
+        {
+            result = Result.Of<AtomicRuleRef>(new UnknownError(e));
+            return false;
+        }
+    }
+
+    public static bool TryParseProductionRef(
+        TokenReader reader,
+        MetaContext context,
+        out IResult<ProductionRef> result)
     {
         var position = reader.Position;
 
@@ -212,14 +433,101 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
-            result = Result.Of<ICompositeRule>(new UnknownError(e));
+            result = Result.Of<ProductionRef>(new UnknownError(e));
             return false;
         }
     }
-    
+
+    public static bool TryParseGroup(
+        TokenReader reader,
+        MetaContext context,
+        out IResult<IGroup> result)
+    {
+        var position = reader.Position;
+
+        try
+        {
+        }
+        catch (Exception e)
+        {
+            result = Result.Of<ProductionRef>(new UnknownError(e));
+            return false;
+        }
+    }
+
+    public static bool TryParseSet(
+        TokenReader reader,
+        MetaContext context,
+        out IResult<ProductionRef> result)
+    {
+        var position = reader.Position;
+
+        try
+        {
+        }
+        catch (Exception e)
+        {
+            result = Result.Of<ProductionRef>(new UnknownError(e));
+            return false;
+        }
+    }
+
+    public static bool TryParseChoice(
+        TokenReader reader,
+        MetaContext context,
+        out IResult<ProductionRef> result)
+    {
+        var position = reader.Position;
+
+        try
+        {
+        }
+        catch (Exception e)
+        {
+            result = Result.Of<ProductionRef>(new UnknownError(e));
+            return false;
+        }
+    }
+
+    public static bool TryParseSequence(
+        TokenReader reader,
+        MetaContext context,
+        out IResult<ProductionRef> result)
+    {
+        var position = reader.Position;
+
+        try
+        {
+        }
+        catch (Exception e)
+        {
+            result = Result.Of<ProductionRef>(new UnknownError(e));
+            return false;
+        }
+    }
+    public static bool TryParseCardinality(
+        TokenReader reader,
+        MetaContext context,
+        out IResult<Cardinality> result)
+    {
+        var position = reader.Position;
+
+        try
+        {
+        }
+        catch (Exception e)
+        {
+            result = Result.Of<Cardinality>(new UnknownError(e));
+            return false;
+        }
+    }
+
+    #endregion
+
+    #region Atomic
     public static bool TryParseAtomicRule(
         TokenReader reader,
-        LanguageContext context,
+        MetaContext context,
         out IResult<IAtomicRule> result)
     {
         var position = reader.Position;
@@ -233,11 +541,11 @@ public static class GrammarParser
             return false;
         }
     }
-    
-    
+    #endregion
+
     public static bool TryParse___(
         TokenReader reader,
-        LanguageContext context,
+        MetaContext context,
         out IResult<Production> result)
     {
         var position = reader.Position;

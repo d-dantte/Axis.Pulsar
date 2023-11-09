@@ -1,7 +1,7 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
-using Axis.Pulsar.Core.Exceptions;
+using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Utils;
 using System.Collections.Immutable;
 
@@ -34,6 +34,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
         public bool TryRecognize(
             TokenReader reader,
             ProductionPath parentPath,
+            ILanguageContext context,
             out IResult<NodeSequence> result)
         {
             ArgumentNullException.ThrowIfNull(reader);
@@ -42,7 +43,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             var position = reader.Position;
             foreach(var element in Elements)
             {
-                if (element.Cardinality.TryRepeat(reader, parentPath, element, out result))
+                if (element.Cardinality.TryRepeat(reader, parentPath, context, element, out result))
                     return true;
 
                 reader.Reset(position);

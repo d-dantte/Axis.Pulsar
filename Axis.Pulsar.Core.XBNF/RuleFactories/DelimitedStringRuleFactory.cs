@@ -67,7 +67,7 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
     private static readonly IEscapeTransformer Transformer = new SequencesEscapeTransformer();
 
     public IAtomicRule NewRule(
-        LanguageContext context,
+        MetaContext context,
         ImmutableDictionary<Argument, string> arguments)
     {
         ValidateArgs(arguments);
@@ -118,7 +118,7 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
     }
 
     internal static IEnumerable<IEscapeSequenceMatcher> ParseEscapeMatchers(
-        LanguageContext context,
+        MetaContext context,
         string matchers)
     {
         ArgumentNullException.ThrowIfNull(context);

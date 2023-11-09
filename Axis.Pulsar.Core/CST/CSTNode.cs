@@ -96,7 +96,7 @@ namespace Axis.Pulsar.Core.CST
                     $"Invalid {nameof(tokens)}: default"));
 
                 _name = name.ThrowIf(
-                    n => !Production.SymbolPattern.IsMatch(n),
+                    n => !IProduction.SymbolPattern.IsMatch(n),
                     new ArgumentException($"Invalid {nameof(name)}: '{name}'"));
             }
 

@@ -38,7 +38,7 @@ public interface IAtomicRuleFactory
     /// <param name="arguments"></param>
     /// <returns></returns>
     IAtomicRule NewRule(
-        LanguageContext context,
+        MetaContext context,
         ImmutableDictionary<Argument, string> arguments);
 
     #region Nested Types

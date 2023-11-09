@@ -6,28 +6,22 @@ using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar.Groups
 {
-    public class ProductionRef : IGroupElement
+    public class AtomicRuleRef : IGroupElement
     {
         public Cardinality Cardinality { get; }
 
-        /// <summary>
-        /// The production symbol
-        /// </summary>
-        public string Symbol { get; }
+        public IAtomicRule Rule { get; }
 
-        public ProductionRef(Cardinality cardinality, string productionSymbol)
+        public AtomicRuleRef(Cardinality cardinality, IAtomicRule rule)
         {
             Cardinality = cardinality.ThrowIfDefault(new ArgumentException($"Invalid {nameof(cardinality)}: default"));
-            Symbol = productionSymbol
-                .ThrowIfNot(
-                    IProduction.SymbolPattern.IsMatch,
-                    new ArgumentException($"Invalid {nameof(productionSymbol)}: '{productionSymbol}'"));
+            Rule = rule ?? throw new ArgumentNullException(nameof(rule));
         }
 
-        public static ProductionRef Of(
+        public static AtomicRuleRef Of(
             Cardinality cardinality,
-            string productionSymbol)
-            => new(cardinality, productionSymbol);
+            IAtomicRule rule)
+            => new(cardinality, rule);
 
         public bool TryRecognize(
             TokenReader reader,
@@ -39,19 +33,18 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             ArgumentNullException.ThrowIfNull(parentPath);
 
             var position = reader.Position;
-            var production = context.Grammar.GetProduction(Symbol);
-            if (!production.TryProcessRule(reader, parentPath, context, out var refResult))
+            if (!Rule.TryRecognize(reader, parentPath, context, out var ruleResult))
             {
                 reader.Reset(position);
 
-                result = refResult.AsError().MapGroupError(
+                result = ruleResult.AsError().MapGroupError(
                     ute => GroupError.Of(ute, NodeSequence.Empty),
                     pte => GroupError.Of(pte, NodeSequence.Empty));
 
                 return false;
             }
 
-            result = refResult.Map(node => NodeSequence.Of(node));
+            result = ruleResult.Map(node => NodeSequence.Of(node));
             return true;
         }
     }
