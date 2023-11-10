@@ -1,4 +1,5 @@
 ﻿using Axis.Pulsar.Core.Utils.EscapeMatchers;
+using Axis.Pulsar.Core.XBNF.Definitions;
 
 namespace Axis.Pulsar.Core.XBNF;
 

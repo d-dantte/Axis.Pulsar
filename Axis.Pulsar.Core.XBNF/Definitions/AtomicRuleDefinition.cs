@@ -1,12 +1,7 @@
 ﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Axis.Pulsar.Core.XBNF
+namespace Axis.Pulsar.Core.XBNF.Definitions
 {
     /// <summary>
     /// 
@@ -27,7 +22,7 @@ namespace Axis.Pulsar.Core.XBNF
             ContentDelimiterType = contentDelimiterType;
             Factory = factory.ThrowIfNull(new ArgumentNullException(nameof(factory)));
             Symbol = symbol.ThrowIfNot(
-                Production.SymbolPattern.IsMatch,
+                IProduction.SymbolPattern.IsMatch,
                 new FormatException($"Invalid symbol format: '{symbol}'"));
         }
 

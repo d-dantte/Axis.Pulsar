@@ -20,12 +20,13 @@ namespace Axis.Pulsar.Core.Grammar.Groups
         /// Minimum number of recognized items that can exist for this group to be deemed recognized.
         /// Default value is <see cref="Set.Rules.Length"/>.
         /// </summary>
-        public int? MinRecognitionCount { get;
+        public int? MinRecognitionCount { get; }
 
 
-        public Set(Cardinality cardinality, params IGroupElement[] elements)
+        public Set(Cardinality cardinality, int? minRecognitionCount, params IGroupElement[] elements)
         {
             Cardinality = cardinality;
+            MinRecognitionCount = minRecognitionCount;
             Elements = elements
                 .ThrowIfNull(new ArgumentNullException(nameof(elements)))
                 .ThrowIfAny(e => e is null, new ArgumentException($"Invalid element: null"))
@@ -34,8 +35,9 @@ namespace Axis.Pulsar.Core.Grammar.Groups
 
         public static Set Of(
             Cardinality cardinality,
+            int? minRecognitionCount,
             params IGroupElement[] elements)
-            => new(cardinality, elements);        
+            => new(cardinality, minRecognitionCount, elements);        
         
         public bool TryRecognize(
             TokenReader reader,

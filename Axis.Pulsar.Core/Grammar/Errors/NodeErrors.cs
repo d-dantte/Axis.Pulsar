@@ -1,5 +1,4 @@
 ﻿using Axis.Luna.Extensions;
-using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar.Errors

@@ -2,7 +2,7 @@
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Utils;
 
-namespace Axis.Pulsar.Core.XBNF
+namespace Axis.Pulsar.Core.XBNF.Definitions
 {
     /// <summary>
     /// 
@@ -19,7 +19,7 @@ namespace Axis.Pulsar.Core.XBNF
         {
             Matcher = matcher.ThrowIfNull(new ArgumentNullException(nameof(matcher)));
             Name = name.ThrowIfNot(
-                Production.SymbolPattern.IsMatch,
+                IProduction.SymbolPattern.IsMatch,
                 new FormatException($"Invalid escape name: '{name}'"));
         }
 

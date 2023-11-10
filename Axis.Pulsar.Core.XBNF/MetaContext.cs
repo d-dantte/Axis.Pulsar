@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.XBNF.Definitions;
 using Axis.Pulsar.Core.XBNF.RuleFactories;
 
 namespace Axis.Pulsar.Core.XBNF;
@@ -10,12 +11,15 @@ public class MetaContext
 
     public ImmutableDictionary<string, EscapeMatcherDefinition> EscapeMatcherMap { get; }
 
+    public ImmutableDictionary<string, ProductionValidatorDefinition> ProductionValidatorMap { get; }
+
     private MetaContext(
-        IEnumerable<AtomicRuleDefinition> factoryMap,
-        IEnumerable<EscapeMatcherDefinition> matcherMap)
+        IEnumerable<AtomicRuleDefinition> atomicRules,
+        IEnumerable<EscapeMatcherDefinition> matchers,
+        IEnumerable<ProductionValidatorDefinition> validators)
     {
-        AtomicFactoryMap = factoryMap
-            .ThrowIfNull(new ArgumentNullException(nameof(factoryMap)))
+        AtomicFactoryMap = atomicRules
+            .ThrowIfNull(new ArgumentNullException(nameof(atomicRules)))
             .ThrowIfAny(
                 item => item is null,
                 new ArgumentException($"Invalid factory definition: null"))
@@ -23,13 +27,22 @@ public class MetaContext
                 item => item.Symbol,
                 item => item);
 
-        EscapeMatcherMap = matcherMap
-            .ThrowIfNull(new ArgumentNullException(nameof(matcherMap)))
+        EscapeMatcherMap = matchers
+            .ThrowIfNull(new ArgumentNullException(nameof(matchers)))
             .ThrowIfAny(
                 item => item is null,
                 new ArgumentException($"Invalid matcher definition: null"))
             .ToImmutableDictionary(
                 item => item.Name,
+                item => item);
+
+        ProductionValidatorMap = validators
+            .ThrowIfNull(new ArgumentNullException(nameof(validators)))
+            .ThrowIfAny(
+                item => item is null,
+                new ArgumentException($"Invalid validator definition: null"))
+            .ToImmutableDictionary(
+                item => item.Symbol,
                 item => item);
     }
 
@@ -37,6 +50,7 @@ public class MetaContext
     {
         private readonly Dictionary<string, AtomicRuleDefinition> _atomicFactoryMap = new();
         private readonly Dictionary<string, EscapeMatcherDefinition> _matcherMap = new();
+        private readonly Dictionary<string, ProductionValidatorDefinition> _productionValidatorMap = new();
 
         public Builder()
         {
@@ -91,14 +105,30 @@ public class MetaContext
                 .WithEscapeMatcherDefinition(DefaultEscapeMatcherDefinitions.BSolAscii)
                 .WithEscapeMatcherDefinition(DefaultEscapeMatcherDefinitions.BSolUTF);
         }
-        
+
+        #endregion
+
+        #region Production Validator
+        public Builder WithProductionValidator(ProductionValidatorDefinition validatorDefinition)
+        {
+            ArgumentNullException.ThrowIfNull(validatorDefinition);
+
+            _productionValidatorMap[validatorDefinition.Symbol] = validatorDefinition;
+            return this;
+        }
+
+        public bool ContainsValidatorDefinitionFor(string productionSymbol)
+        {
+            return _productionValidatorMap.ContainsKey(productionSymbol);
+        }
         #endregion
 
         public MetaContext Build()
         {
             return new MetaContext(
                 _atomicFactoryMap.Values,
-                _matcherMap.Values);
+                _matcherMap.Values,
+                _productionValidatorMap.Values);
         }
     }
 }

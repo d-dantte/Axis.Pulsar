@@ -1,4 +1,6 @@
-﻿namespace Axis.Pulsar.Core.XBNF.RuleFactories
+﻿using Axis.Pulsar.Core.XBNF.Definitions;
+
+namespace Axis.Pulsar.Core.XBNF.RuleFactories
 {
     /// <summary>
     /// Default out-of-the-box rule definitions

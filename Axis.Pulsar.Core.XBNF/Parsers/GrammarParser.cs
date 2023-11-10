@@ -1,6 +1,5 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
-using Axis.Pulsar.Core.Exceptions;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Groups;
 using Axis.Pulsar.Core.Grammar.Rules;
@@ -430,6 +429,24 @@ public static class GrammarParser
 
         try
         {
+            if (!TryParseCompositeSymbolName(reader, context, out var compositeSymbolNameResult))
+            {
+                result = compositeSymbolNameResult.MapAs<ProductionRef>();
+                reader.Reset(position);
+                return false;
+            }
+
+            if (!TryParseCardinality(reader, context, out var cardinalityResult))
+            {
+                result = cardinalityResult.MapAs<ProductionRef>();
+                reader.Reset(position);
+                return false;
+            }
+
+            result = cardinalityResult.Combine(
+                compositeSymbolNameResult,
+                ProductionRef.Of);
+            return true;
         }
         catch (Exception e)
         {
@@ -447,10 +464,53 @@ public static class GrammarParser
 
         try
         {
+            #region Choice
+            if (TryParseChoice(reader, context, out var choiceResult))
+            {
+                result = choiceResult.MapAs<IGroup>();
+                return true;
+            }
+            else if (choiceResult.IsErrorResult(out FaultyMatchError fme)
+                || choiceResult.IsErrorResult(out UnknownError uke))
+            {
+                result = choiceResult.MapAs<IGroup>();
+                reader.Reset(position);
+                return false;
+            }
+            #endregion
+
+            #region or Sequence
+            if (TryParseSequence(reader, context, out var sequenceResult))
+            {
+                result = sequenceResult.MapAs<IGroup>();
+                return true;
+            }
+            else if (sequenceResult.IsErrorResult(out FaultyMatchError fme)
+                || sequenceResult.IsErrorResult(out UnknownError uke))
+            {
+                result = sequenceResult.MapAs<IGroup>();
+                reader.Reset(position);
+                return false;
+            }
+            #endregion
+
+            #region or Group
+            if (TryParseSet(reader, context, out var setResult))
+            {
+                result = setResult.MapAs<IGroup>();
+                return true;
+            }
+            else
+            {
+                result = setResult.MapAs<IGroup>();
+                reader.Reset(position);
+                return false;
+            }
+            #endregion
         }
         catch (Exception e)
         {
-            result = Result.Of<ProductionRef>(new UnknownError(e));
+            result = Result.Of<IGroup>(new UnknownError(e));
             return false;
         }
     }
@@ -458,16 +518,55 @@ public static class GrammarParser
     public static bool TryParseSet(
         TokenReader reader,
         MetaContext context,
-        out IResult<ProductionRef> result)
+        out IResult<Set> result)
     {
         var position = reader.Position;
 
         try
         {
+            if (!reader.TryGetTokens("#", out var delimiterToken))
+            {
+                reader.Reset(position);
+                result = Result.Of<Set>(new UnmatchedError(
+                    "set-group",
+                    position));
+                return false;
+            }
+
+            // optional min match count
+            if (!reader.TryGetPattern(DigitPattern, out var minMatchCount))
+                minMatchCount = Tokens.Empty;
+
+            // element list
+            if(!TryParseElementList(reader, context, out var elementListResult))
+            {
+                result = Result.Of<Set>(new FaultyMatchError(
+                    "set-group",
+                    position,
+                    reader.Position - position));
+                reader.Reset(position);
+                return false;
+            }
+
+            // cardinality
+            if (!TryParseCardinality(reader, context, out var cardinalityResult))
+            {
+                result = cardinalityResult.MapAs<Set>();
+                reader.Reset(position);
+                return false;
+            }
+
+            result = cardinalityResult.Combine(
+                elementListResult,
+                (cardinality, elements) => Set.Of(
+                    cardinality,
+                    minMatchCount.IsEmpty ? null : int.Parse(minMatchCount.AsSpan()),
+                    elements));
+            return true;
         }
         catch (Exception e)
         {
-            result = Result.Of<ProductionRef>(new UnknownError(e));
+            result = Result.Of<Set>(new UnknownError(e));
             return false;
         }
     }
@@ -475,7 +574,7 @@ public static class GrammarParser
     public static bool TryParseChoice(
         TokenReader reader,
         MetaContext context,
-        out IResult<ProductionRef> result)
+        out IResult<Choice> result)
     {
         var position = reader.Position;
 
@@ -492,7 +591,7 @@ public static class GrammarParser
     public static bool TryParseSequence(
         TokenReader reader,
         MetaContext context,
-        out IResult<ProductionRef> result)
+        out IResult<Sequence> result)
     {
         var position = reader.Position;
 
@@ -505,6 +604,14 @@ public static class GrammarParser
             return false;
         }
     }
+
+    /// <summary>
+    /// If cardinality is not found, return a "occurs only once" cardinality.
+    /// </summary>
+    /// <param name="reader"></param>
+    /// <param name="context"></param>
+    /// <param name="result"></param>
+    /// <returns></returns>
     public static bool TryParseCardinality(
         TokenReader reader,
         MetaContext context,
@@ -518,6 +625,23 @@ public static class GrammarParser
         catch (Exception e)
         {
             result = Result.Of<Cardinality>(new UnknownError(e));
+            return false;
+        }
+    }
+
+    public static bool TryParseElementList(
+        TokenReader reader,
+        MetaContext context,
+        out IResult<IGroupElement[]> result)
+    {
+        var position = reader.Position;
+
+        try
+        {
+        }
+        catch (Exception e)
+        {
+            result = Result.Of<Production>(new UnknownError(e));
             return false;
         }
     }
