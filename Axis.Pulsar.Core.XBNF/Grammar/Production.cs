@@ -1,31 +1,12 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Utils;
-using System.Text.RegularExpressions;
 
-namespace Axis.Pulsar.Core.Grammar
-{
-    public interface IProduction
-    {
-        /// <summary>
-        /// The symbol name pattern
-        /// </summary>
-        public static Regex SymbolPattern { get; } = new Regex(
-            "^[a-zA-Z]([a-zA-Z0-9-])*\\z",
-            RegexOptions.Compiled);
+namespace Axis.Pulsar.Core.XBNF;
 
-        bool TryProcessRule(
-            TokenReader reader,
-            ProductionPath? parentPath,
-            ILanguageContext context,
-            out IResult<ICSTNode> result);
-
-        string Symbol { get; }
-    }
-
-    [Obsolete]
-    public class Production: IProduction
+public class Production: IProduction
     {
         private readonly IRule _rule;
 
@@ -54,4 +35,3 @@ namespace Axis.Pulsar.Core.Grammar
             return _rule.TryRecognize(reader, productionPath, context, out result);
         }
     }
-}

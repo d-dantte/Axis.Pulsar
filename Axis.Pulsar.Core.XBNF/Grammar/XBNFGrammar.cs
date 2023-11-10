@@ -1,36 +1,18 @@
 ﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.Grammar;
 
-namespace Axis.Pulsar.Core.Grammar
+namespace Axis.Pulsar.Core.XBNF;
+
+public class XBNFGrammar: IGrammar
 {
-    public interface IGrammar
-    {
-        public string Root { get; }
-
-        public int ProductionCount { get; }
-
-        public IProduction this[string name] { get; }
-
-        public IEnumerable<string> ProductionSymbols { get; }
-
-
-        public bool ContainsProduction(string symbolName);
-
-        public IProduction GetProduction(string name);
-
-        public bool TryGetProduction(string name, out IProduction? production);
-    }
-
-    [Obsolete]
-    public class Grammar: IGrammar
-    {
         private readonly Dictionary<string, IProduction> _productions;
-        private string _root;
+        private readonly string _root;
 
         public string Root => _root;
 
         public IEnumerable<string> ProductionSymbols => _productions.Keys;
 
-        internal Grammar(string root, IEnumerable<IProduction> productions)
+        internal XBNFGrammar(string root, IEnumerable<IProduction> productions)
         {
             _root = root.ThrowIf(
                 string.IsNullOrWhiteSpace,
@@ -47,7 +29,7 @@ namespace Axis.Pulsar.Core.Grammar
         public static IGrammar Of(
             string root,
             IEnumerable<IProduction> productions)
-            => new Grammar(root, productions);
+            => new XBNFGrammar(root, productions);
 
         public bool ContainsProduction(string symbolName) => _productions.ContainsKey(symbolName);
 
@@ -76,5 +58,4 @@ namespace Axis.Pulsar.Core.Grammar
         {
             throw new NotImplementedException();
         }
-    }
 }

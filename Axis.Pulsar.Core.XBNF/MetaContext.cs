@@ -9,6 +9,8 @@ public class MetaContext
 {
     public ImmutableDictionary<string, AtomicRuleDefinition> AtomicFactoryMap { get; }
 
+    public ImmutableDictionary<AtomicContentDelimiterType, string> AtomicContentTypeMap { get; }
+
     public ImmutableDictionary<string, EscapeMatcherDefinition> EscapeMatcherMap { get; }
 
     public ImmutableDictionary<string, ProductionValidatorDefinition> ProductionValidatorMap { get; }
@@ -26,6 +28,12 @@ public class MetaContext
             .ToImmutableDictionary(
                 item => item.Symbol,
                 item => item);
+
+        AtomicContentTypeMap = atomicRules
+            .Where(def => def.ContentDelimiterType != AtomicContentDelimiterType.None)
+            .ToImmutableDictionary(
+                item => item.ContentDelimiterType,
+                item => item.Symbol);
 
         EscapeMatcherMap = matchers
             .ThrowIfNull(new ArgumentNullException(nameof(matchers)))
@@ -72,7 +80,7 @@ public class MetaContext
         {
             return _atomicFactoryMap.ContainsKey(productionSymbol);
         }
-        
+
         public Builder WithDefaultAtomicRuleDefinitions()
         {
             return this
@@ -80,7 +88,7 @@ public class MetaContext
                 .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.Pattern)
                 .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.CharacterRanges);
         }
-        
+
         #endregion
 
         #region EscapeMatcher
@@ -97,7 +105,7 @@ public class MetaContext
         {
             return _matcherMap.ContainsKey(name);
         }
-        
+
         public Builder WithDefaultEscapeMatcherDefinitions()
         {
             return this

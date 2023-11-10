@@ -1,15 +1,27 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar;
+using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Groups;
 using Axis.Pulsar.Core.Grammar.Rules;
 using Axis.Pulsar.Core.Utils;
+using Axis.Pulsar.Core.XBNF.Definitions;
+using System.Collections.Immutable;
 using System.Text.RegularExpressions;
+using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
 namespace Axis.Pulsar.Core.XBNF;
 
+
 public static class GrammarParser
 {
+    private static readonly Regex DigitPattern = new Regex("^\\d+\\z", RegexOptions.Compiled);
+
+    private static readonly Regex CardinalityMinOccurencePattern = new Regex(
+        "^\\*|\\?|\\+|\\d+\\z",
+        RegexOptions.Compiled);
+
+
     public static bool TryParseGrammar(
         TokenReader reader,
         MetaContext context,
@@ -50,7 +62,7 @@ public static class GrammarParser
             while (true);
 
             result = productions
-                .ApplyTo(prods => Grammar.Grammar.Of(
+                .ApplyTo(prods => XBNFGrammar.Of(
                     productions[0].Symbol,
                     productions))
                 .ApplyTo(Result.Of);
@@ -58,7 +70,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
-                    reader.Reset(position);
+            reader.Reset(position);
             result = Result.Of<IGrammar>(new UnknownError(e));
             return false;
         }
@@ -283,8 +295,6 @@ public static class GrammarParser
         }
     }
 
-
-    private static readonly Regex DigitPattern = new Regex("^\\d+\\z", RegexOptions.Compiled);
     public static bool TryParseRecognitionThreshold(
         TokenReader reader,
         MetaContext context,
@@ -494,7 +504,7 @@ public static class GrammarParser
             }
             #endregion
 
-            #region or Group
+            #region or Set
             if (TryParseSet(reader, context, out var setResult))
             {
                 result = setResult.MapAs<IGroup>();
@@ -538,7 +548,7 @@ public static class GrammarParser
                 minMatchCount = Tokens.Empty;
 
             // element list
-            if(!TryParseElementList(reader, context, out var elementListResult))
+            if (!TryParseElementList(reader, context, out var elementListResult))
             {
                 result = Result.Of<Set>(new FaultyMatchError(
                     "set-group",
@@ -580,10 +590,40 @@ public static class GrammarParser
 
         try
         {
+            if (!reader.TryGetTokens("?", out var delimiterToken))
+            {
+                reader.Reset(position);
+                result = Result.Of<Choice>(new UnmatchedError(
+                    "choice-group",
+                    position));
+                return false;
+            }
+
+            // element list
+            if (!TryParseElementList(reader, context, out var elementListResult))
+            {
+                result = Result.Of<Choice>(new FaultyMatchError(
+                    "choice-group",
+                    position,
+                    reader.Position - position));
+                reader.Reset(position);
+                return false;
+            }
+
+            // cardinality
+            if (!TryParseCardinality(reader, context, out var cardinalityResult))
+            {
+                result = cardinalityResult.MapAs<Choice>();
+                reader.Reset(position);
+                return false;
+            }
+
+            result = cardinalityResult.Combine(elementListResult, Choice.Of);
+            return true;
         }
         catch (Exception e)
         {
-            result = Result.Of<ProductionRef>(new UnknownError(e));
+            result = Result.Of<Choice>(new UnknownError(e));
             return false;
         }
     }
@@ -597,10 +637,40 @@ public static class GrammarParser
 
         try
         {
+            if (!reader.TryGetTokens("+", out var delimiterToken))
+            {
+                reader.Reset(position);
+                result = Result.Of<Sequence>(new UnmatchedError(
+                    "sequence-group",
+                    position));
+                return false;
+            }
+
+            // element list
+            if (!TryParseElementList(reader, context, out var elementListResult))
+            {
+                result = Result.Of<Sequence>(new FaultyMatchError(
+                    "sequence-group",
+                    position,
+                    reader.Position - position));
+                reader.Reset(position);
+                return false;
+            }
+
+            // cardinality
+            if (!TryParseCardinality(reader, context, out var cardinalityResult))
+            {
+                result = cardinalityResult.MapAs<Sequence>();
+                reader.Reset(position);
+                return false;
+            }
+
+            result = cardinalityResult.Combine(elementListResult, Sequence.Of);
+            return true;
         }
         catch (Exception e)
         {
-            result = Result.Of<ProductionRef>(new UnknownError(e));
+            result = Result.Of<Sequence>(new UnknownError(e));
             return false;
         }
     }
@@ -621,6 +691,68 @@ public static class GrammarParser
 
         try
         {
+            if (!reader.TryGetToken(out var delimiterToken)
+                || !'.'.Equals(delimiterToken[0]))
+            {
+                reader.Reset(position);
+                result = Result.Of(Cardinality.OccursOnlyOnce());
+                return true;
+            }
+
+            // min occurs value
+            if (!reader.TryGetPattern(CardinalityMinOccurencePattern, out var minOccursTokens))
+            {
+                result = Result.Of<Cardinality>(new FaultyMatchError(
+                    "cardinality",
+                    position,
+                    reader.Position - position));
+                reader.Reset(position);
+                return false;
+            }
+
+            // value separator
+            if (!reader.TryGetTokens(",", out var separatorTokens))
+            {
+                result = Result.Of(minOccursTokens[0] switch
+                {
+                    '*' => Cardinality.OccursNeverOrMore(),
+                    '?' => Cardinality.OccursOptionally(),
+                    '+' => Cardinality.OccursAtLeastOnce(),
+                    _ => Cardinality.OccursOnly(int.Parse(minOccursTokens.AsSpan()))
+                });
+                return true;
+            }
+
+            // max occurs value
+            if (reader.TryGetPattern(DigitPattern, out var maxOccursTokens))
+            {
+                result = minOccursTokens[0] switch
+                {
+                    '*' or '?' or '+' => Result.Of<Cardinality>(new FaultyMatchError(
+                        "cardinality",
+                        position,
+                        reader.Position - position)),
+
+                    _ => Result.Of(Cardinality.Occurs(
+                        int.Parse(minOccursTokens.AsSpan()),
+                        int.Parse(maxOccursTokens.AsSpan())))
+                };
+                return true;
+            }
+            else
+            {
+                result = minOccursTokens[0] switch
+                {
+                    '*' or '?' or '+' => Result.Of<Cardinality>(new FaultyMatchError(
+                        "cardinality",
+                        position,
+                        reader.Position - position)),
+
+                    _ => Result.Of(Cardinality.OccursAtLeast(
+                        int.Parse(minOccursTokens.AsSpan())))
+                };
+                return true;
+            }
         }
         catch (Exception e)
         {
@@ -638,10 +770,60 @@ public static class GrammarParser
 
         try
         {
+            // open bracket
+            if (!reader.TryGetTokens("[", out var openBracket))
+            {
+                result = Result.Of<IGroupElement[]>(new UnmatchedError(
+                    "element-list",
+                    position));
+                reader.Reset(position);
+                return false;
+            }
+
+            var elementList = new List<IGroupElement>();
+
+            do
+            {
+                // whitespace
+                _ = TryParseSilentBlock(reader, context, out _);
+
+                if (TryParseGroupElement(reader, context, out var elementResult))
+                    elementResult.Consume(elementList.Add);
+
+                else
+                {
+                    result = Result.Of<IGroupElement[]>(new FaultyMatchError(
+                        "element-list",
+                        position,
+                        reader.Position - position));
+                    reader.Reset(position);
+                    return false;
+                }
+
+                // possible whitespace after element
+                _ = TryParseSilentBlock(reader, context, out _);
+            }
+            while (reader.TryGetToken(out var commaToken) && ','.Equals(commaToken[0]));
+
+            reader.Back(); // back one space for the failed ',' match
+            if (!reader.TryGetTokens("]", out var closeBracket))
+            {
+                result = Result.Of<IGroupElement[]>(new FaultyMatchError(
+                    "element-list",
+                    position,
+                    reader.Position - position));
+                reader.Reset(position);
+                return false;
+            }
+
+            result = elementList
+                .ToArray()
+                .ApplyTo(Result.Of);
+            return true;
         }
         catch (Exception e)
         {
-            result = Result.Of<Production>(new UnknownError(e));
+            result = Result.Of<IGroupElement[]>(new UnknownError(e));
             return false;
         }
     }
@@ -658,6 +840,61 @@ public static class GrammarParser
 
         try
         {
+            result = ParserAccumulator
+                .Of(reader, context, (Name: string.Empty, Args: new List<ArgumentPair>()))
+
+                // parse atomic symbol name
+                .ThenTry<string>(TryParseAtomicSymbolName, (r, name) =>
+                {
+                    r.Name = name;
+                    return r;
+                })
+
+                // or parse atomic content, and derive symbol name
+                .OrTry<(AtomicContentDelimiterType ContentType, Tokens Content)>(TryParseAtomicContent, (r, contentInfo) =>
+                {
+                    if (!context.AtomicContentTypeMap.TryGetValue(contentInfo.ContentType, out var symbol))
+                        throw new FaultyMatchError(
+                            "atomic-rule",
+                            position,
+                            reader.Position - position);
+
+                    r.Name = symbol;
+                    r.Args.Add(ArgumentPair.Of(
+                        IAtomicRuleFactory.ContentArgument,
+                        contentInfo.Content.ToString()!));
+
+                    return r;
+                })
+
+                // parse optional arguments
+                .ThenTry<ArgumentPair[]>(
+                    tryParse: TryParseAtomicRuleArguments,
+                    optionalValueAggregatorFunction: r => r,
+                    aggregatorFunction: (r, args) =>
+                    {
+                        r.Args.AddRange(args);
+                        return r;
+                    })
+
+                // map to atomic rule
+                .ToResult(r =>
+                {
+                    if (!context.AtomicFactoryMap.TryGetValue(r.Name, out var factoryDef))
+                        throw new FaultyMatchError(
+                            "atomic-rule",
+                            position,
+                            reader.Position - position);
+
+                    return factoryDef.Factory.NewRule(
+                        context,
+                        r.Args.ToImmutableDictionary(arg => arg.Argument, arg => arg.Value));
+                });
+
+            if (result.IsErrorResult())
+                reader.Reset(position);
+
+            return result.IsDataResult();
         }
         catch (Exception e)
         {
@@ -665,6 +902,81 @@ public static class GrammarParser
             return false;
         }
     }
+
+    public static bool TryParseAtomicContent(
+        TokenReader reader,
+        MetaContext context,
+        out IResult<(AtomicContentDelimiterType ContentType, Tokens Content)> result)
+    {
+        var position = reader.Position;
+
+        try
+        {
+            // start delim
+            if (!reader.TryGetToken(out var startDelimToken)
+                || !AtomicContentDelimiterTypeExtensions.DelimiterCharacterSet.Contains(startDelimToken[0]))
+            {
+                result = Result.Of<(AtomicContentDelimiterType, Tokens)>(new UnrecognizedTokens(
+                    "atomic-rule",
+                    position));
+                reader.Reset(position);
+                return false;
+            }
+
+            // content chars
+            var contentTokens = Tokens.Empty;
+            while (reader.TryGetToken(out var stringChar))
+            {
+                if (stringChar[0] == startDelimToken[0]
+                    && contentTokens.Count > 0 && contentTokens[^1] != '\\')
+                {
+                    reader.Back();
+                    break;
+                }
+                else contentTokens += stringChar; // contentTokens = contentTokens.Join(stringChar);
+            }
+
+            // end delim
+            if (!reader.TryGetToken(out var endDelimToken)
+                || endDelimToken[0] != startDelimToken[0])
+            {
+                result = Result.Of<(AtomicContentDelimiterType, string)>(new FaultyMatchError(
+                    "atomic-rule",
+                    position,
+                    reader.Position - position));
+                reader.Reset(position);
+                return false;
+            }
+
+            result = Result.Of((
+                startDelimToken[0].DelimiterType(),
+                contentTokens));
+            return true;
+        }
+        catch (Exception e)
+        {
+            result = Result.Of<(AtomicContentDelimiterType, Tokens)>(new UnknownError(e));
+            return false;
+        }
+    }
+
+    public static bool TryParseAtomicRuleArguments(
+        TokenReader reader,
+        MetaContext context,
+        out IResult<ArgumentPair[]> result)
+    {
+        var position = reader.Position;
+
+        try
+        {
+        }
+        catch (Exception e)
+        {
+            result = Result.Of<KeyValuePair<Argument, string>[]>(new UnknownError(e));
+            return false;
+        }
+    }
+
     #endregion
 
     public static bool TryParse___(
@@ -683,5 +995,5 @@ public static class GrammarParser
             return false;
         }
     }
-    
+
 }

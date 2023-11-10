@@ -409,6 +409,8 @@ namespace Axis.Pulsar.Core.Utils
         {
             return !(left == right);
         }
+
+        public static Tokens operator +(Tokens left, Tokens right) => left.Join(right);
         #endregion
     }
 }

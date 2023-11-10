@@ -19,7 +19,7 @@ namespace Axis.Pulsar.Core.Grammar
                 new ArgumentNullException(nameof(name)));
         }
 
-        internal static ProductionPath Of(string name, ProductionPath? parent = null) => new(name, parent);
+        public static ProductionPath Of(string name, ProductionPath? parent = null) => new(name, parent);
 
         public static implicit operator ProductionPath(string name) => new(name, null);
 

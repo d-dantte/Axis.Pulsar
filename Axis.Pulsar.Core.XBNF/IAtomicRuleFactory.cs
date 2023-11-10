@@ -42,7 +42,7 @@ public interface IAtomicRuleFactory
         ImmutableDictionary<Argument, string> arguments);
 
     #region Nested Types
-    public readonly struct Argument:
+    public readonly struct Argument :
         IEquatable<Argument>,
         IDefaultValueProvider<Argument>
     {
@@ -62,7 +62,6 @@ public interface IAtomicRuleFactory
         public static Argument Of(string key) => new(key);
 
         public static implicit operator Argument(string key) => new(key);
-
 
         #region DefaultValueProvider
         public static Argument Default => default;
@@ -90,6 +89,63 @@ public interface IAtomicRuleFactory
         }
 
         public static bool operator !=(Argument left, Argument right)
+        {
+            return !(left == right);
+        }
+    }
+
+    public readonly struct ArgumentPair :
+        IEquatable<ArgumentPair>,
+        IDefaultValueProvider<ArgumentPair>
+    {
+        public Argument Argument { get; }
+
+        public string Value { get; }
+
+        public ArgumentPair(Argument argument, string value)
+        {
+            Argument = argument;
+            Value = value;
+        }
+
+        public static ArgumentPair Of(
+            Argument argument,
+            string value)
+            => new(argument, value);
+
+        #region DefaultValueProvider
+        public static ArgumentPair Default => default;
+
+        public bool IsDefault => Argument.IsDefault && Value is null;
+        #endregion
+
+        public bool Equals(ArgumentPair other)
+        {
+            return Argument.Equals(other.Argument)
+                && EqualityComparer<string>.Default.Equals(Value, other.Value);
+        }
+
+        public override bool Equals([NotNullWhen(true)] object? obj)
+        {
+            return obj is ArgumentPair other
+                && Equals(other);
+        }
+
+        public override int GetHashCode() => HashCode.Combine(Argument, Value);
+
+        public override string ToString()
+        {
+            return IsDefault
+                ? "{}"
+                : $"{{key: {Argument}, value: {Value}}}";
+        }
+
+        public static bool operator ==(ArgumentPair left, ArgumentPair right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(ArgumentPair left, ArgumentPair right)
         {
             return !(left == right);
         }
