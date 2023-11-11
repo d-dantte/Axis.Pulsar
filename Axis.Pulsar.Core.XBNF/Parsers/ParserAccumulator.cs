@@ -145,8 +145,13 @@ public class ParserAccumulator<TData>
     /// <param name="mapper"></param>
     /// <returns></returns>
     public IResult<TOther> ToResult<TOther>(
-        Func<TData, TOther> mapper)
-        => this.ToResult().Map(mapper);
+        Func<TData, TOther>? mapper = null)
+    {
+        if (mapper is null)
+            return ToResult().MapAs<TOther>();
+
+        else return ToResult().Map(mapper);
+    }
 }
 
 public static class ParserAccumulator

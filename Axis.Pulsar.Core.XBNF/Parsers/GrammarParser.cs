@@ -6,6 +6,7 @@ using Axis.Pulsar.Core.Grammar.Groups;
 using Axis.Pulsar.Core.Grammar.Rules;
 using Axis.Pulsar.Core.Utils;
 using Axis.Pulsar.Core.XBNF.Definitions;
+using Axis.Pulsar.Core.XBNF.Parsers.Models;
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
@@ -21,7 +22,7 @@ public static class GrammarParser
         "^\\*|\\?|\\+|\\d+\\z",
         RegexOptions.Compiled);
 
-
+    #region Production
     public static bool TryParseGrammar(
         TokenReader reader,
         MetaContext context,
@@ -239,23 +240,7 @@ public static class GrammarParser
             return false;
         }
     }
-
-    public static bool TryParseSilentBlock(
-        TokenReader reader,
-        MetaContext context,
-        out IResult<ISilentBlock> result)
-    {
-        var position = reader.Position;
-
-        try
-        {
-        }
-        catch (Exception e)
-        {
-            result = Result.Of<ISilentBlock>(new UnknownError(e));
-            return false;
-        }
-    }
+    #endregion
 
     #region Composite
     public static bool TryParseCompositeRule(
@@ -851,7 +836,7 @@ public static class GrammarParser
                 })
 
                 // or parse atomic content, and derive symbol name
-                .OrTry<(AtomicContentDelimiterType ContentType, Tokens Content)>(TryParseAtomicContent, (r, contentInfo) =>
+                .OrTry<AtomicContentArgumentInfo>(TryParseAtomicContent, (r, contentInfo) =>
                 {
                     if (!context.AtomicContentTypeMap.TryGetValue(contentInfo.ContentType, out var symbol))
                         throw new FaultyMatchError(
@@ -906,17 +891,70 @@ public static class GrammarParser
     public static bool TryParseAtomicContent(
         TokenReader reader,
         MetaContext context,
-        out IResult<(AtomicContentDelimiterType ContentType, Tokens Content)> result)
+        out IResult<AtomicContentArgumentInfo> result)
+    {
+        var position = reader.Position;
+
+        try
+        {
+            var accumulator = ParserAccumulator.Of(
+                reader, context,
+                new AtomicContentArgumentInfo(),
+                new UnmatchedError("atomic-content", position)); // <-- error so we can start off with "OrTry"
+
+            foreach (var delimChar in AtomicContentDelimiterTypeExtensions.DelimiterCharacterSet)
+            {
+                accumulator = accumulator.OrTry(
+                    (TokenReader x, MetaContext y, out IResult<Tokens> z) => TryParseDelimitedContent(x, y, delimChar, delimChar, out z),
+                    (info, content) => info with
+                    {
+                        Content = content,
+                        ContentType = delimChar.DelimiterType()
+                    });
+
+                // break if we already have a match
+                if (!accumulator.IsPreviousOpErrored)
+                    break;
+            }
+
+            if (accumulator.IsPreviousOpErrored)
+            {
+                result = !accumulator.IsPreviousOpUnmatched
+                    ? accumulator.ToResult<AtomicContentArgumentInfo>()
+                    : Result.Of<AtomicContentArgumentInfo>(
+                        new FaultyMatchError(
+                            "atomic-rule-arguments",
+                            position,
+                            reader.Position - position));
+                reader.Reset(position);
+                return false;
+            }
+
+            result = accumulator.ToResult();
+            return true;
+        }
+        catch (Exception e)
+        {
+            result = Result.Of<AtomicContentArgumentInfo>(new UnknownError(e));
+            return false;
+        }
+    }
+
+    public static bool TryParseDelimitedContent(
+        TokenReader reader,
+        MetaContext context,
+        char startDelimiter,
+        char endDelimiter,
+        out IResult<Tokens> result)
     {
         var position = reader.Position;
 
         try
         {
             // start delim
-            if (!reader.TryGetToken(out var startDelimToken)
-                || !AtomicContentDelimiterTypeExtensions.DelimiterCharacterSet.Contains(startDelimToken[0]))
+            if (!reader.TryGetTokens(startDelimiter.ToString(), out var startDelimToken))
             {
-                result = Result.Of<(AtomicContentDelimiterType, Tokens)>(new UnrecognizedTokens(
+                result = Result.Of<Tokens>(new UnrecognizedTokens(
                     "atomic-rule",
                     position));
                 reader.Reset(position);
@@ -937,10 +975,9 @@ public static class GrammarParser
             }
 
             // end delim
-            if (!reader.TryGetToken(out var endDelimToken)
-                || endDelimToken[0] != startDelimToken[0])
+            if (!reader.TryGetTokens(endDelimiter.ToString(), out var endDelimToken))
             {
-                result = Result.Of<(AtomicContentDelimiterType, string)>(new FaultyMatchError(
+                result = Result.Of<Tokens>(new FaultyMatchError(
                     "atomic-rule",
                     position,
                     reader.Position - position));
@@ -948,14 +985,12 @@ public static class GrammarParser
                 return false;
             }
 
-            result = Result.Of((
-                startDelimToken[0].DelimiterType(),
-                contentTokens));
+            result = Result.Of(contentTokens);
             return true;
         }
         catch (Exception e)
         {
-            result = Result.Of<(AtomicContentDelimiterType, Tokens)>(new UnknownError(e));
+            result = Result.Of<Tokens>(new UnknownError(e));
             return false;
         }
     }
@@ -969,20 +1004,133 @@ public static class GrammarParser
 
         try
         {
+            if (!reader.TryGetTokens("{", out var startDelimToken))
+            {
+                result = Result.Of<ArgumentPair[]>(new UnmatchedError(
+                    "atomic-rule-arguments",
+                    position));
+                reader.Reset(position);
+                return false;
+            }
+
+            var argSeparatorToken = Tokens.Default;
+            var accumulator = ParserAccumulator
+                .Of(reader, context, new List<ArgumentPair>());
+
+            do
+            {
+                accumulator = accumulator
+
+                    // optional silent block
+                    .ThenTry<SilentBlock>(
+                        TryParseSilentBlock,
+                        (args, silentBlock) => args,
+                        args => args)
+
+                    // required argument-pair
+                    .ThenTry<ArgumentPair>(
+                        TryParseArgument,
+                        (args, arg) => args.AddItem(arg))
+
+                    // optional silent block
+                    .ThenTry<SilentBlock>(
+                        TryParseSilentBlock,
+                        (args, silentBlock) => args,
+                        args => args);
+            }
+            while (!accumulator.IsPreviousOpErrored && reader.TryGetTokens(",", out argSeparatorToken));
+
+            // back up from the mis-matched separator
+            reader.Back();
+
+            if (accumulator.IsPreviousOpErrored)
+            {
+                result = !accumulator.IsPreviousOpUnmatched
+                    ? accumulator.ToResult<ArgumentPair[]>()
+                    : Result.Of<ArgumentPair[]>(
+                        new FaultyMatchError(
+                            "atomic-rule-arguments",
+                            position,
+                            reader.Position - position));
+                reader.Reset(position);
+                return false;
+            }
+
+            result = accumulator.Data
+                .ToArray()
+                .ApplyTo(Result.Of);
+            return true;
         }
         catch (Exception e)
         {
-            result = Result.Of<KeyValuePair<Argument, string>[]>(new UnknownError(e));
+            result = Result.Of<ArgumentPair[]>(new UnknownError(e));
+            return false;
+        }
+    }
+
+    public static bool TryParseArgument(
+        TokenReader reader,
+        MetaContext context,
+        out IResult<ArgumentPair> result)
+    {
+        var position = reader.Position;
+
+        try
+        {
+            if (!reader.TryGetPattern(Argument.ArgumentPattern, out var argKey))
+            {
+                result = Result.Of<ArgumentPair>(new UnmatchedError(
+                    "atomic-rule-argument",
+                    position));
+                reader.Reset(position);
+                return false;
+            }
+
+            // optional whitespace
+            _ = TryParseSilentBlock(reader, context, out _);
+
+            // optional value
+            var argValue = Tokens.Default;
+            if (reader.TryGetTokens(":", out var argSeparator))
+            {
+                //optional whitespace
+                _ = TryParseSilentBlock(reader, context, out _);
+
+                // required delimited content
+                if (!TryParseDelimitedContent(reader, context, '\'', '\'', out var argValueResult))
+                {
+                    result = Result.Of<ArgumentPair>(new FaultyMatchError(
+                        "atomic-rule-argument",
+                        position,
+                        reader.Position - position));
+                    reader.Reset(position);
+                    return false;
+                }
+
+                argValueResult.Consume(value => argValue = value);
+            }
+
+            result = Result.Of(
+                ArgumentPair.Of(
+                    Argument.Of(argKey.ToString()!),
+                    argValue.ToString()!));
+            return true;
+        }
+        catch (Exception e)
+        {
+            result = Result.Of<ArgumentPair>(new UnknownError(e));
             return false;
         }
     }
 
     #endregion
 
-    public static bool TryParse___(
+    #region Silent Block
+
+    public static bool TryParseSilentBlock(
         TokenReader reader,
         MetaContext context,
-        out IResult<Production> result)
+        out IResult<SilentBlock> result)
     {
         var position = reader.Position;
 
@@ -991,9 +1139,62 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
-            result = Result.Of<Production>(new UnknownError(e));
+            result = Result.Of<SilentBlock>(new UnknownError(e));
             return false;
         }
     }
+
+    public static bool TryParseBlockComment(
+        TokenReader reader,
+        MetaContext context,
+        out IResult<BlockComment> result)
+    {
+        var position = reader.Position;
+
+        try
+        {
+        }
+        catch (Exception e)
+        {
+            result = Result.Of<BlockComment>(new UnknownError(e));
+            return false;
+        }
+    }
+
+    public static bool TryParseLineComment(
+        TokenReader reader,
+        MetaContext context,
+        out IResult<LineComment> result)
+    {
+        var position = reader.Position;
+
+        try
+        {
+        }
+        catch (Exception e)
+        {
+            result = Result.Of<LineComment>(new UnknownError(e));
+            return false;
+        }
+    }
+
+    public static bool TryParseWhitespace(
+        TokenReader reader,
+        MetaContext context,
+        out IResult<Whitespace> result)
+    {
+        var position = reader.Position;
+
+        try
+        {
+        }
+        catch (Exception e)
+        {
+            result = Result.Of<Whitespace>(new UnknownError(e));
+            return false;
+        }
+    }
+
+    #endregion
 
 }

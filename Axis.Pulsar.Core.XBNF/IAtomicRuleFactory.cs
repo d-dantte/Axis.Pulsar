@@ -100,9 +100,9 @@ public interface IAtomicRuleFactory
     {
         public Argument Argument { get; }
 
-        public string Value { get; }
+        public string? Value { get; }
 
-        public ArgumentPair(Argument argument, string value)
+        public ArgumentPair(Argument argument, string? value)
         {
             Argument = argument;
             Value = value;
@@ -110,7 +110,7 @@ public interface IAtomicRuleFactory
 
         public static ArgumentPair Of(
             Argument argument,
-            string value)
+            string? value)
             => new(argument, value);
 
         #region DefaultValueProvider

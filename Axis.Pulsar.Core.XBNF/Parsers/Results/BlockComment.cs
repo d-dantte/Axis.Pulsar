@@ -1,12 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Axis.Pulsar.Core.XBNF.Parsers.Models
+﻿namespace Axis.Pulsar.Core.XBNF.Parsers.Models
 {
-    internal class BlockComment
+    public class BlockComment : ISilentElement
     {
+        public string Content { get; }
+
+        public BlockComment(string comment)
+        {
+            Content = comment ?? throw new ArgumentNullException(nameof(comment));
+
+            if (comment.Contains("*/", StringComparison.CurrentCulture))
+                throw new ArgumentException($"Comment cannot contain the '*/' sequence");
+        }
     }
 }
