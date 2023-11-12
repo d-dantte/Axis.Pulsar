@@ -1,15 +1,22 @@
-﻿namespace Axis.Pulsar.Core.XBNF.Parsers.Models
+﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.Utils;
+
+namespace Axis.Pulsar.Core.XBNF.Parsers.Models
 {
     public class BlockComment : ISilentElement
     {
-        public string Content { get; }
+        public Tokens Content { get; }
 
-        public BlockComment(string comment)
+        public BlockComment(Tokens comment)
         {
-            Content = comment ?? throw new ArgumentNullException(nameof(comment));
+            Content = comment.ThrowIfDefault(new ArgumentException("Invalid comment: default"));
 
-            if (comment.Contains("*/", StringComparison.CurrentCulture))
+            if (comment.Contains("*/"))
                 throw new ArgumentException($"Comment cannot contain the '*/' sequence");
         }
+
+        public static BlockComment Of(Tokens comment) => new(comment);
+
+        public static implicit operator BlockComment(Tokens comment) => new(comment);
     }
 }

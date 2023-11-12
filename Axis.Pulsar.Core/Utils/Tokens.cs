@@ -412,5 +412,37 @@ namespace Axis.Pulsar.Core.Utils
 
         public static Tokens operator +(Tokens left, Tokens right) => left.Join(right);
         #endregion
+
+        public bool Contains(string substring)
+        {
+            if (IsDefault)
+                return false;
+
+            if (substring is null)
+                return false;
+
+            return _source!.IndexOf(substring, _offset, _count) >= 0;
+        }
+
+        public bool Contains(Tokens subtokens)
+        {
+            if (IsDefault ^ subtokens.IsDefault)
+                return false;
+
+            if (subtokens.Count > Count)
+                return false;
+
+            return AsSpan().Contains(subtokens.AsSpan(), StringComparison.InvariantCulture);
+        }
+
+        public bool Contains(char c) => ContainsAny(c);
+
+        public bool ContainsAny(params char[] chars)
+        {
+            if (IsDefault)
+                return false;
+
+            return _source!.IndexOfAny(chars, _offset, _count) >= 0;
+        }
     }
 }

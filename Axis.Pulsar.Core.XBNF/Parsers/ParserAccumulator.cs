@@ -152,6 +152,27 @@ public class ParserAccumulator<TData>
 
         else return ToResult().Map(mapper);
     }
+
+
+    public ParserAccumulator<TData> Consume(Action<TData> consumer)
+    {
+        ArgumentNullException.ThrowIfNull(consumer);
+
+        if (!IsPreviousOpErrored)
+            consumer.Invoke(Data);
+
+        return this;
+    }
+
+    public ParserAccumulator<TData> ConsumeError(Action<Exception> consumer)
+    {
+        ArgumentNullException.ThrowIfNull(consumer);
+
+        if (IsPreviousOpErrored)
+            consumer.Invoke(_aggregationException!);
+
+        return this;
+    }
 }
 
 public static class ParserAccumulator
@@ -164,7 +185,15 @@ public static class ParserAccumulator
     public static ParserAccumulator<TData> Of<TData>(
         TokenReader reader,
         MetaContext context,
+        TData data)
+        => new(reader, context, data, null);
+
+    public static ParserAccumulator<TData> OfAlternative<TData>(
+        TokenReader reader,
+        MetaContext context,
         TData data,
-        Exception? error = null)
-        => new(reader, context, data, error);
+        string symbolName = null!)
+        => new(reader, context, data, new UnmatchedError(
+            symbolName ?? "$_alternative", 
+            reader.Position));
 }

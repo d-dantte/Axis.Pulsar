@@ -161,6 +161,24 @@ namespace Axis.Pulsar.Core.Utils
         public TokenReader Back() => Back(1);
         #endregion
 
+        #region Advance
+        public TokenReader Advance(int count)
+        {
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count));
+
+            var newPosition = _position + count;
+
+            if (newPosition > _source.Length)
+                throw new InvalidOperationException($"Invalid calculated position: {newPosition}");
+
+            _position = newPosition;
+            return this;
+        }
+
+        public TokenReader Advance() => Advance(1);
+        #endregion
+
         #region Reset
         public TokenReader Reset(int newPosition)
         {

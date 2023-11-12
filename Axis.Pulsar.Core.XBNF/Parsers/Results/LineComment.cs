@@ -1,21 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.XBNF.Parsers.Models
 {
-    internal class LineComment : ISilentElement
+    public class LineComment : ISilentElement
     {
-        public string Content { get; }
+        public Tokens Content { get; }
 
-        public LineComment(string comment)
+        public LineComment(Tokens comment)
         {
-            Content = comment ?? throw new ArgumentNullException(nameof(comment));
+            Content = comment.ThrowIfDefault(new ArgumentException("Invalid comment: default"));
 
-            if (comment.IndexOfAny(new[] { '\n', '\r' }) >= 0)
+            if (comment.ContainsAny('\n', '\r'))
                 throw new ArgumentException($"Comment cannot contain '\\n' or '\\r' characters");
         }
+
+        public static LineComment Of(Tokens comment) => new(comment);
+
+        public static implicit operator LineComment(Tokens comment) => new(comment);
     }
 }

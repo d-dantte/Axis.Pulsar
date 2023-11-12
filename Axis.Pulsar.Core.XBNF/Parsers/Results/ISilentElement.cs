@@ -1,6 +1,8 @@
-﻿namespace Axis.Pulsar.Core.XBNF;
+﻿using Axis.Pulsar.Core.Utils;
+
+namespace Axis.Pulsar.Core.XBNF;
 
 public interface ISilentElement
 {
-    string Content { get; }
+    Tokens Content { get; }
 }

@@ -1,4 +1,6 @@
 ﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.Utils;
+using System.Collections.Immutable;
 
 namespace Axis.Pulsar.Core.XBNF;
 
@@ -6,31 +8,31 @@ public class Whitespace :
     ISilentElement,
     IEquatable<Whitespace>
 {
-    public WhitespaceChar Char { get; }
+    private static readonly ImmutableHashSet<char> _WhitespaceChars = Enum
+        .GetValues<WhitespaceChar>()
+        .Select(c => (char)c)
+        .ToImmutableHashSet();
 
-    public string Content => Char switch
-    {
-        WhitespaceChar.Space => " ",
-        WhitespaceChar.Tab => "\t",
-        WhitespaceChar.LineFeed => "\n",
-        WhitespaceChar.CarriageReturn => "\r",
-        _ => throw new InvalidOperationException($"Invalid whitespace char: {Char}")
-    };
+    public WhitespaceChar Char => (WhitespaceChar)Content[0];
 
-    public Whitespace(WhitespaceChar @char)
+    public Tokens Content { get; }
+
+    public Whitespace(Tokens whitespaceToken)
     {
-        Char = @char.ThrowIfNot(
-            Enum.IsDefined,
-            new ArgumentOutOfRangeException(nameof(@char)));
+        Content = whitespaceToken
+            .ThrowIf(
+                t => t.Count != 1,
+                new ArgumentException($"Invalid token: {whitespaceToken}"))
+            .ThrowIfNot(
+                t => _WhitespaceChars.Contains(t[0]),
+                new ArgumentException($"Invalid whitespace character: {whitespaceToken}"));
     }
 
-    public static Whitespace Of(WhitespaceChar @char) => new(@char);
+    public static Whitespace Of(Tokens whitespaceToken) => new(whitespaceToken);
 
-    public static implicit operator Whitespace(WhitespaceChar @char) => new(@char);
+    public static implicit operator Whitespace(Tokens whitespaceToken) => new(whitespaceToken);
 
-    public static implicit operator Whitespace(char @char) => new((WhitespaceChar)@char);
-
-    public override string ToString() => Content;
+    public override string ToString() => Content.ToString()!;
 
     public override int GetHashCode() => HashCode.Combine(Char);
 
