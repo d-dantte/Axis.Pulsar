@@ -53,15 +53,26 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 .Setup(m => m.TryProcessRule(
                     It.IsAny<TokenReader>(),
                     It.IsAny<ProductionPath?>(),
+                    It.IsAny<ILanguageContext>(),
                     out It.Ref<IResult<ICSTNode>>.IsAny))
                 .Returns(new TryRecognizeNode((
                         TokenReader reader,
                         ProductionPath? path,
+                        ILanguageContext languageContext,
                         out IResult<ICSTNode> result) =>
                 {
                     result = executionResult;
                     return executionStatus;
                 }));
+
+            return mock.Object;
+        }
+
+        internal static ILanguageContext MockContext(IGrammar grammar)
+        {
+            var mock = new Mock<ILanguageContext>();
+
+            mock.Setup(l => l.Grammar).Returns(grammar);
 
             return mock.Object;
         }
@@ -104,46 +115,37 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 KeyValuePair.Create("re", runtimeErrorProduction),
                 KeyValuePair.Create("sp", passingProduction));
 
+            // lang context
+            var context = MockContext(grammar);
+
 
             var path = ProductionPath.Of("parent");
-            var pref = ProductionRef.Of(
-                "sp",
-                Cardinality.OccursOnlyOnce(),
-                grammar);
+            var pref = ProductionRef.Of(Cardinality.OccursOnlyOnce(), "sp");
 
-            var success = pref.TryRecognize("some tokens", path, out var result);
+            var success = pref.TryRecognize("some tokens", path, context, out var result);
             Assert.IsTrue(success);
             Assert.IsNotNull(result);
             Assert.IsTrue(result.IsDataResult());
 
 
-            pref = ProductionRef.Of(
-                "up",
-                Cardinality.OccursOnlyOnce(),
-                grammar);
-            success = pref.TryRecognize("some tokens", path, out result);
+            pref = ProductionRef.Of(Cardinality.OccursOnlyOnce(), "up");
+            success = pref.TryRecognize("some tokens", path, context, out result);
             Assert.IsFalse(success);
             Assert.IsNotNull(result);
             Assert.IsTrue(result.IsErrorResult());
             Assert.IsTrue(result.IsErrorResult(out GroupError ge, ge => ge.NodeError is UnrecognizedTokens));
 
 
-            pref = ProductionRef.Of(
-                "pp",
-                Cardinality.OccursOnlyOnce(),
-                grammar);
-            success = pref.TryRecognize("some tokens", path, out result);
+            pref = ProductionRef.Of(Cardinality.OccursOnlyOnce(), "pp");
+            success = pref.TryRecognize("some tokens", path, context, out result);
             Assert.IsFalse(success);
             Assert.IsNotNull(result);
             Assert.IsTrue(result.IsErrorResult());
             Assert.IsTrue(result.IsErrorResult(out ge, ge => ge.NodeError is PartiallyRecognizedTokens));
 
 
-            pref = ProductionRef.Of(
-                "re",
-                Cardinality.OccursOnlyOnce(),
-                grammar);
-            success = pref.TryRecognize("some tokens", path, out result);
+            pref = ProductionRef.Of(Cardinality.OccursOnlyOnce(), "re");
+            success = pref.TryRecognize("some tokens", path, context, out result);
             Assert.IsFalse(success);
             Assert.IsNotNull(result);
             Assert.IsTrue(result.IsErrorResult());

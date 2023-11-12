@@ -16,6 +16,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             var success = literal.TryRecognize(
                 "stuff",
                 ProductionPath.Of("dummy-path"),
+                null!,
                 out var result);
 
             Assert.IsTrue(success);
@@ -27,6 +28,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             success = literal.TryRecognize(
                 "not-stuff",
                 ProductionPath.Of("dummy-path"),
+                null!,
                 out result);
 
             Assert.IsFalse(success);

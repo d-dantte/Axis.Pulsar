@@ -10,4 +10,8 @@
     <ProjectReference Include="..\Axis.Pulsar.Core\Axis.Pulsar.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Writers\" />
+  </ItemGroup>
+
 </Project>

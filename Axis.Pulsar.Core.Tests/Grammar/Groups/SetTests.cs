@@ -26,10 +26,12 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                     .Setup(m => m.TryRecognize(
                         It.IsAny<TokenReader>(),
                         It.IsAny<ProductionPath>(),
+                        It.IsAny<ILanguageContext>(),
                         out It.Ref<IResult<NodeSequence>>.IsAny))
                     .Returns(new TryRecognizeNodeSequence((
                         TokenReader reader,
                         ProductionPath? path,
+                        ILanguageContext languageContext,
                         out IResult<NodeSequence> result) =>
                     {
                         result = Result.Of(NodeSequence.Of(ICSTNode.Of("dummy", Tokens.Of("source"))));
@@ -45,10 +47,12 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                     .Setup(m => m.TryRecognize(
                         It.IsAny<TokenReader>(),
                         It.IsAny<ProductionPath>(),
+                        It.IsAny<ILanguageContext>(),
                         out It.Ref<IResult<NodeSequence>>.IsAny))
                     .Returns(new TryRecognizeNodeSequence((
                         TokenReader reader,
                         ProductionPath? path,
+                        ILanguageContext languageContext,
                         out IResult<NodeSequence> result) =>
                     {
                         result = Result.Of<NodeSequence>(
@@ -69,10 +73,12 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                     .Setup(m => m.TryRecognize(
                         It.IsAny<TokenReader>(),
                         It.IsAny<ProductionPath>(),
+                        It.IsAny<ILanguageContext>(),
                         out It.Ref<IResult<NodeSequence>>.IsAny))
                     .Returns(new TryRecognizeNodeSequence((
                         TokenReader reader,
                         ProductionPath? path,
+                        ILanguageContext languageContext,
                         out IResult<NodeSequence> result) =>
                     {
                         result = Result.Of<NodeSequence>(
@@ -94,10 +100,12 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                     .Setup(m => m.TryRecognize(
                         It.IsAny<TokenReader>(),
                         It.IsAny<ProductionPath>(),
+                        It.IsAny<ILanguageContext>(),
                         out It.Ref<IResult<NodeSequence>>.IsAny))
                     .Returns(new TryRecognizeNodeSequence((
                         TokenReader reader,
                         ProductionPath? path,
+                        ILanguageContext languageContext,
                         out IResult<NodeSequence> result) =>
                     {
                         result = Result.Of<NodeSequence>(
@@ -116,10 +124,12 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                     .Setup(m => m.TryRecognize(
                         It.IsAny<TokenReader>(),
                         It.IsAny<ProductionPath>(),
+                        It.IsAny<ILanguageContext>(),
                         out It.Ref<IResult<NodeSequence>>.IsAny))
                     .Returns(new TryRecognizeNodeSequence((
                         TokenReader reader,
                         ProductionPath? path,
+                        ILanguageContext languageContext,
                         out IResult<NodeSequence> result) =>
                     {
                         result = RecognitionRuntimeError
@@ -131,9 +141,10 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
 
             var seq = Set.Of(
                 Cardinality.OccursOnly(1),
+                1,
                 passingElementMock.Object,
                 passingElementMock.Object);
-            var success = seq.TryRecognize("dummy", "dummy", out var result);
+            var success = seq.TryRecognize("dummy", "dummy", null!, out var result);
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             var nseq = result.Resolve();
@@ -141,9 +152,10 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
 
             seq = Set.Of(
                 Cardinality.OccursOnly(1),
+                1,
                 passingElementMock.Object,
                 unrecognizedElementMock.Object);
-            success = seq.TryRecognize("dummy", "dummy", out result);
+            success = seq.TryRecognize("dummy", "dummy", null!, out result);
             Assert.IsFalse(success);
             Assert.IsTrue(result.IsErrorResult());
             Assert.IsInstanceOfType<GroupError>(result.AsError().ActualCause());
@@ -153,9 +165,10 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
 
             seq = Set.Of(
                 Cardinality.OccursOnly(1),
+                1,
                 unrecognizedElementMock.Object,
                 unrecognizedElementMock.Object);
-            success = seq.TryRecognize("dummy", "dummy", out result);
+            success = seq.TryRecognize("dummy", "dummy", null!, out result);
             Assert.IsFalse(success);
             Assert.IsTrue(result.IsErrorResult());
             Assert.IsInstanceOfType<GroupError>(result.AsError().ActualCause());
@@ -165,9 +178,10 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
 
             seq = Set.Of(
                 Cardinality.OccursOnly(1),
+                1,
                 passingElementMock.Object,
                 partiallyRecognizedElementMock.Object);
-            success = seq.TryRecognize("dummy", "dummy", out result);
+            success = seq.TryRecognize("dummy", "dummy", null!, out result);
             Assert.IsFalse(success);
             Assert.IsTrue(result.IsErrorResult());
             Assert.IsInstanceOfType<GroupError>(result.AsError().ActualCause());
@@ -177,9 +191,10 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
 
             seq = Set.Of(
                 Cardinality.OccursOnly(1),
+                1,
                 passingElementMock.Object,
                 customErrorElementMock.Object);
-            success = seq.TryRecognize("dummy", "dummy", out result);
+            success = seq.TryRecognize("dummy", "dummy", null!, out result);
             Assert.IsFalse(success);
             Assert.IsTrue(result.IsErrorResult());
             Assert.IsInstanceOfType<RecognitionRuntimeError>(result.AsError().ActualCause());
@@ -188,9 +203,10 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
 
             seq = Set.Of(
                 Cardinality.OccursOnly(1),
+                1,
                 passingElementMock.Object,
                 runtimeErrorElementMock.Object);
-            success = seq.TryRecognize("dummy", "dummy", out result);
+            success = seq.TryRecognize("dummy", "dummy", null!, out result);
             Assert.IsFalse(success);
             Assert.IsTrue(result.IsErrorResult());
             Assert.IsInstanceOfType<RecognitionRuntimeError>(result.AsError().ActualCause());

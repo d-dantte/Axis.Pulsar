@@ -91,7 +91,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 .ToImmutableHashSet();
 
             // NOTE: Ensure that the escape delimiters do not clash with the Illegal ranges/sequences.
-            throw new NotImplementedException("NOTE: Ensure that the escape delimiters do not clash with the Illegal ranges/sequences");
+            // throw new NotImplementedException("NOTE: Ensure that the escape delimiters do not clash with the Illegal ranges/sequences");
         }
 
         public static DelimitedString Of(
@@ -342,7 +342,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
         /// </summary>
         internal class SequenceMatcher
         {
-            private int _cursor;
+            private int _cursor = -1;
             private RollingHash.Hash _matchSequenceHash;
             private RollingHash? _sourceRollingHash;
 
@@ -405,9 +405,6 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                     return false;
 
                 _cursor = newCursor;
-                if (_cursor - StartOffset < Pattern.Count)
-                    return true;
-
                 if (_sourceRollingHash is null)
                 {
                     _sourceRollingHash = RollingHash.Of(Source, StartOffset, Pattern.Count);

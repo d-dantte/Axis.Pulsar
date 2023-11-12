@@ -33,6 +33,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             var success = xterRanges.TryRecognize(
                 "b",
                 ProductionPath.Of("xyz"),
+                null!,
                 out var result);
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult(out var data, d =>
@@ -44,6 +45,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             success = xterRanges.TryRecognize(
                 "2",
                 ProductionPath.Of("xyz"),
+                null!,
                 out result);
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult(out data, d =>
@@ -55,6 +57,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             success = xterRanges.TryRecognize(
                 "e",
                 ProductionPath.Of("xyz"),
+                null!,
                 out result);
             Assert.IsFalse(success);
             Assert.IsTrue(result.IsErrorResult(out UnrecognizedTokens erro));

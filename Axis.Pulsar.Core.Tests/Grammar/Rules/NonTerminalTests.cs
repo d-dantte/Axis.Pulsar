@@ -21,14 +21,16 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             var mock = new Mock<IGroupElement>();
 
             mock.Setup(m => m.Cardinality).Returns(cardinality);
-            mock
-                .Setup(m => m.TryRecognize(
+            mock.Setup(m => m.TryRecognize(
                     It.IsAny<TokenReader>(),
                     It.IsAny<ProductionPath>(),
+                    It.IsAny<ILanguageContext>(),
                     out It.Ref<IResult<NodeSequence>>.IsAny))
-                .Returns(new TryRecognizeNodeSequence((
+                .Returns(
+                    new TryRecognizeNodeSequence((
                         TokenReader reader,
                         ProductionPath? path,
+                        ILanguageContext cxt,
                         out IResult<NodeSequence> result) =>
                 {
                     result = recognitionResult;
@@ -49,7 +51,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 true,
                 Result.Of(NodeSequence.Empty));
             var nt = NonTerminal.Of(element);
-            var success = nt.TryRecognize("stuff", path, out var result);
+            var success = nt.TryRecognize("stuff", path, null!, out var result);
             Assert.IsTrue(success);
             Assert.IsNotNull(result);
             Assert.IsTrue(result.IsDataResult());
@@ -63,7 +65,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                     .ApplyTo(GroupError.Of)
                     .ApplyTo(Result.Of<NodeSequence>));
             nt = NonTerminal.Of(element);
-            success = nt.TryRecognize("stuff", path, out result);
+            success = nt.TryRecognize("stuff", path, null!, out result);
             Assert.IsFalse(success);
             Assert.IsNotNull(result);
             Assert.IsTrue(result.IsErrorResult(out UnrecognizedTokens ge));
@@ -77,7 +79,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                     .ApplyTo(g => GroupError.Of(g, NodeSequence.Of(ICSTNode.Of("partial", "partial tokens"))))
                     .ApplyTo(Result.Of<NodeSequence>));
             nt = NonTerminal.Of(element);
-            success = nt.TryRecognize("stuff", path, out result);
+            success = nt.TryRecognize("stuff", path, null!, out result);
             Assert.IsFalse(success);
             Assert.IsNotNull(result);
             Assert.IsTrue(result.IsErrorResult(out PartiallyRecognizedTokens pe));
@@ -92,7 +94,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                         NodeSequence.Of(NodeSequence.Of(ICSTNode.Of("partial", "partial tokens")))))
                     .ApplyTo(Result.Of<NodeSequence>));
             nt = NonTerminal.Of(element);
-            success = nt.TryRecognize("stuff", path, out result);
+            success = nt.TryRecognize("stuff", path, null!, out result);
             Assert.IsFalse(success);
             Assert.IsNotNull(result);
             Assert.IsTrue(result.IsErrorResult(out pe));
@@ -105,7 +107,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                     .Of(new Exception())
                     .ApplyTo(Result.Of<NodeSequence>));
             nt = NonTerminal.Of(element);
-            success = nt.TryRecognize("stuff", path, out result);
+            success = nt.TryRecognize("stuff", path, null!, out result);
             Assert.IsFalse(success);
             Assert.IsNotNull(result);
             Assert.IsTrue(result.IsErrorResult(out RecognitionRuntimeError rre));

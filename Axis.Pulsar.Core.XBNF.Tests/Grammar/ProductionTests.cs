@@ -6,7 +6,7 @@ using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Utils;
 using Moq;
 
-namespace Axis.Pulsar.Core.Tests.Grammar
+namespace Axis.Pulsar.Core.XBNF.Tests.Grammar
 {
     [TestClass]
     public class ProductionTests
@@ -19,8 +19,9 @@ namespace Axis.Pulsar.Core.Tests.Grammar
                 .Setup(r => r.TryRecognize(
                     It.IsAny<TokenReader>(),
                     It.IsAny<ProductionPath>(),
+                    It.IsAny<ILanguageContext>(),
                     out It.Ref<IResult<ICSTNode>>.IsAny))
-                .Returns(new TryRecognizeNode((TokenReader reader, ProductionPath? path, out IResult<ICSTNode> x) =>
+                .Returns(new TryRecognizeNode((TokenReader reader, ProductionPath? path, ILanguageContext cxt, out IResult<ICSTNode> x) =>
                 {
                     x = ICSTNode
                         .Of("symbol", "tokens")
@@ -33,8 +34,9 @@ namespace Axis.Pulsar.Core.Tests.Grammar
                 .Setup(r => r.TryRecognize(
                     It.IsAny<TokenReader>(),
                     It.IsAny<ProductionPath>(),
+                    It.IsAny<ILanguageContext>(),
                     out It.Ref<IResult<ICSTNode>>.IsAny))
-                .Returns(new TryRecognizeNode((TokenReader reader, ProductionPath? path, out IResult<ICSTNode> x) =>
+                .Returns(new TryRecognizeNode((TokenReader reader, ProductionPath? path, ILanguageContext cxt, out IResult<ICSTNode> x) =>
                 {
                     x = UnrecognizedTokens
                         .Of(path!, 2)
@@ -43,14 +45,14 @@ namespace Axis.Pulsar.Core.Tests.Grammar
                 }));
 
             var production = Production.Of("symbol", passingRuleMock.Object);
-            var success = production.TryProcessRule("some tokens", null, out var result);
+            var success = production.TryProcessRule("some tokens", null, null!, out var result);
             Assert.IsTrue(success);
             Assert.IsNotNull(result);
             Assert.IsTrue(result.IsDataResult());
 
 
             production = Production.Of("symbol", failingRuleMock.Object);
-            success = production.TryProcessRule("some tokens", null, out result);
+            success = production.TryProcessRule("some tokens", null, null!, out result);
             Assert.IsFalse(success);
             Assert.IsNotNull(result);
             Assert.IsTrue(result.IsErrorResult());

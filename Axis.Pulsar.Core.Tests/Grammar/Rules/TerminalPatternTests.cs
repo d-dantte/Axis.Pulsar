@@ -22,6 +22,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             var success = literal.TryRecognize(
                 "abcd efgh...other stuff",
                 ProductionPath.Of("dummy-path"),
+                null!,
                 out var result);
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
@@ -33,6 +34,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             success = literal.TryRecognize(
                 "abcd exgh...other stuff",
                 ProductionPath.Of("dummy-path"),
+                null!,
                 out result);
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
@@ -44,6 +46,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             success = literal.TryRecognize(
                 "not-stuff",
                 ProductionPath.Of("dummy-path"),
+                null!,
                 out result);
             Assert.IsFalse(success);
             Assert.IsTrue(result.IsErrorResult(out UnrecognizedTokens ute));
