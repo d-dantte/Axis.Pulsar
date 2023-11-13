@@ -1,31 +1,29 @@
 ﻿using Axis.Luna.Extensions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Axis.Pulsar.Core.Utils
 {
     internal abstract class SubstringMatcher
     {
+        protected readonly Lazy<RollingHash> _hasher;
+
         protected RollingHash.Hash PatternHash { get; }
 
         public string Source { get; }
 
         public int StartOffset { get; }
 
-        public Tokens Pattern { get; }
+        public int PatternLength { get; }
 
         protected SubstringMatcher(
             Tokens patternSequence,
             string source,
             int startOffset)
         {
-            Pattern = patternSequence.ThrowIf(
+            var pattern = patternSequence.ThrowIf(
                 seq => seq.IsEmpty || seq.IsDefault,
                 new ArgumentException($"Invalid {nameof(patternSequence)}: default/empty"));
+
+            PatternLength = pattern.Count;
 
             Source = source.ThrowIf(
                 string.IsNullOrEmpty,
@@ -37,12 +35,32 @@ namespace Axis.Pulsar.Core.Utils
                     nameof(startOffset),
                     $"Value '{startOffset}' is < 0 or > {nameof(source)}.Length"));
 
-            PatternHash = RollingHash
-                .Of(Pattern.Source!,
-                    Pattern.Offset,
-                    Pattern.Count)
-                .WindowHash;
+            var patternHasher =  RollingHash.Of(
+                pattern.Source!,
+                pattern.Offset,
+                pattern.Count);
+            
+            PatternHash = !patternHasher.TryNext(out var hash)
+                ? throw new InvalidOperationException($"Failed to calculate hash for pattern: {pattern}")
+                : hash;
+
+            _hasher = new Lazy<RollingHash>(() => RollingHash.Of(
+                source,
+                startOffset,
+                patternSequence.Count));
         }
+
+        public static SubstringMatcher OfLookAhead(
+            Tokens patternSequence,
+            string source,
+            int startOffset)
+            => new LookAheadMatcher(patternSequence, source, startOffset);
+
+        public static SubstringMatcher OfLookBehind(
+            Tokens patternSequence,
+            string source,
+            int startOffset)
+            => new LookBehindMatcher(patternSequence, source, startOffset);
 
         /// <summary>
         /// Consumes the next token from the source, from the current offset, then attempts to match the new window with the <see cref="SequenceMatcher.Pattern"/>.
@@ -54,9 +72,7 @@ namespace Axis.Pulsar.Core.Utils
 
         internal class LookAheadMatcher : SubstringMatcher
         {
-            private readonly Lazy<RollingHash> _hasher;
-
-            public LookAheadMatcher(
+            internal LookAheadMatcher(
                 Tokens patternSequence,
                 string source,
                 int startOffset)
@@ -64,37 +80,33 @@ namespace Axis.Pulsar.Core.Utils
             {
                 if (startOffset + patternSequence.Count > source.Length)
                     throw new ArgumentException("Invalid args: source.Length < startOffset + patternSequence.Count");
-
-                _hasher = new Lazy<RollingHash>(() => RollingHash.Of(
-                    source,
-                    startOffset,
-                    patternSequence.Count));
             }
 
             public override bool TryNextWindow(out bool isMatch)
             {
                 var advanced = _hasher.Value.TryNext(out var hash);
-                isMatch = advanced &&  hash.Equals(PatternHash);
+                isMatch = advanced && hash.Equals(PatternHash);
 
                 return advanced;
             }
         }
 
-        internal class LookBehindMatcher: SubstringMatcher
+        /// <summary>
+        /// Matcher that "skips" a number of input characters from the startOffset equal to the
+        /// patternSequence's length, before it starts searching for matches. What this means is,
+        /// when the current index is at "x", for example, the search window will effectively be
+        /// <c>(Offset: x - patternSequence.Count, Length: patternSequence.Count)</c>
+        /// </summary>
+        internal class LookBehindMatcher : SubstringMatcher
         {
-            private readonly Lazy<RollingHash> _hasher;
             private int _consumedCharCount = 0;
 
-            public LookBehindMatcher(
+            internal LookBehindMatcher(
                 Tokens patternSequence,
                 string source,
                 int startOffset)
                 : base(patternSequence, source, startOffset)
             {
-                _hasher = new Lazy<RollingHash>(() => RollingHash.Of(
-                    source,
-                    startOffset,
-                    patternSequence.Count));
             }
 
             public override bool TryNextWindow(out bool isMatch)
@@ -106,7 +118,7 @@ namespace Axis.Pulsar.Core.Utils
                     return false;
 
                 _consumedCharCount = newCount;
-                if (_consumedCharCount >= Pattern.Count)
+                if (_consumedCharCount >= PatternLength)
                     isMatch =
                         _hasher.Value.TryNext(out var hash)
                         && hash.Equals(PatternHash);

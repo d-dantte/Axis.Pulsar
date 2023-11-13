@@ -37,7 +37,7 @@ namespace Axis.Pulsar.Core.Utils
             return tokens;
         }
 
-        #region TryGetTokens
+        #region GetTokens
         public bool TryGetTokens(string expectedTokens, out Tokens tokens)
         {
             if (TryPeekTokens(expectedTokens, out tokens))
@@ -105,7 +105,7 @@ namespace Axis.Pulsar.Core.Utils
         }
         #endregion
 
-        #region TryPeekTokens
+        #region PeekTokens
         public bool TryPeekTokens(string expectedTokens, out Tokens tokens)
         {
             if (string.IsNullOrEmpty(expectedTokens))

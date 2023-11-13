@@ -307,21 +307,91 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             return false;
         }
 
-        /// <summary>
-        /// Advances all matchers by one token, then returns the first one whose window matches.
-        /// </summary>
-        /// <param name="matchers">Sequence of matchers</param>
-        /// <param name="matcher">The delimiter that matched.</param>
-        /// <returns>True if a match was made, false otherwise</returns>
-        internal static bool TryMatch(IEnumerable<SequenceMatcher> matchers, out SequenceMatcher? matcher)
+        internal bool TryRecognizeString_(TokenReader reader, out Tokens tokens)
         {
-            matcher = null;
-            foreach (var m in matchers)
+            var position = reader.Position;
+            tokens = Tokens.Empty;
+
+            var endDelimiterMatcher = SubstringMatcher.OfLookAhead(
+                EndDelimiter,
+                reader.Source,
+                reader.Position);
+
+            var illegalSequenceMatchers = IllegalSequences
+                .Select(illegalSequence => SubstringMatcher.OfLookBehind(
+                    illegalSequence,
+                    reader.Source,
+                    reader.Position))
+                .ToArray();
+
+            var legalSequenceMatchers = LegalSequences
+                .Select(legalSequence => SubstringMatcher.OfLookBehind(
+                    legalSequence,
+                    reader.Source,
+                    reader.Position))
+                .ToArray();
+
+            // Seems the only full-proof implementation will involve:
+            // 1. reading the input token by token till we reach the (non-escaped) end delimiter.
+            // 2. during #1, check for legal/illegal ranges
+            // 3. in a second loop, check for illegal sequences
+            // 4. in a third loop, ensure the whole string consists only of legal sequences
+            while (reader.TryPeekToken(out var token))
             {
-                _ = m.TryNextWindow(out bool isMatch);
-                matcher = isMatch && matcher is null ? m : matcher;
+                var newTokens = Tokens.Empty;
+
+                #region End delimiter
+
+                // could not read any other token from the reader
+                if (!endDelimiterMatcher.TryNextWindow(out var isEndDelimiterMatch))
+                    return false;
+
+                else if (isEndDelimiterMatch)
+                {
+                    reader.Advance(endDelimiterMatcher.PatternLength);
+                    return true;
+                }
+                
+                #endregion
+
+                #region Illegal sequence match
+
+                if (MatchesAny(illegalSequenceMatchers, out _))
+                    return false;
+
+                #endregion
+
+                #region Legal sequence match
+
+                if (legalSequenceMatchers.Length == 0)
+                    newTokens = token;
+
+                else if (MatchesAny(legalSequenceMatchers, out var matchCount))
+                {
+                    
+                }
+
+                #endregion
+
+                // illegal tokens
             }
-            return matcher is not null;
+        }
+
+        internal static bool MatchesAny(
+            IEnumerable<SubstringMatcher> matchers,
+            out int matchCount)
+        {
+            matchCount = 0;
+            foreach (var matcher in matchers)
+            {
+                if (matcher.TryNextWindow(out bool isMatch) && isMatch)
+                {
+                    matchCount = matcher.PatternLength;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -331,95 +401,6 @@ namespace Axis.Pulsar.Core.Grammar.Rules
         {
             _ = reader.Reset(position);
             return returnValue;
-        }
-
-        #endregion
-
-        #region Nested types
-
-        /// <summary>
-        /// Uses a RollingHash implementation to check if a moving window of the source string matches a given pattern.
-        /// </summary>
-        internal class SequenceMatcher
-        {
-            private readonly RollingHash.Hash _patternHash;
-            private RollingHash? _sourceRollingHash;
-            private int _count = 0;
-
-            /// <summary>
-            /// The pattern to find within the source string
-            /// </summary>
-            public Tokens Pattern { get; }
-
-            /// <summary>
-            /// The source string
-            /// </summary>
-            public string Source { get; }
-
-            /// <summary>
-            /// The start offset in the source string from which matches are to be found
-            /// </summary>
-            public int StartOffset { get; }
-
-            public SequenceMatcher(Tokens patternSequence, string source, int startOffset)
-            {
-                Pattern = patternSequence.ThrowIf(
-                    seq => seq.IsEmpty || seq.IsDefault,
-                    new ArgumentException($"Invalid {nameof(patternSequence)}: default/empty"));
-
-                Source = source.ThrowIf(
-                    string.IsNullOrEmpty,
-                    new ArgumentException($"Invalid {nameof(source)}: null/empty"));
-
-                StartOffset = startOffset.ThrowIf(
-                    offset => offset < 0 || offset >= source.Length,
-                    new ArgumentOutOfRangeException(
-                        nameof(startOffset),
-                        $"Value '{startOffset}' is < 0 or > {nameof(source)}.Length"));
-
-                _sourceRollingHash = null;
-                _patternHash = RollingHash
-                    .Of(Pattern.Source!,
-                        Pattern.Offset,
-                        Pattern.Count)
-                    .WindowHash;
-            }
-
-            public static SequenceMatcher Of(
-                Tokens sequence,
-                string source,
-                int startOffset)
-                => new(sequence, source, startOffset);
-
-            /// <summary>
-            /// Consumes the next token from the source, from the current offset, then attempts to match the new window with the <see cref="SequenceMatcher.Pattern"/>.
-            /// </summary>
-            /// <param name="isMatch">True if the match succeeded, false otherwise</param>
-            /// <returns>True if a new token could be consumed, false otherwise</returns>
-            public bool TryNextWindow(out bool isMatch)
-            {
-                isMatch = false;
-                var newCount = _count + 1;
-
-                if (newCount > Source.Length)
-                    return false;
-
-                _count = newCount;
-
-                if (_sourceRollingHash is not null)
-                {
-                    isMatch =
-                        _sourceRollingHash.TryNext(out var hash)
-                        && hash.Equals(_patternHash);
-                }
-                else if (_count == Pattern.Count) // && _sourceRollingHash is null
-                {
-                    _sourceRollingHash = RollingHash.Of(Source, StartOffset, Pattern.Count);
-                    isMatch = _sourceRollingHash.WindowHash.Equals(_patternHash);
-                }
-                
-                return true;
-            }
         }
 
         #endregion
