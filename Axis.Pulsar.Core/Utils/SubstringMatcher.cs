@@ -1,12 +1,16 @@
 ﻿using Axis.Luna.Extensions;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Axis.Pulsar.Core.Utils
 {
-    internal class SubstringMatcher
+    internal abstract class SubstringMatcher
     {
-        private readonly Lazy<RollingHash> _hasher;
-
-        private readonly RollingHash.Hash _patternHash;
+        protected RollingHash.Hash PatternHash { get; }
 
         public string Source { get; }
 
@@ -14,7 +18,7 @@ namespace Axis.Pulsar.Core.Utils
 
         public Tokens Pattern { get; }
 
-        internal SubstringMatcher(
+        protected SubstringMatcher(
             Tokens patternSequence,
             string source,
             int startOffset)
@@ -33,19 +37,11 @@ namespace Axis.Pulsar.Core.Utils
                     nameof(startOffset),
                     $"Value '{startOffset}' is < 0 or > {nameof(source)}.Length"));
 
-            _hasher = new Lazy<RollingHash>(() => RollingHash.Of(
-                Source,
-                StartOffset,
-                Pattern.Count));
-
-            var patternHasher = RollingHash.Of(
-                Pattern.Source!,
-                Pattern.Offset,
-                Pattern.Count);
-
-            _patternHash = patternHasher.TryNext(out var hash)
-                ? hash
-                : throw new InvalidOperationException($"Failed to calculate pattern hash");
+            PatternHash = RollingHash
+                .Of(Pattern.Source!,
+                    Pattern.Offset,
+                    Pattern.Count)
+                .WindowHash;
         }
 
         /// <summary>
@@ -53,13 +49,70 @@ namespace Axis.Pulsar.Core.Utils
         /// </summary>
         /// <param name="isMatch">True if the match succeeded, false otherwise</param>
         /// <returns>True if a new token could be consumed, false otherwise</returns>
-        public bool TryNextWindow(out bool isMatch)
-        {
-            var advanced = _hasher.Value.TryNext(out var hash);
-            isMatch = advanced && hash.Equals(PatternHash);
+        public abstract bool TryNextWindow(out bool isMatch);
 
-            return advanced;
+
+        internal class LookAheadMatcher : SubstringMatcher
+        {
+            private readonly Lazy<RollingHash> _hasher;
+
+            public LookAheadMatcher(
+                Tokens patternSequence,
+                string source,
+                int startOffset)
+                : base(patternSequence, source, startOffset)
+            {
+                if (startOffset + patternSequence.Count > source.Length)
+                    throw new ArgumentException("Invalid args: source.Length < startOffset + patternSequence.Count");
+
+                _hasher = new Lazy<RollingHash>(() => RollingHash.Of(
+                    source,
+                    startOffset,
+                    patternSequence.Count));
+            }
+
+            public override bool TryNextWindow(out bool isMatch)
+            {
+                var advanced = _hasher.Value.TryNext(out var hash);
+                isMatch = advanced &&  hash.Equals(PatternHash);
+
+                return advanced;
+            }
         }
 
+        internal class LookBehindMatcher: SubstringMatcher
+        {
+            private readonly Lazy<RollingHash> _hasher;
+            private int _consumedCharCount = 0;
+
+            public LookBehindMatcher(
+                Tokens patternSequence,
+                string source,
+                int startOffset)
+                : base(patternSequence, source, startOffset)
+            {
+                _hasher = new Lazy<RollingHash>(() => RollingHash.Of(
+                    source,
+                    startOffset,
+                    patternSequence.Count));
+            }
+
+            public override bool TryNextWindow(out bool isMatch)
+            {
+                isMatch = false;
+                var newCount = _consumedCharCount + 1;
+
+                if (StartOffset + newCount > Source.Length)
+                    return false;
+
+                _consumedCharCount = newCount;
+                if (_consumedCharCount >= Pattern.Count)
+                    isMatch =
+                        _hasher.Value.TryNext(out var hash)
+                        && hash.Equals(PatternHash);
+
+                return true;
+            }
+        }
     }
 }
