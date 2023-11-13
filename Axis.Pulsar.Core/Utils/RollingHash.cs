@@ -3,13 +3,21 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Axis.Pulsar.Core.Utils
 {
+    /// <summary>
+    /// Rolling polynomial hash implementation.
+    /// <para/>
+    /// 
+    /// Instances of this type, upon creation, assume that the "current" offset is one step behind the provided
+    /// offset value in the constructor. This means <see cref="RollingHash.WindowHash"/> will hold "null" until
+    /// the first call to either of the <c>TryNext(...)</c> methods.
+    /// </summary>
     abstract public class RollingHash
     {
         protected readonly string _source;
         protected readonly int _length;
         protected int _offset;
 
-        public Hash WindowHash { get; protected set; }
+        public Hash? WindowHash { get; protected set; }
 
         public int Length => _length;
 
@@ -22,7 +30,7 @@ namespace Axis.Pulsar.Core.Utils
             Validate(@string, offset, length);
 
             _source = @string;
-            _offset = offset;
+            _offset = offset - 1;
             _length = length;
         }
 
@@ -106,7 +114,6 @@ namespace Axis.Pulsar.Core.Utils
             {
                 _factor1 = ComputeFactor(_Base1, _Mod1, _length);
                 _factor2 = ComputeFactor(_Base2, _Mod2, _length);
-                WindowHash = ComputeHash(_source, _offset, _length);
             }
 
             override public bool TryNext(out Hash result)
@@ -118,7 +125,9 @@ namespace Axis.Pulsar.Core.Utils
                     return false;
                 }
 
-                WindowHash = result = NextHash(WindowHash, _source, _offset, _length, (_factor1, _factor2));
+                WindowHash = result = WindowHash is null
+                    ? ComputeHash(_source, newOffset, _length)
+                    : NextHash(WindowHash.Value, _source, _offset, _length, (_factor1, _factor2));
                 _offset = newOffset;
                 return true;
             }
@@ -132,14 +141,23 @@ namespace Axis.Pulsar.Core.Utils
                     return false;
                 }
 
-                result = WindowHash = Enumerable
+                WindowHash = Enumerable
                     .Range(0, count)
-                    .Aggregate(WindowHash, (hash, next) => NextHash(
-                        hash,
-                        _source, _offset + next,
-                        _length,
-                        (_factor1, _factor2)));
+                    .Aggregate(WindowHash, (hash, next) =>
+                    {
+                        // if the rolling hash is new
+                        if (hash is null)
+                            return ComputeHash(_source, count, _length);
+
+                        return NextHash(
+                            hash.Value,
+                            _source, _offset + next,
+                            _length,
+                            (_factor1, _factor2));
+                    });
+
                 _offset = finalOffset;
+                result = WindowHash!.Value;
                 return true;
             }
 
@@ -220,7 +238,6 @@ namespace Axis.Pulsar.Core.Utils
             internal RollingValueHash(string @string, int offset, int length)
             : base(@string, offset, length)
             {
-                WindowHash = ComputeHash(@string, offset, length);
             }
 
             override public bool TryNext(out Hash result)

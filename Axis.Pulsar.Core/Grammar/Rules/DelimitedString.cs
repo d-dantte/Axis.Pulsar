@@ -342,9 +342,9 @@ namespace Axis.Pulsar.Core.Grammar.Rules
         /// </summary>
         internal class SequenceMatcher
         {
-            private int _cursor = -1;
-            private RollingHash.Hash _patternHash;
+            private readonly RollingHash.Hash _patternHash;
             private RollingHash? _sourceRollingHash;
+            private int _count = 0;
 
             /// <summary>
             /// The pattern to find within the source string
@@ -361,11 +361,11 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             /// </summary>
             public int StartOffset { get; }
 
-            public SequenceMatcher(Tokens sequence, string source, int startOffset)
+            public SequenceMatcher(Tokens patternSequence, string source, int startOffset)
             {
-                Pattern = sequence.ThrowIf(
+                Pattern = patternSequence.ThrowIf(
                     seq => seq.IsEmpty || seq.IsDefault,
-                    new ArgumentException($"Invalid {nameof(sequence)}: default/empty"));
+                    new ArgumentException($"Invalid {nameof(patternSequence)}: default/empty"));
 
                 Source = source.ThrowIf(
                     string.IsNullOrEmpty,
@@ -399,12 +399,12 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             public bool TryNextWindow(out bool isMatch)
             {
                 isMatch = false;
-                var newCursor = _cursor + 1;
+                var newCount = _count + 1;
 
-                if (newCursor >= Source.Length)
+                if (newCount > Source.Length)
                     return false;
 
-                _cursor = newCursor;
+                _count = newCount;
 
                 if (_sourceRollingHash is not null)
                 {
@@ -412,8 +412,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                         _sourceRollingHash.TryNext(out var hash)
                         && hash.Equals(_patternHash);
                 }
-                else if (_cursor >= Pattern.Count
-                    && _sourceRollingHash is null)
+                else if (_count == Pattern.Count) // && _sourceRollingHash is null
                 {
                     _sourceRollingHash = RollingHash.Of(Source, StartOffset, Pattern.Count);
                     isMatch = _sourceRollingHash.WindowHash.Equals(_patternHash);

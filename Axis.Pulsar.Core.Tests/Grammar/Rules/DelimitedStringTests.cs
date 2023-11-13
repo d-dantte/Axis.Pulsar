@@ -149,19 +149,11 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
         public void TryNextWindow_Tests()
         {
             var sequenceMatcher = DelimitedString.SequenceMatcher.Of(
-                "a",
-                "So, actuall, no body says yes and then says no",
+                ":",
+                "So:",
                 0);
 
             var moved = sequenceMatcher.TryNextWindow(out var isMatch);
-            Assert.IsTrue(moved);
-            Assert.IsFalse(isMatch);
-
-            moved = sequenceMatcher.TryNextWindow(out isMatch);
-            Assert.IsTrue(moved);
-            Assert.IsFalse(isMatch);
-
-            moved = sequenceMatcher.TryNextWindow(out isMatch);
             Assert.IsTrue(moved);
             Assert.IsFalse(isMatch);
 
@@ -175,19 +167,27 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
 
 
             sequenceMatcher = DelimitedString.SequenceMatcher.Of(
-                ":",
-                "So:",
+                "a",
+                "So, actuall, no body says yes and then says no",
                 0);
 
-            _ = sequenceMatcher.TryNextWindow(out isMatch);
+            moved = sequenceMatcher.TryNextWindow(out isMatch);
             Assert.IsTrue(moved);
             Assert.IsFalse(isMatch);
 
-            _ = sequenceMatcher.TryNextWindow(out isMatch);
+            moved = sequenceMatcher.TryNextWindow(out isMatch);
             Assert.IsTrue(moved);
             Assert.IsFalse(isMatch);
 
-            _ = sequenceMatcher.TryNextWindow(out isMatch);
+            moved = sequenceMatcher.TryNextWindow(out isMatch);
+            Assert.IsTrue(moved);
+            Assert.IsFalse(isMatch);
+
+            moved = sequenceMatcher.TryNextWindow(out isMatch);
+            Assert.IsTrue(moved);
+            Assert.IsFalse(isMatch);
+
+            moved = sequenceMatcher.TryNextWindow(out isMatch);
             Assert.IsTrue(moved);
             Assert.IsTrue(isMatch);
         }
