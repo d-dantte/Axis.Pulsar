@@ -336,14 +336,14 @@ namespace Axis.Pulsar.Core.Grammar.Rules
         #endregion
 
         #region Nested types
-        
+
         /// <summary>
         /// Uses a RollingHash implementation to check if a moving window of the source string matches a given pattern.
         /// </summary>
         internal class SequenceMatcher
         {
             private int _cursor = -1;
-            private RollingHash.Hash _matchSequenceHash;
+            private RollingHash.Hash _patternHash;
             private RollingHash? _sourceRollingHash;
 
             /// <summary>
@@ -378,7 +378,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                         $"Value '{startOffset}' is < 0 or > {nameof(source)}.Length"));
 
                 _sourceRollingHash = null;
-                _matchSequenceHash = RollingHash
+                _patternHash = RollingHash
                     .Of(Pattern.Source!,
                         Pattern.Offset,
                         Pattern.Count)
@@ -405,18 +405,20 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                     return false;
 
                 _cursor = newCursor;
-                if (_sourceRollingHash is null)
-                {
-                    _sourceRollingHash = RollingHash.Of(Source, StartOffset, Pattern.Count);
-                    isMatch = _sourceRollingHash.WindowHash.Equals(_matchSequenceHash);
-                }
-                else
+
+                if (_sourceRollingHash is not null)
                 {
                     isMatch =
                         _sourceRollingHash.TryNext(out var hash)
-                        && hash.Equals(_matchSequenceHash);
+                        && hash.Equals(_patternHash);
                 }
-
+                else if (_cursor >= Pattern.Count
+                    && _sourceRollingHash is null)
+                {
+                    _sourceRollingHash = RollingHash.Of(Source, StartOffset, Pattern.Count);
+                    isMatch = _sourceRollingHash.WindowHash.Equals(_patternHash);
+                }
+                
                 return true;
             }
         }

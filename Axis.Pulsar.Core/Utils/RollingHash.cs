@@ -145,8 +145,6 @@ namespace Axis.Pulsar.Core.Utils
 
             override public Hash ComputeHash(string @string, int offset, int length)
             {
-                Validate(@string, offset, length);
-
                 return Hash.Of(
                     ComputeHash(@string, offset, length, _Mod1, _Base1),
                     ComputeHash(@string, offset, length, _Mod2, _Base2));
@@ -166,22 +164,6 @@ namespace Axis.Pulsar.Core.Utils
                     NextHash(previous.Hash2, factors.factor2, @string, oldOffset, length, _Mod2, _Base2));
             }
 
-            private static long ComputeHash(
-                string @string,
-                int offset,
-                int length,
-                long mod,
-                long @base)
-            {
-                long hash = 0;
-                var limit = offset + length;
-                for (int index = offset; index < limit; index++)
-                {
-                    hash = (@base * hash + @string[index]) % mod;
-                }
-                return hash;
-            }
-
             private static long NextHash(
                 long previousHash,
                 long factor,
@@ -191,6 +173,8 @@ namespace Axis.Pulsar.Core.Utils
                 long mod,
                 long @base)
             {
+                Validate(@string, oldOffset + 1, length);
+
                 // Remove hash of left-most character, and refactor hash
                 var hash = (previousHash + mod - factor * @string[oldOffset] % mod) % mod;
 
@@ -200,6 +184,24 @@ namespace Axis.Pulsar.Core.Utils
                 return hash;
             }
 
+            private static long ComputeHash(
+                string @string,
+                int offset,
+                int length,
+                long mod,
+                long @base)
+            {
+                Validate(@string, offset, length);
+
+                long hash = 0;
+                var limit = offset + length;
+                for (int index = offset; index < limit; index++)
+                {
+                    hash = (@base * hash + @string[index]) % mod;
+                }
+                return hash;
+            }
+            
             private static long ComputeFactor(long @base, long mod, long length)
             {
                 var factor = 1L;
