@@ -195,5 +195,5 @@ public static class ParserAccumulator
         string symbolName = null!)
         => new(reader, context, data, new UnmatchedError(
             symbolName ?? "$_alternative", 
-            reader.Position));
+            reader?.Position ?? 0));
 }
