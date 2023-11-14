@@ -11,13 +11,10 @@ public class MetaContext
 
     public ImmutableDictionary<AtomicContentDelimiterType, string> AtomicContentTypeMap { get; }
 
-    public ImmutableDictionary<string, EscapeMatcherDefinition> EscapeMatcherMap { get; }
-
     public ImmutableDictionary<string, ProductionValidatorDefinition> ProductionValidatorMap { get; }
 
     private MetaContext(
         IEnumerable<AtomicRuleDefinition> atomicRules,
-        IEnumerable<EscapeMatcherDefinition> matchers,
         IEnumerable<ProductionValidatorDefinition> validators)
     {
         AtomicFactoryMap = atomicRules
@@ -35,15 +32,6 @@ public class MetaContext
                 item => item.ContentDelimiterType,
                 item => item.Symbol);
 
-        EscapeMatcherMap = matchers
-            .ThrowIfNull(new ArgumentNullException(nameof(matchers)))
-            .ThrowIfAny(
-                item => item is null,
-                new ArgumentException($"Invalid matcher definition: null"))
-            .ToImmutableDictionary(
-                item => item.Name,
-                item => item);
-
         ProductionValidatorMap = validators
             .ThrowIfNull(new ArgumentNullException(nameof(validators)))
             .ThrowIfAny(
@@ -57,7 +45,6 @@ public class MetaContext
     public class Builder
     {
         private readonly Dictionary<string, AtomicRuleDefinition> _atomicFactoryMap = new();
-        private readonly Dictionary<string, EscapeMatcherDefinition> _matcherMap = new();
         private readonly Dictionary<string, ProductionValidatorDefinition> _productionValidatorMap = new();
 
         public Builder()
@@ -91,31 +78,6 @@ public class MetaContext
 
         #endregion
 
-        #region EscapeMatcher
-
-        public Builder WithEscapeMatcherDefinition(EscapeMatcherDefinition matcherDefinition)
-        {
-            ArgumentNullException.ThrowIfNull(matcherDefinition);
-
-            _matcherMap[matcherDefinition.Name] = matcherDefinition;
-            return this;
-        }
-
-        public bool ContainsEscapeMatcherDefinitionFor(string name)
-        {
-            return _matcherMap.ContainsKey(name);
-        }
-
-        public Builder WithDefaultEscapeMatcherDefinitions()
-        {
-            return this
-                .WithEscapeMatcherDefinition(DefaultEscapeMatcherDefinitions.BSolBasic)
-                .WithEscapeMatcherDefinition(DefaultEscapeMatcherDefinitions.BSolAscii)
-                .WithEscapeMatcherDefinition(DefaultEscapeMatcherDefinitions.BSolUTF);
-        }
-
-        #endregion
-
         #region Production Validator
         public Builder WithProductionValidator(ProductionValidatorDefinition validatorDefinition)
         {
@@ -135,7 +97,6 @@ public class MetaContext
         {
             return new MetaContext(
                 _atomicFactoryMap.Values,
-                _matcherMap.Values,
                 _productionValidatorMap.Values);
         }
     }

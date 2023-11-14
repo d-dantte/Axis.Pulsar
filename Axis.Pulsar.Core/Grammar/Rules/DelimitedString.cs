@@ -26,13 +26,11 @@ namespace Axis.Pulsar.Core.Grammar.Rules
     /// </summary>
     public class DelimitedString : IAtomicRule
     {
-        private readonly string[] _orderedMatcherDelimiters;
-
-        public ImmutableDictionary<string, IEscapeSequenceMatcher> EscapeMatchers { get; }
-        public ImmutableHashSet<Tokens> IllegalSequences { get; }
-        public ImmutableHashSet<Tokens> LegalSequences { get; }
+        public ImmutableArray<Tokens> IllegalSequences { get; }
+        public ImmutableArray<Tokens> LegalSequences { get; }
         public ImmutableHashSet<CharRange> IllegalRanges { get; }
         public ImmutableHashSet<CharRange> LegalRanges { get; }
+        public Tokens EndDelimiterEscapeSequence { get; }
         public string StartDelimiter { get; }
         public string EndDelimiter { get; }
         public bool AcceptsEmptyString { get; }
@@ -46,7 +44,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
         /// <param name="illegalSequences"></param>
         /// <param name="legalRanges">The collection of legal character ranges. Note: an empty collection means all ranges are legal</param>
         /// <param name="illegalRanges"></param>
-        /// <param name="escapeMatchers"></param>
+        /// <param name="endDelimiterEscapeSequence"></param>
         public DelimitedString(
             bool acceptsEmptyString,
             string startDelimiter,
@@ -55,17 +53,10 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             IEnumerable<Tokens> illegalSequences,
             IEnumerable<CharRange> legalRanges,
             IEnumerable<CharRange> illegalRanges,
-            IEnumerable<IEscapeSequenceMatcher> escapeMatchers)
+            Tokens endDelimiterEscapeSequence = default)
         {
             AcceptsEmptyString = acceptsEmptyString;
-            EscapeMatchers = escapeMatchers
-                .ThrowIfNull(new ArgumentNullException(nameof(escapeMatchers)))
-                .ThrowIfAny(e => e is null, new ArgumentException("Invalid escape matcher: null"))
-                .ToImmutableDictionary(m => m.EscapeDelimiter, m => m);
-
-            _orderedMatcherDelimiters = EscapeMatchers.Keys
-                .OrderByDescending(delim => delim.Length)
-                .ToArray();
+            EndDelimiterEscapeSequence = endDelimiterEscapeSequence;
 
             StartDelimiter = startDelimiter.ThrowIf(
                 string.IsNullOrEmpty,
@@ -84,14 +75,14 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             LegalSequences = legalSequences
                 .ThrowIfNull(new ArgumentNullException(nameof(legalSequences)))
                 .ThrowIfAny(t => t.IsDefault || t.IsEmpty, new ArgumentException("Invalid legal sequence: default/empty"))
-                .ToImmutableHashSet();
+                .Distinct()
+                .OrderByDescending(t => t.Count)
+                .ToImmutableArray();
             IllegalSequences = illegalSequences
                 .ThrowIfNull(new ArgumentNullException(nameof(illegalSequences)))
                 .ThrowIfAny(t => t.IsDefault || t.IsEmpty, new ArgumentException("Invalid legal sequence: default/empty"))
-                .ToImmutableHashSet();
-
-            // NOTE: Ensure that the escape delimiters do not clash with the Illegal ranges/sequences.
-            // throw new NotImplementedException("NOTE: Ensure that the escape delimiters do not clash with the Illegal ranges/sequences");
+                .Distinct()
+                .ToImmutableArray();
         }
 
         public static DelimitedString Of(
@@ -102,11 +93,11 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             IEnumerable<Tokens> illegalSequences,
             IEnumerable<CharRange> legalRanges,
             IEnumerable<CharRange> illegalRanges,
-            IEnumerable<IEscapeSequenceMatcher> escapeMatchers)
+            Tokens endDelimiterEscapeSequence = default)
             => new(acceptsEmptyString, startDelimiter, endDelimiter,
                 legalSequences, illegalSequences,
                 legalRanges, illegalRanges,
-                escapeMatchers);
+                endDelimiterEscapeSequence);
 
         #region Procedural implementation
         public bool TryRecognize(
@@ -188,219 +179,107 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             return true;
         }
 
-        internal bool TryRecognizeEscapeSequence(TokenReader reader, out Tokens tokens)
-        {
-            var position = reader.Position;
-            tokens = Tokens.Empty;
-
-            for (int index = 0; index < _orderedMatcherDelimiters.Length; index++)
-            {
-                var delim = _orderedMatcherDelimiters[index];
-                if (reader.TryGetTokens(delim.Length, true, out var escapeDelim)
-                    && escapeDelim.Equals(delim))
-                {
-                    tokens = tokens.Join(escapeDelim);
-                    var matcher = EscapeMatchers[delim];
-
-                    if (matcher.TryMatchEscapeArgument(reader, out var argResult))
-                    {
-                        tokens = tokens.Join(argResult);
-                        return true;
-                    }
-
-                    reader.Reset(position);
-                    return false;
-                }
-
-                reader.Reset(position);
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Attempts to recognize the string between the start and end delimiters. The algorithm works as follows:
-        /// <list type="number">
-        /// <item><paramref name="tokens"/> represents all currently valid string tokens</item>
-        /// <item>Check that the tail end of the tokens does not match with the <see cref="DelimitedString.EndDelimiter"/>. If it does, exit.</item>
-        /// <item>Next, check that the last token does not match any given illegal character range.</item>
-        /// <item>Next, check that the last token matches any given legal character range. If no legal range exists, then all non-illegal tokens are legal</item>
-        /// <item>Next, check that the tail end of the tokens does not match any illegal sequence.</item>
-        /// <item>Next, check that the tail end of the tokens matches any given legal sequence. If no legal sequence exists, then all non-illegal sequences are legal</item>
-        /// <item>If we got this far, we have a legal token. Append it to <paramref name="tokens"/>.</item>
-        /// </list>
-        /// </summary>
-        /// <param name="reader">The token reader</param>
-        /// <param name="tokens">The token instance, holding all valid tokens</param>
-        /// <returns>True if recognition succeeds, false otherwise</returns>
         internal bool TryRecognizeString(TokenReader reader, out Tokens tokens)
         {
-            var position = reader.Position;
             tokens = Tokens.Empty;
+            var position = reader.Position;
 
-            // build sequence matchers
-            var endDelimiterMatcher = SequenceMatcher.Of(
-                EndDelimiter,
-                reader.Source,
-                position);
+            #region First run: find the end delimiter, and validate char ranges
 
-            var escapeDelimMatchers = _orderedMatcherDelimiters
-                .Select(delim => new SequenceMatcher(delim, reader.Source, position))
-                .ToArray();
-
-            var illegalSequenceMatchers = IllegalSequences
-                .Select(seq => new SequenceMatcher(seq, reader.Source, position))
-                .ToArray();
-
-            var legalSequenceMatchers = LegalSequences
-                .Select(seq => new SequenceMatcher(seq, reader.Source, position))
-                .ToArray();
-
-            while (reader.TryGetToken(out var token))
+            while (!reader.IsConsumed)
             {
-                var tempPosition = reader.Position;
-
-                // end delimiter?
-                if (endDelimiterMatcher.TryNextWindow(out var isMatch) && isMatch)
-                    return ResetReader(reader, tempPosition, true);
-
-                #region Ranges
-                // illegal ranges?
-                if (IllegalRanges.Any(range => range.Contains(token[0])))
-                    return ResetReader(reader, tempPosition, false);
-
-                // legal ranges?
-                if (!LegalRanges.IsEmpty
-                    && !LegalRanges.Any(range => range.Contains(token[0])))
-                    return ResetReader(reader, tempPosition, false);
-                #endregion
-
-                #region Sequences
-
-                // escape sequences?
-                if (TryMatch(escapeDelimMatchers, out var matcher))
+                // escaped delimiter
+                if (!EndDelimiterEscapeSequence.IsDefault && reader.TryGetTokens(
+                    EndDelimiterEscapeSequence,
+                    out var escapedDelimTokens))
                 {
-                    var escapeDelimString = matcher!.Pattern.ToString()!;
-                    var escapeMatcher = EscapeMatchers[escapeDelimString];
-
-                    if (!escapeMatcher.TryMatchEscapeArgument(reader, out var escapeArgs))
-                        return ResetReader(reader, tempPosition, false);
-
-                    tokens = tokens.Join(token).Join(escapeArgs);
+                    tokens += escapedDelimTokens;
                     continue;
                 }
 
-                // illegal sequences?
-                if (TryMatch(illegalSequenceMatchers, out _))
-                    return ResetReader(reader, tempPosition, false);
+                // end delimiter
+                if (reader.TryPeekTokens(EndDelimiter, out _))
+                    break;
 
-                // legal sequences?
-                if (!legalSequenceMatchers.IsEmpty()
-                    && !TryMatch(legalSequenceMatchers, out matcher))
-                    return ResetReader(reader, tempPosition, false);
-                #endregion
+                if (reader.TryPeekToken(out var token))
+                {
+                    // illegal range
+                    if (IllegalRanges.Any(range => range.Contains(token[0])))
+                        return false;
 
-                tokens = tokens.Join(token);
+                    // legal range
+                    if (LegalRanges.IsEmpty || LegalRanges.Any(range => range.Contains(token[0])))
+                    {
+                        tokens += token;
+                        reader.Advance();
+                    }
+                }
             }
 
-            reader.Reset(position);
-            return false;
-        }
+            if (tokens.IsEmpty && AcceptsEmptyString)
+                return true;
 
-        internal bool TryRecognizeString_(TokenReader reader, out Tokens tokens)
-        {
-            var position = reader.Position;
-            tokens = Tokens.Empty;
+            #endregion
 
-            var endDelimiterMatcher = SubstringMatcher.OfLookAhead(
-                EndDelimiter,
-                reader.Source,
-                reader.Position);
+            #region Second run: find illegal sequences
 
-            var illegalSequenceMatchers = IllegalSequences
+            var capturedTokens = tokens;
+            var illegalMatchers = IllegalSequences
                 .Select(illegalSequence => SubstringMatcher.OfLookBehind(
                     illegalSequence,
-                    reader.Source,
-                    reader.Position))
+                    capturedTokens))
+                .OrderByDescending(m => m.PatternLength)
                 .ToArray();
 
-            var legalSequenceMatchers = LegalSequences
-                .Select(legalSequence => SubstringMatcher.OfLookBehind(
-                    legalSequence,
-                    reader.Source,
-                    reader.Position))
-                .ToArray();
-
-            // Seems the only full-proof implementation will involve:
-            // 1. reading the input token by token till we reach the (non-escaped) end delimiter.
-            // 2. during #1, check for legal/illegal ranges
-            // 3. in a second loop, check for illegal sequences
-            // 4. in a third loop, ensure the whole string consists only of legal sequences
-            while (reader.TryPeekToken(out var token))
+            foreach (var matcher in illegalMatchers)
             {
-                var newTokens = Tokens.Empty;
-
-                #region End delimiter
-
-                // could not read any other token from the reader
-                if (!endDelimiterMatcher.TryNextWindow(out var isEndDelimiterMatch))
-                    return false;
-
-                else if (isEndDelimiterMatch)
+                while (matcher.TryNextWindow(out var isMatch))
                 {
-                    reader.Advance(endDelimiterMatcher.PatternLength);
-                    return true;
-                }
-                
-                #endregion
-
-                #region Illegal sequence match
-
-                if (MatchesAny(illegalSequenceMatchers, out _))
-                    return false;
-
-                #endregion
-
-                #region Legal sequence match
-
-                if (legalSequenceMatchers.Length == 0)
-                    newTokens = token;
-
-                else if (MatchesAny(legalSequenceMatchers, out var matchCount))
-                {
-                    
-                }
-
-                #endregion
-
-                // illegal tokens
-            }
-        }
-
-        internal static bool MatchesAny(
-            IEnumerable<SubstringMatcher> matchers,
-            out int matchCount)
-        {
-            matchCount = 0;
-            foreach (var matcher in matchers)
-            {
-                if (matcher.TryNextWindow(out bool isMatch) && isMatch)
-                {
-                    matchCount = matcher.PatternLength;
-                    return true;
+                    if (isMatch)
+                    {
+                        tokens = tokens[..matcher.CurrentOffset];
+                        return false;
+                    }
                 }
             }
 
-            return false;
-        }
+            #endregion
 
-        /// <summary>
-        /// Convenience method for resetting the reader and returning a boolean value
-        /// </summary>
-        internal static bool ResetReader(TokenReader reader, int position, bool returnValue)
-        {
-            _ = reader.Reset(position);
-            return returnValue;
+            #region Third run: find legal sequences
+
+            if (LegalSequences.IsEmpty)
+                return true;
+
+            for (int index = 0; index < tokens.Count; index++)
+            {
+                var shift = LegalSequences
+                    .Where(legalSequence =>
+                    {
+                        var boundaryIndex = legalSequence.Count + index;
+                        if (boundaryIndex > capturedTokens.Count)
+                            return false;
+
+                        var subtoken = capturedTokens[index..boundaryIndex];
+                        if (legalSequence.Equals(subtoken))
+                            return true;
+
+                        return false;
+                    })
+                    .Select(legalSequence => legalSequence.Count)
+                    .FirstOrDefault();
+
+                if (shift > 0)
+                    index += (shift - 1);
+
+                else
+                {
+                    tokens = tokens[..index];
+                    return false;
+                }
+            }
+            return true;
+
+            #endregion
         }
 
         #endregion

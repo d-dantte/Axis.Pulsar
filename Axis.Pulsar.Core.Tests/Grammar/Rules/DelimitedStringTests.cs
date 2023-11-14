@@ -1,7 +1,8 @@
-﻿using Axis.Luna.Common.Utils;
+﻿using Axis.Luna.Common.Results;
+using Axis.Luna.Common.Utils;
+using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Rules;
 using Axis.Pulsar.Core.Utils;
-using Axis.Pulsar.Core.Utils.EscapeMatchers;
 
 namespace Axis.Pulsar.Core.Tests.Grammar.Rules
 {
@@ -16,8 +17,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 Enumerable.Empty<Tokens>(),
                 ArrayUtil.Of(Tokens.Of("xyz")),
                 Enumerable.Empty<CharRange>(),
-                Enumerable.Empty<CharRange>(),
-                ArrayUtil.Of(new BSolAsciiEscapeMatcher()));
+                Enumerable.Empty<CharRange>());
 
             var inputString = "\"the quick brown fox, etc...\"";
 
@@ -36,8 +36,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 Enumerable.Empty<Tokens>(),
                 ArrayUtil.Of(Tokens.Of("xyz")),
                 Enumerable.Empty<CharRange>(),
-                Enumerable.Empty<CharRange>(),
-                ArrayUtil.Of(new BSolAsciiEscapeMatcher()));
+                Enumerable.Empty<CharRange>());
 
             var inputString = "\"the quick brown fox, etc...\"";
 
@@ -49,41 +48,6 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
         }
 
         [TestMethod]
-        public void TryRecognizeEscapeSequence_Tests()
-        {
-            var dstring = DelimitedString.Of(
-                true, "\"", "\"",
-                Enumerable.Empty<Tokens>(),
-                ArrayUtil.Of(Tokens.Of("xyz")),
-                Enumerable.Empty<CharRange>(),
-                Enumerable.Empty<CharRange>(),
-                ArrayUtil.Of<IEscapeSequenceMatcher>(
-                    new BSolAsciiEscapeMatcher(),
-                    new BSolUTFEscapeMatcher(),
-                    new BSolBasicEscapeMatcher()));
-
-            var inputString = "\"the \\n \\x10 \\u0010 quick brown fox, etc...\"";
-
-            var success = dstring.TryRecognizeEscapeSequence(
-                inputString[5..],
-                out var delim);
-            Assert.IsTrue(success);
-            Assert.IsTrue(delim.Equals("\\n"));
-
-            success = dstring.TryRecognizeEscapeSequence(
-                inputString[8..],
-                out delim);
-            Assert.IsTrue(success);
-            Assert.IsTrue(delim.Equals("\\x10"));
-
-            success = dstring.TryRecognizeEscapeSequence(
-                inputString[13..],
-                out delim);
-            Assert.IsTrue(success);
-            Assert.IsTrue(delim.Equals("\\u0010"));
-        }
-
-        [TestMethod]
         public void TryRecognizeString_Tests()
         {
             var dstring = DelimitedString.Of(
@@ -92,15 +56,15 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 ArrayUtil.Of(Tokens.Of("xyz")),
                 Enumerable.Empty<CharRange>(),
                 Enumerable.Empty<CharRange>(),
-                ArrayUtil.Of(new BSolAsciiEscapeMatcher()));
+                "\\\"");
 
-            var inputString = "\"the quick brown fox, etc...\"";
+            var inputString = "\"the \\\"quick\\\" brown fox, etc...\"";
 
             var success = dstring.TryRecognizeString(
                 inputString[1..],
                 out var delim);
             Assert.IsTrue(success);
-            Assert.IsTrue(delim.Equals("the quick brown fox, etc..."));
+            Assert.IsTrue(delim.Equals("the \\\"quick\\\" brown fox, etc..."));
 
             inputString = "\"the quick brown fox, xyz etc...\"";
 
@@ -116,22 +80,21 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 Enumerable.Empty<Tokens>(),
                 Enumerable.Empty<CharRange>(),
                 Enumerable.Empty<CharRange>(),
-                ArrayUtil.Of(new BSolAsciiEscapeMatcher()));
+                "\\*/");
 
-            inputString = "stuff comment * bleh / finall */";
+            inputString = "stuff comment * bleh / finall \\*/ */";
             success = dstring.TryRecognizeString(
                 inputString,
                 out delim);
             Assert.IsTrue(success);
-            Assert.IsTrue(delim.Equals("stuff comment * bleh / finall "));
+            Assert.IsTrue(delim.Equals("stuff comment * bleh / finall \\*/ "));
 
             dstring = DelimitedString.Of(
                 true, "/*", "*/",
                 Enumerable.Empty<Tokens>(),
                 Enumerable.Empty<Tokens>(),
                 Enumerable.Empty<CharRange>(),
-                ArrayUtil.Of(CharRange.Of('0', '9')),
-                ArrayUtil.Of(new BSolAsciiEscapeMatcher()));
+                ArrayUtil.Of(CharRange.Of('0', '9')));
 
             inputString = "stuff 6 comment * bleh / finall */";
             success = dstring.TryRecognizeString(
@@ -139,57 +102,51 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 out delim);
             Assert.IsFalse(success);
             Assert.IsTrue(delim.Equals("stuff "));
+
+            dstring = DelimitedString.Of(
+                true, "/*", "*/",
+                new Tokens[] { "abc", "ab" },
+                Enumerable.Empty<Tokens>(),
+                Enumerable.Empty<CharRange>(),
+                ArrayUtil.Of(CharRange.Of('0', '9')));
+
+            inputString = "abcabcabcababababc*/";
+            success = dstring.TryRecognizeString(
+                inputString,
+                out delim);
+            Assert.IsTrue(success);
+            Assert.IsTrue(delim.Equals("abcabcabcababababc"));
         }
-    }
 
-    [TestClass]
-    public class SequenceMatcherTests
-    {
         [TestMethod]
-        public void TryNextWindow_Tests()
+        public void TryRecognize_Tests()
         {
-            var sequenceMatcher = DelimitedString.SequenceMatcher.Of(
-                ":",
-                "So:",
-                0);
+            var path = ProductionPath.Of("a");
+            var dstring = DelimitedString.Of(
+                true, "'", "'",
+                Enumerable.Empty<Tokens>(),
+                ArrayUtil.Of(Tokens.Of("xyz")),
+                Enumerable.Empty<CharRange>(),
+                Enumerable.Empty<CharRange>(),
+                "\\\"");
 
-            var moved = sequenceMatcher.TryNextWindow(out var isMatch);
-            Assert.IsTrue(moved);
-            Assert.IsFalse(isMatch);
+            var inputString = "'the \\\"quick\\\" brown fox, etc...'";
 
-            moved = sequenceMatcher.TryNextWindow(out isMatch);
-            Assert.IsTrue(moved);
-            Assert.IsFalse(isMatch);
+            var success = dstring.TryRecognize(
+                inputString,
+                path,
+                null!,
+                out var nodeResult);
+            Assert.IsTrue(success);
+            nodeResult.Consume(n => n.Tokens.Equals("'the \\\"quick\\\" brown fox, etc...'"));
 
-            moved = sequenceMatcher.TryNextWindow(out isMatch);
-            Assert.IsTrue(moved);
-            Assert.IsTrue(isMatch);
-
-
-            sequenceMatcher = DelimitedString.SequenceMatcher.Of(
-                "a",
-                "So, actuall, no body says yes and then says no",
-                0);
-
-            moved = sequenceMatcher.TryNextWindow(out isMatch);
-            Assert.IsTrue(moved);
-            Assert.IsFalse(isMatch);
-
-            moved = sequenceMatcher.TryNextWindow(out isMatch);
-            Assert.IsTrue(moved);
-            Assert.IsFalse(isMatch);
-
-            moved = sequenceMatcher.TryNextWindow(out isMatch);
-            Assert.IsTrue(moved);
-            Assert.IsFalse(isMatch);
-
-            moved = sequenceMatcher.TryNextWindow(out isMatch);
-            Assert.IsTrue(moved);
-            Assert.IsFalse(isMatch);
-
-            moved = sequenceMatcher.TryNextWindow(out isMatch);
-            Assert.IsTrue(moved);
-            Assert.IsTrue(isMatch);
+            success = dstring.TryRecognize(
+                "'something wonderful this way avoids'",
+                path,
+                null!,
+                out nodeResult);
+            Assert.IsTrue(success);
+            nodeResult.Consume(n => n.Tokens.Equals("'something wonderful this way avoids'"));
         }
     }
 }

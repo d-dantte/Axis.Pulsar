@@ -58,9 +58,9 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
     public static Argument AcceptsEmptyArgument => Argument.Of("accepts-empty");
 
     /// <summary>
-    /// Escape matchers argument
+    /// The optoinal escaped version of the end delimiter
     /// </summary>
-    public static Argument EscapeMatchersArgument => Argument.Of("escape-matchers");
+    public static Argument EscapedEndDelimiterArgument => Argument.Of("escaped-delimiter");
 
     #endregion
 
@@ -76,7 +76,9 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
         var sequences = ParseSequences(arguments[SequencesArgument]);
         var delimiters = ParseDelimiters(arguments);
         var acceptsEmpty = ParseAcceptsEmpty(arguments);
-        var escapeMatchers = ParseEscapeMatchers(context, arguments[EscapeMatchersArgument]);
+        var escapedDelimiter = arguments.TryGetValue(EscapedEndDelimiterArgument, out var value)
+            ? Tokens.Of(value)
+            : Tokens.Default;
 
         return DelimitedString.Of(
             acceptsEmpty,
@@ -86,7 +88,7 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
             sequences.Excludes,
             ranges.Includes,
             ranges.Excludes,
-            escapeMatchers);
+            escapedDelimiter);
     }
 
     private static void ValidateArgs(ImmutableDictionary<Argument, string> arguments)
@@ -95,9 +97,6 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
 
         if (!arguments.ContainsKey(StartDelimArgument))
             throw new ArgumentException($"Invalid arguments: '{StartDelimArgument}' is missing");
-
-        if (!arguments.ContainsKey(EscapeMatchersArgument))
-            throw new ArgumentException($"Invalid arguments: '{EscapeMatchersArgument}' is missing");
     }
 
     internal static (string Start, string End) ParseDelimiters(ImmutableDictionary<Argument, string> arguments)
@@ -115,19 +114,6 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
         return arguments.TryGetValue(AcceptsEmptyArgument, out var value)
             ? bool.Parse(value)
             : true;
-    }
-
-    internal static IEnumerable<IEscapeSequenceMatcher> ParseEscapeMatchers(
-        MetaContext context,
-        string matchers)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-
-        return matchers
-            .Split(',')
-            .Select(name => context.EscapeMatcherMap[name])
-            .Select(matcherDef => matcherDef.Matcher)
-            .ToArray();
     }
 
     internal static (IEnumerable<Tokens> Includes, IEnumerable<Tokens> Excludes) ParseSequences(string sequences)

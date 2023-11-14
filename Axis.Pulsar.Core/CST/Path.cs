@@ -107,9 +107,9 @@ namespace Axis.Pulsar.Core.CST
 
     public enum NodeType
     {
-        Unspecified,
-        NonTerminal,
-        Terminal
+        Unspecified = 'u',
+        NonTerminal = 'n',
+        Terminal = 't'
     }
 
     public record NodeFilter

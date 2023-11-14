@@ -8,16 +8,27 @@ namespace Axis.Pulsar.Core.Utils
 
         protected RollingHash.Hash PatternHash { get; }
 
-        public string Source { get; }
+        public Tokens Source { get; }
 
         public int StartOffset { get; }
 
         public int PatternLength { get; }
 
+        public int CurrentOffset
+        {
+            get
+            {
+                if (_hasher.IsValueCreated)
+                    return _hasher.Value.Offset;
+
+                return - 1;
+            }
+        }
+
         protected SubstringMatcher(
             Tokens patternSequence,
-            string source,
-            int startOffset)
+            Tokens source,
+            int startOffset = 0)
         {
             var pattern = patternSequence.ThrowIf(
                 seq => seq.IsEmpty || seq.IsDefault,
@@ -26,11 +37,11 @@ namespace Axis.Pulsar.Core.Utils
             PatternLength = pattern.Count;
 
             Source = source.ThrowIf(
-                string.IsNullOrEmpty,
+                s => s.IsDefaultOrEmpty,
                 new ArgumentException($"Invalid {nameof(source)}: null/empty"));
 
             StartOffset = startOffset.ThrowIf(
-                offset => offset < 0 || offset >= source.Length,
+                offset => offset < 0 || offset >= source.Count,
                 new ArgumentOutOfRangeException(
                     nameof(startOffset),
                     $"Value '{startOffset}' is < 0 or > {nameof(source)}.Length"));
@@ -45,21 +56,21 @@ namespace Axis.Pulsar.Core.Utils
                 : hash;
 
             _hasher = new Lazy<RollingHash>(() => RollingHash.Of(
-                source,
-                startOffset,
+                source.Source!,
+                startOffset + source.Offset,
                 patternSequence.Count));
         }
 
         public static SubstringMatcher OfLookAhead(
             Tokens patternSequence,
-            string source,
-            int startOffset)
+            Tokens source,
+            int startOffset = 0)
             => new LookAheadMatcher(patternSequence, source, startOffset);
 
         public static SubstringMatcher OfLookBehind(
             Tokens patternSequence,
-            string source,
-            int startOffset)
+            Tokens source,
+            int startOffset = 0)
             => new LookBehindMatcher(patternSequence, source, startOffset);
 
         /// <summary>
@@ -74,12 +85,12 @@ namespace Axis.Pulsar.Core.Utils
         {
             internal LookAheadMatcher(
                 Tokens patternSequence,
-                string source,
+                Tokens source,
                 int startOffset)
                 : base(patternSequence, source, startOffset)
             {
-                if (startOffset + patternSequence.Count > source.Length)
-                    throw new ArgumentException("Invalid args: source.Length < startOffset + patternSequence.Count");
+                if (startOffset + patternSequence.Count > source.Count)
+                    throw new ArgumentException("Invalid args: source.Count < startOffset + patternSequence.Count");
             }
 
             public override bool TryNextWindow(out bool isMatch)
@@ -103,7 +114,7 @@ namespace Axis.Pulsar.Core.Utils
 
             internal LookBehindMatcher(
                 Tokens patternSequence,
-                string source,
+                Tokens source,
                 int startOffset)
                 : base(patternSequence, source, startOffset)
             {
@@ -114,7 +125,7 @@ namespace Axis.Pulsar.Core.Utils
                 isMatch = false;
                 var newCount = _consumedCharCount + 1;
 
-                if (StartOffset + newCount > Source.Length)
+                if (StartOffset + newCount > Source.Count)
                     return false;
 
                 _consumedCharCount = newCount;

@@ -13,51 +13,61 @@ namespace Axis.Pulsar.Core.Utils
     /// </summary>
     abstract public class RollingHash
     {
-        protected readonly string _source;
-        protected readonly int _length;
+        protected readonly Tokens _source;
+        protected readonly int _windowLength;
         protected int _offset;
 
         public Hash? WindowHash { get; protected set; }
 
-        public int Length => _length;
+        public int WindowLength => _windowLength;
 
         public int Offset => _offset;
 
-        public string Source => _source;
+        public Tokens Source => _source;
 
-        protected RollingHash(string @string, int offset, int length)
+        protected RollingHash(Tokens @string, int offset, int windowLength)
         {
-            Validate(@string, offset, length);
+            Validate(@string, offset, windowLength);
 
             _source = @string;
             _offset = offset - 1;
-            _length = length;
+            _windowLength = windowLength;
         }
 
-        public static RollingHash Of(string @string, int offset, int length)
+        public static RollingHash Of(Tokens @string, int offset, int windowLength)
         {
-            if (length == 1)
-                return new RollingValueHash(@string, offset, length);
+            if (windowLength == 1)
+                return new RollingValueHash(@string, offset, windowLength);
 
-            else return new RollingWindowHash(@string, offset, length);
+            else return new RollingWindowHash(@string, offset, windowLength);
         }
 
         abstract public bool TryNext(out Hash result);
 
         abstract public bool TryNext(int count, out Hash result);
 
-        abstract public Hash ComputeHash(string @string, int offset, int length);
+        abstract public Hash ComputeHash(Tokens @string, int offset, int length);
 
-        protected static void Validate(string @string, int offset, int length)
+        protected static void Validate(Tokens @string, int offset, int length)
         {
-            if (string.IsNullOrEmpty(@string))
-                throw new ArgumentException($"Invalid string: null/empty");
+            if (@string.IsDefaultOrEmpty)
+                throw new ArgumentException($"Invalid tokens: null/empty");
 
-            if (offset < 0 || offset >= @string.Length)
+            if (offset < 0 || offset >= @string.Count)
                 throw new ArgumentOutOfRangeException(nameof(offset));
 
-            if (offset + length > @string.Length)
+            if (offset + length > @string.Count)
                 throw new ArgumentOutOfRangeException(nameof(length));
+        }
+
+        public static Hash ComputeHash(Tokens @string)
+        {
+            var impl = Of(@string, 0, @string.Count);
+            if (impl.TryNext(out var hash))
+                return hash;
+
+            throw new InvalidOperationException(
+                $"Invalid string: could not calculate hash of '{@string}'");
         }
 
         #region Nested types
@@ -109,59 +119,46 @@ namespace Axis.Pulsar.Core.Utils
             private readonly long _factor1;
             private readonly long _factor2;
 
-            public RollingWindowHash(string @string, int offset, int length)
+            public RollingWindowHash(Tokens @string, int offset, int length)
             : base(@string, offset, length)
             {
-                _factor1 = ComputeFactor(_Base1, _Mod1, _length);
-                _factor2 = ComputeFactor(_Base2, _Mod2, _length);
+                _factor1 = ComputeFactor(_Base1, _Mod1, _windowLength);
+                _factor2 = ComputeFactor(_Base2, _Mod2, _windowLength);
             }
 
             override public bool TryNext(out Hash result)
             {
                 var newOffset = _offset + 1;
-                if (newOffset + _length > _source.Length)
+                if (newOffset + _windowLength > _source.Count)
                 {
                     result = default;
                     return false;
                 }
 
                 WindowHash = result = WindowHash is null
-                    ? ComputeHash(_source, newOffset, _length)
-                    : NextHash(WindowHash.Value, _source, _offset, _length, (_factor1, _factor2));
+                    ? ComputeHash(_source, newOffset, _windowLength)
+                    : NextHash(WindowHash.Value, _source, _offset, _windowLength, (_factor1, _factor2));
                 _offset = newOffset;
                 return true;
             }
 
             override public bool TryNext(int count, out Hash result)
             {
-                var finalOffset = _offset + count;
-                if (finalOffset + _length > _source.Length)
+                result = default;
+                for (int cnt = 1; cnt <= count; cnt++)
                 {
-                    result = default;
-                    return false;
+                    var moved = cnt == count
+                        ? TryNext(out result)
+                        : TryNext(out _);
+
+                    if (!moved)
+                        return false;
                 }
 
-                WindowHash = Enumerable
-                    .Range(0, count)
-                    .Aggregate(WindowHash, (hash, next) =>
-                    {
-                        // if the rolling hash is new
-                        if (hash is null)
-                            return ComputeHash(_source, count, _length);
-
-                        return NextHash(
-                            hash.Value,
-                            _source, _offset + next,
-                            _length,
-                            (_factor1, _factor2));
-                    });
-
-                _offset = finalOffset;
-                result = WindowHash!.Value;
                 return true;
             }
 
-            override public Hash ComputeHash(string @string, int offset, int length)
+            override public Hash ComputeHash(Tokens @string, int offset, int length)
             {
                 return Hash.Of(
                     ComputeHash(@string, offset, length, _Mod1, _Base1),
@@ -172,7 +169,7 @@ namespace Axis.Pulsar.Core.Utils
 
             public static Hash NextHash(
                 Hash previous,
-                string @string,
+                Tokens @string,
                 int oldOffset,
                 int length,
                 (long factor1, long factor2) factors)
@@ -185,7 +182,7 @@ namespace Axis.Pulsar.Core.Utils
             private static long NextHash(
                 long previousHash,
                 long factor,
-                string @string,
+                Tokens @string,
                 int oldOffset,
                 int length,
                 long mod,
@@ -203,7 +200,7 @@ namespace Axis.Pulsar.Core.Utils
             }
 
             private static long ComputeHash(
-                string @string,
+                Tokens @string,
                 int offset,
                 int length,
                 long mod,
@@ -235,7 +232,7 @@ namespace Axis.Pulsar.Core.Utils
 
         internal class RollingValueHash : RollingHash
         {
-            internal RollingValueHash(string @string, int offset, int length)
+            internal RollingValueHash(Tokens @string, int offset, int length)
             : base(@string, offset, length)
             {
             }
@@ -243,13 +240,13 @@ namespace Axis.Pulsar.Core.Utils
             override public bool TryNext(out Hash result)
             {
                 var newOffset = _offset + 1;
-                if (newOffset + _length > _source.Length)
+                if (newOffset + _windowLength > _source.Count)
                 {
                     result = default;
                     return false;
                 }
 
-                WindowHash = result = ComputeHash(_source, newOffset, _length);
+                WindowHash = result = ComputeHash(_source, newOffset, _windowLength);
                 _offset = newOffset;
                 return true;
             }
@@ -257,18 +254,18 @@ namespace Axis.Pulsar.Core.Utils
             override public bool TryNext(int count, out Hash result)
             {
                 var finalOffset = _offset + count;
-                if (finalOffset + _length > _source.Length)
+                if (finalOffset + _windowLength > _source.Count)
                 {
                     result = default;
                     return false;
                 }
 
-                WindowHash = result = ComputeHash(_source, finalOffset, _length);
+                WindowHash = result = ComputeHash(_source, finalOffset, _windowLength);
                 _offset = finalOffset;
                 return true;
             }
 
-            override public Hash ComputeHash(string @string, int offset, int length)
+            override public Hash ComputeHash(Tokens @string, int offset, int length)
             {
                 Validate(@string, offset, length);
 
@@ -276,6 +273,8 @@ namespace Axis.Pulsar.Core.Utils
                     @string[offset..(offset + 1)][0],
                     0);
             }
+
+
         }
 
         #endregion

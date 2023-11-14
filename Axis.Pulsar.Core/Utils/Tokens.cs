@@ -26,6 +26,8 @@ namespace Axis.Pulsar.Core.Utils
 
         public string? Source => _source;
 
+        public bool IsDefaultOrEmpty => IsDefault || IsEmpty;
+
         public char this[int index]
         {
             get

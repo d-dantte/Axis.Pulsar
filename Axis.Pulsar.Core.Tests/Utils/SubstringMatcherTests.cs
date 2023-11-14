@@ -1,6 +1,6 @@
 ﻿using Axis.Pulsar.Core.Utils;
 
-namespace Axis.Pulsar.Core.Tests;
+namespace Axis.Pulsar.Core.Tests.Utils;
 
 
 [TestClass]

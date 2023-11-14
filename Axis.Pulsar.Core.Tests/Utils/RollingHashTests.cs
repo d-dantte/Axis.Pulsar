@@ -13,16 +13,16 @@ namespace Axis.Pulsar.Core.Tests.Utils
             var rollingHash = RollingHash.Of(Text, 0, 3);
             Assert.IsInstanceOfType<RollingHash.RollingWindowHash>(rollingHash);
             Assert.AreEqual(Text, rollingHash.Source);
-            Assert.AreEqual(0, rollingHash.Offset);
-            Assert.AreEqual(3, rollingHash.Length);
+            Assert.AreEqual(-1, rollingHash.Offset);
+            Assert.AreEqual(3, rollingHash.WindowLength);
 
             rollingHash = RollingHash.Of(Text, 0, 1);
             Assert.IsInstanceOfType<RollingHash.RollingValueHash>(rollingHash);
             Assert.AreEqual(Text, rollingHash.Source);
-            Assert.AreEqual(0, rollingHash.Offset);
-            Assert.AreEqual(1, rollingHash.Length);
+            Assert.AreEqual(-1, rollingHash.Offset);
+            Assert.AreEqual(1, rollingHash.WindowLength);
 
-            Assert.ThrowsException<ArgumentException>(() => RollingHash.Of(null!, 0, 3));
+            Assert.ThrowsException<ArgumentException>(() => RollingHash.Of(default, 0, 3));
             Assert.ThrowsException<ArgumentException>(() => RollingHash.Of("", 0, 3));
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => RollingHash.Of(Text, -2, 3));
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => RollingHash.Of(Text, 0, 300));
@@ -34,7 +34,7 @@ namespace Axis.Pulsar.Core.Tests.Utils
         {
             #region multiple char window tests
             var rollingHash = RollingHash.Of(Text, 0, 3);
-            var hash = rollingHash.WindowHash;
+            var hash = RollingHash.ComputeHash(Tokens.Of(Text, 0, 3));
             var successCount = 0;
             while (rollingHash.TryNext(out var newHash))
             {
@@ -43,11 +43,11 @@ namespace Axis.Pulsar.Core.Tests.Utils
             }
 
             Assert.AreEqual(Text.Length - 3, rollingHash.Offset);
-            Assert.AreEqual(6, successCount);
+            Assert.AreEqual(7, successCount);
 
 
             rollingHash = RollingHash.Of(Text, 0, 4);
-            hash = rollingHash.WindowHash;
+            hash = RollingHash.ComputeHash(Tokens.Of(Text, 0, 4));
             successCount = 0;
             while (rollingHash.TryNext(out var newHash))
             {
@@ -56,19 +56,19 @@ namespace Axis.Pulsar.Core.Tests.Utils
             }
 
             Assert.AreEqual(Text.Length - 4, rollingHash.Offset);
-            Assert.AreEqual(1, successCount);
+            Assert.AreEqual(2, successCount);
 
 
             rollingHash = RollingHash.Of(Text, 0, 3);
-            hash = rollingHash.WindowHash;
-            var moved = rollingHash.TryNext(16, out var xhash);
+            hash = RollingHash.ComputeHash(Tokens.Of(Text, 0, 3));
+            var moved = rollingHash.TryNext(17, out var xhash);
             Assert.IsTrue(moved);
             Assert.AreEqual(hash, xhash);
             #endregion
 
             #region single char window tests
             rollingHash = RollingHash.Of(Text, 0, 1);
-            hash = rollingHash.WindowHash;
+            hash = RollingHash.ComputeHash(Tokens.Of(Text, 0, 1));
             successCount = 0;
             while (rollingHash.TryNext(out var newHash))
             {
@@ -77,12 +77,12 @@ namespace Axis.Pulsar.Core.Tests.Utils
             }
 
             Assert.AreEqual(Text.Length - 1, rollingHash.Offset);
-            Assert.AreEqual(7, successCount);
+            Assert.AreEqual(8, successCount);
 
 
             rollingHash = RollingHash.Of(Text, 3, 1);
-            hash = rollingHash.WindowHash;
-            moved = rollingHash.TryNext(8, out xhash);
+            hash = RollingHash.ComputeHash(Tokens.Of(Text, 3, 1));
+            moved = rollingHash.TryNext(9, out xhash);
             Assert.IsTrue(moved);
             Assert.AreEqual(hash, xhash);
             #endregion

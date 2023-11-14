@@ -30,7 +30,7 @@ namespace Axis.Pulsar.Core.Tests.CST
             Assert.AreEqual(2, nodes.Length);
 
             nodes = CSTNodeUtil
-                .FindNodes(cst, "second.third/fourth")
+                .FindNodes(cst, "second/third/fourth")
                 .ToArray();
             Assert.AreEqual(1, nodes.Length);
 
@@ -46,7 +46,7 @@ namespace Axis.Pulsar.Core.Tests.CST
                     ICSTNode.Of("second"),
                     ICSTNode.Of("second")));
             nodes = CSTNodeUtil
-                .FindNodes(cst, "bleh/@r:second")
+                .FindNodes(cst, "bleh/@n:second")
                 .ToArray();
             Assert.AreEqual(5, nodes.Length);
         }

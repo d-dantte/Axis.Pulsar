@@ -49,6 +49,17 @@ namespace Axis.Pulsar.Core.Utils
             return false;
         }
 
+        public bool TryGetTokens(Tokens expectedTokens, out Tokens tokens)
+        {
+            if (TryPeekTokens(expectedTokens, out tokens))
+            {
+                _position += expectedTokens.Count;
+                return true;
+            }
+
+            return false;
+        }
+
         public bool TryGetTokens(int tokenCount, bool failOnInsufficientTokens, out Tokens tokens)
         {
             if (TryPeekTokens(tokenCount, failOnInsufficientTokens, out tokens))
@@ -118,6 +129,18 @@ namespace Axis.Pulsar.Core.Utils
             return false;
         }
 
+        public bool TryPeekTokens(Tokens expectedTokens, out Tokens tokens)
+        {
+            if (expectedTokens.IsDefaultOrEmpty)
+                throw new ArgumentException($"Invalid {nameof(expectedTokens)}: default/empty");
+
+            if (TryPeekTokens(expectedTokens.Count, true, out tokens)
+                && tokens.Equals(expectedTokens))
+                return true;
+
+            return false;
+        }
+
         public bool TryPeekTokens(int tokenCount, bool failOnInsufficientTokens, out Tokens tokens)
         {
             if (tokenCount < 0)
@@ -137,10 +160,14 @@ namespace Axis.Pulsar.Core.Utils
             return true;
         }
 
-        public bool TryPeekTokens(int tokenCount, out Tokens tokens)
+        public bool TryPeekTokens(
+            int tokenCount,
+            out Tokens tokens)
             => TryPeekTokens(tokenCount, false, out tokens);
 
-        public bool TryPeekToken(out Tokens tokens) => TryPeekTokens(1, false, out tokens);
+        public bool TryPeekToken(
+            out Tokens tokens)
+            => TryPeekTokens(1, false, out tokens);
         #endregion
 
         #region Back

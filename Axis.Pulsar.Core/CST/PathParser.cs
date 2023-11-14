@@ -29,10 +29,10 @@ namespace Axis.Pulsar.Core.CST
         internal static readonly string NodeName_Symbol_Name = "symbol-name";
         internal static readonly string NodeName_Tokens = "tokens";
 
-        private static readonly HashSet<char> FilterTypeCharacters = new()
-        {
-            't', 'n', 'u'
-        };
+        private static readonly HashSet<char> FilterTypeCharacters = Enum
+            .GetValues<NodeType>()
+            .Select(nt => (char)nt)
+            .ToHashSet();
 
 
         public static IResult<Path> Parse(string pathText)
