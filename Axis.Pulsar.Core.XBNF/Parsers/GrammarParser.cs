@@ -923,7 +923,7 @@ public static class GrammarParser
             // start delim
             if (!reader.TryGetTokens(startDelimiter.ToString(), out var startDelimToken))
             {
-                result = Result.Of<Tokens>(new UnrecognizedTokens(
+                result = Result.Of<Tokens>(new UnmatchedError(
                     "atomic-rule",
                     position));
                 reader.Reset(position);
@@ -934,13 +934,20 @@ public static class GrammarParser
             var contentTokens = Tokens.Empty;
             while (reader.TryGetToken(out var stringChar))
             {
-                if (stringChar[0] == startDelimToken[0]
-                    && contentTokens.Count > 0 && contentTokens[^1] != '\\')
+                if (stringChar[0] == '\\'
+                    && reader.TryPeekToken(out var nextToken)
+                    && nextToken[0] == endDelimiter)
+                {
+                    stringChar += nextToken;
+                    reader.Advance();
+                }
+                else if (stringChar[0] == endDelimiter)
                 {
                     reader.Back();
                     break;
-                }
-                else contentTokens += stringChar; // contentTokens = contentTokens.Join(stringChar);
+                }                
+                
+                contentTokens += stringChar; // contentTokens = contentTokens.Join(stringChar);
             }
 
             // end delim

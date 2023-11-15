@@ -167,7 +167,7 @@ namespace Axis.Pulsar.Core.Utils
 
         public bool TryPeekToken(
             out Tokens tokens)
-            => TryPeekTokens(1, false, out tokens);
+            => TryPeekTokens(1, true, out tokens);
         #endregion
 
         #region Back

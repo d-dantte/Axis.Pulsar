@@ -314,7 +314,68 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             var info = result.Resolve();
-            Assert.IsTrue(info.Equals("the content\\'"));
+            Assert.AreEqual(AtomicContentDelimiterType.Quote, info.ContentType);
+            Assert.IsTrue(info.Content.Equals("the content\\'"));
+
+            // double quote
+            success = GrammarParser.TryParseAtomicContent(
+                "\"the content\\\"\"",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            info = result.Resolve();
+            Assert.AreEqual(AtomicContentDelimiterType.DoubleQuote, info.ContentType);
+            Assert.IsTrue(info.Content.Equals("the content\\\""));
+
+            // grave
+            success = GrammarParser.TryParseAtomicContent(
+                "`the content\\``",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            info = result.Resolve();
+            Assert.AreEqual(AtomicContentDelimiterType.Grave, info.ContentType);
+            Assert.IsTrue(info.Content.Equals("the content\\`"));
+
+            // sol
+            success = GrammarParser.TryParseAtomicContent(
+                "/the content\\//",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            info = result.Resolve();
+            Assert.AreEqual(AtomicContentDelimiterType.Sol, info.ContentType);
+            Assert.IsTrue(info.Content.Equals("the content\\/"));
+
+            // back-sol
+            success = GrammarParser.TryParseAtomicContent(
+                "\\the content\\\\\\",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            info = result.Resolve();
+            Assert.AreEqual(AtomicContentDelimiterType.BackSol, info.ContentType);
+            Assert.IsTrue(info.Content.Equals("the content\\\\"));
+
+            // vertical bar
+            success = GrammarParser.TryParseAtomicContent(
+                "|the content\\||",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            info = result.Resolve();
+            Assert.AreEqual(AtomicContentDelimiterType.VerticalBar, info.ContentType);
+            Assert.IsTrue(info.Content.Equals("the content\\|"));
         }
         #endregion
     }
