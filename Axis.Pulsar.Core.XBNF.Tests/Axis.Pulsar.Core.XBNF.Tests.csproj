@@ -24,4 +24,9 @@
     <ProjectReference Include="..\Axis.Pulsar.Core.XBNF\Axis.Pulsar.Core.XBNF.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Writers\" />
+    <Folder Include="RuleFactories\" />
+  </ItemGroup>
+
 </Project>

@@ -1137,7 +1137,8 @@ public static class GrammarParser
             while (!accumulator.IsPreviousOpErrored);
 
 
-            if (accumulator.IsPreviousOpErrored)
+            if (accumulator.IsPreviousOpFaultyMatch
+                || accumulator.IsPreviousOpUnknown)
             {
                 if (accumulator.IsPreviousOpUnmatched && list.Count > 0)
                     result = Result.Of<SilentBlock>(new FaultyMatchError(
@@ -1268,10 +1269,10 @@ public static class GrammarParser
         try
         {
             if (!reader.TryGetToken(out var whitespaceToken)
-                || ' ' != whitespaceToken[0]
-                || '\t' != whitespaceToken[0]
-                || '\n' != whitespaceToken[0]
-                || '\r' != whitespaceToken[0])
+                || (' ' != whitespaceToken[0]
+                && '\t' != whitespaceToken[0]
+                && '\n' != whitespaceToken[0]
+                && '\r' != whitespaceToken[0]))
             {
                 result = Result.Of<Whitespace>(new UnmatchedError(
                     "whitespace",

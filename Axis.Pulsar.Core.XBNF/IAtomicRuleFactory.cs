@@ -83,6 +83,11 @@ public interface IAtomicRuleFactory
             return EqualityComparer<string>.Default.Equals(_key, arg._key);
         }
 
+        public bool Equals(string key)
+        {
+            return EqualityComparer<string>.Default.Equals(_key, key);
+        }
+
         public static bool operator ==(Argument left, Argument right)
         {
             return left.Equals(right);
