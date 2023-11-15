@@ -1,5 +1,6 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Pulsar.Core.Utils;
+using Axis.Pulsar.Core.XBNF.Definitions;
 using Axis.Pulsar.Core.XBNF.Parsers.Models;
 
 namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
@@ -283,7 +284,37 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         [TestMethod]
         public void TryParseDelimitedContent_Tests()
         {
+            var metaContext = MetaContext.Builder.NewBuilder().Build();
 
+            // quote
+            var success = GrammarParser.TryParseDelimitedContent(
+                "'the content\\''",
+                metaContext,
+                '\'',
+                '\'',
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            var info = result.Resolve();
+            Assert.IsTrue(info.Equals("the content\\'"));
+        }
+
+        [TestMethod]
+        public void TryParseAtomicContent_Tests()
+        {
+            var metaContext = MetaContext.Builder.NewBuilder().Build();
+
+            // quote
+            var success = GrammarParser.TryParseAtomicContent(
+                "'the content\\''",
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            var info = result.Resolve();
+            Assert.IsTrue(info.Equals("the content\\'"));
         }
         #endregion
     }
