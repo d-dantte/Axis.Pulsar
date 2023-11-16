@@ -37,5 +37,10 @@ namespace Axis.Pulsar.Core.XBNF.Definitions
             AtomicContentDelimiterType contentDelimiterType,
             IAtomicRuleFactory factory)
             => new(symbol, contentDelimiterType, factory);
+
+        public static AtomicRuleDefinition Of(
+            string symbol,
+            IAtomicRuleFactory factory)
+            => new(symbol, AtomicContentDelimiterType.None, factory);
     }
 }

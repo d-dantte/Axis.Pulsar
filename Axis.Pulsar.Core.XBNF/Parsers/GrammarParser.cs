@@ -8,6 +8,7 @@ using Axis.Pulsar.Core.Utils;
 using Axis.Pulsar.Core.XBNF.Definitions;
 using Axis.Pulsar.Core.XBNF.Parsers.Models;
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
@@ -18,9 +19,18 @@ public static class GrammarParser
 {
     private static readonly Regex DigitPattern = new Regex("^\\d+\\z", RegexOptions.Compiled);
 
+    private static readonly Regex BoolPattern = new Regex(
+        "^true|false",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     private static readonly Regex CardinalityMinOccurencePattern = new Regex(
         "^\\*|\\?|\\+|\\d+\\z",
         RegexOptions.Compiled);
+
+    private static readonly HashSet<char> NumberArgValueEndDelimiters = new HashSet<char>
+    {
+        ',', '}', '\n', '\r', '\t', ' ', '#', '/', '\''
+    };
 
     #region Production
 
@@ -133,6 +143,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<Production>(new UnknownError(e));
             return false;
         }
@@ -172,6 +183,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<string>(new UnknownError(e));
             return false;
         }
@@ -211,6 +223,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<string>(new UnknownError(e));
             return false;
         }
@@ -238,6 +251,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<Tokens>(new UnknownError(e));
             return false;
         }
@@ -281,6 +295,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<ICompositeRule>(new UnknownError(e));
             return false;
         }
@@ -321,6 +336,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<uint>(new UnknownError(e));
             return false;
         }
@@ -362,6 +378,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<IGroupElement>(new UnknownError(e));
             return false;
         }
@@ -400,6 +417,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<AtomicRuleRef>(new UnknownError(e));
             return false;
         }
@@ -438,6 +456,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<ProductionRef>(new UnknownError(e));
             return false;
         }
@@ -479,6 +498,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<IGroup>(new UnknownError(e));
             return false;
         }
@@ -535,6 +555,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<Set>(new UnknownError(e));
             return false;
         }
@@ -582,6 +603,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<Choice>(new UnknownError(e));
             return false;
         }
@@ -629,6 +651,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<Sequence>(new UnknownError(e));
             return false;
         }
@@ -710,6 +733,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<Cardinality>(new UnknownError(e));
             return false;
         }
@@ -777,6 +801,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<IGroupElement[]>(new UnknownError(e));
             return false;
         }
@@ -852,6 +877,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<IAtomicRule>(new UnknownError(e));
             return false;
         }
@@ -904,6 +930,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<AtomicContentArgumentInfo>(new UnknownError(e));
             return false;
         }
@@ -966,6 +993,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<Tokens>(new UnknownError(e));
             return false;
         }
@@ -1039,6 +1067,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<ArgumentPair[]>(new UnknownError(e));
             return false;
         }
@@ -1066,14 +1095,31 @@ public static class GrammarParser
             _ = TryParseSilentBlock(reader, context, out _);
 
             // optional value
-            var argValue = Tokens.Default;
+            string? argValue = null;
             if (reader.TryGetTokens(":", out var argSeparator))
             {
                 //optional whitespace
                 _ = TryParseSilentBlock(reader, context, out _);
 
-                // required delimited content
-                if (!TryParseDelimitedContent(reader, context, '\'', '\'', out var argValueResult))
+                var accumulator = ParserAccumulator
+                    .Of(reader, context, "")
+
+                    // bool value?
+                    .ThenTry<bool>(
+                        TryParseBooleanArgValue,
+                        (value, @bool) => @bool.ToString())
+
+                    // number value?
+                    .OrTry<decimal>(
+                        TryParseNumberArgValue,
+                        (value, @decimal) => @decimal.ToString())
+
+                    // delimited content value?
+                    .OrTry(
+                        (TokenReader x, MetaContext y, out IResult<Tokens> z) => TryParseDelimitedContent(x, y, '\'', '\'', out z),
+                        (value, tokens) => tokens.ToString()!);
+
+                if (accumulator.IsPreviousOpErrored)
                 {
                     result = Result.Of<ArgumentPair>(new FaultyMatchError(
                         "atomic-rule-argument",
@@ -1082,19 +1128,100 @@ public static class GrammarParser
                     reader.Reset(position);
                     return false;
                 }
-
-                argValueResult.Consume(value => argValue = value);
+                else accumulator.Consume(v => argValue = v);
             }
 
             result = Result.Of(
                 ArgumentPair.Of(
                     Argument.Of(argKey.ToString()!),
-                    argValue.ToString()!));
+                    argValue));
             return true;
         }
         catch (Exception e)
         {
+            reader.Reset(position);
             result = Result.Of<ArgumentPair>(new UnknownError(e));
+            return false;
+        }
+    }
+
+    public static bool TryParseBooleanArgValue(
+        TokenReader reader,
+        MetaContext context,
+        out IResult<bool> result)
+    {
+        var position = reader.Position;
+
+        try
+        {
+            // false?
+            if (reader.TryPeekTokens(5, true, out var falseTokens)
+                && BoolPattern.IsMatch(falseTokens.AsSpan()))
+            {
+                reader.Advance(5);
+                result = Result.Of(false);
+            }
+            else if (reader.TryPeekTokens(4, true, out var trueTokens)
+                && BoolPattern.IsMatch(trueTokens.AsSpan()))
+            {
+                reader.Advance(4);
+                result = Result.Of(true);
+            }
+            else result = Result.Of<bool>(new UnmatchedError("bool-arg-value", position));
+
+            return result.IsDataResult();
+        }
+        catch(Exception e)
+        {
+            result = Result.Of<bool>(new UnknownError(e));
+            return false;
+        }
+    }
+
+    public static bool TryParseNumberArgValue(
+        TokenReader reader,
+        MetaContext context,
+        out IResult<decimal> result)
+    {
+        var position = reader.Position;
+        try
+        {
+            var tokens = Tokens.Empty;
+            while (reader.TryGetToken(out var token))
+            {
+                if (NumberArgValueEndDelimiters.Contains(token[0]))
+                {
+                    reader.Back();
+                    break;
+                }
+
+                tokens += token;
+            }
+
+            if (tokens.IsEmpty)
+            {
+                reader.Reset(position);
+                result = Result.Of<decimal>(new UnmatchedError("number-arg-value", position));
+                return false;
+            }
+
+            if (decimal.TryParse(tokens.AsSpan(), NumberStyles.Any, null, out var @decimal))
+            {
+                result = Result.Of(@decimal);
+                return true;
+            }
+
+            result = Result.Of<decimal>(new FaultyMatchError(
+                "number-arg-value",
+                position,
+                reader.Position - position));
+            reader.Reset(position);
+            return false;
+        }
+        catch (Exception e)
+        {
+            reader.Reset(position);
+            result = Result.Of<decimal>(new UnknownError(e));
             return false;
         }
     }

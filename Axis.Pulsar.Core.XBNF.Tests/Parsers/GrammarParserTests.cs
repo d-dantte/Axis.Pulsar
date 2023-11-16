@@ -1,7 +1,14 @@
 ﻿using Axis.Luna.Common.Results;
+using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Grammar;
+using Axis.Pulsar.Core.Grammar.Errors;
+using Axis.Pulsar.Core.Grammar.Rules;
 using Axis.Pulsar.Core.Utils;
 using Axis.Pulsar.Core.XBNF.Definitions;
 using Axis.Pulsar.Core.XBNF.Parsers.Models;
+using Axis.Pulsar.Core.XBNF.RuleFactories;
+using System.Collections.Immutable;
 
 namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 {
@@ -251,6 +258,42 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             argPair = result.Resolve();
             Assert.AreEqual("arg-name", argPair.Argument.ToString());
             Assert.AreEqual("value2", argPair.Value);
+
+            // args / bool
+            success = GrammarParser.TryParseArgument(
+                "arg-name : true",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            argPair = result.Resolve();
+            Assert.AreEqual("arg-name", argPair.Argument.ToString());
+            Assert.AreEqual("True", argPair.Value);
+
+            // args / number
+            success = GrammarParser.TryParseArgument(
+                "arg-name : 34",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            argPair = result.Resolve();
+            Assert.AreEqual("arg-name", argPair.Argument.ToString());
+            Assert.AreEqual("34", argPair.Value);
+
+
+            success = GrammarParser.TryParseArgument(
+                "arg-name : 34.54",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            argPair = result.Resolve();
+            Assert.AreEqual("arg-name", argPair.Argument.ToString());
+            Assert.AreEqual("34.54", argPair.Value);
         }
 
         [TestMethod]
@@ -271,7 +314,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             // args / value
             success = GrammarParser.TryParseAtomicRuleArguments(
-                "{arg-name :'value', arg-2-flag, arg-3:'bleh'}",
+                "{arg-name :'value', arg-2-flag, arg-3:'bleh'\n#abcd\n/*bleh */}",
                 metaContext,
                 out result);
 
@@ -376,6 +419,122 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             info = result.Resolve();
             Assert.AreEqual(AtomicContentDelimiterType.VerticalBar, info.ContentType);
             Assert.IsTrue(info.Content.Equals("the content\\|"));
+        }
+
+        [TestMethod]
+        public void TryParseAtomicRule_Tests()
+        {
+            var metaContext = MetaContext.Builder
+                .NewBuilder()
+                .WithDefaultAtomicRuleDefinitions()
+                .WithAtomicRuleDefinition(AtomicRuleDefinition.Of(
+                    "nl",
+                    new WindowsNewLineFactory()))
+                .Build();
+
+            #region NL
+            var success = GrammarParser.TryParseAtomicRule(
+                "@nl",
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            var rule = result.Resolve();
+            Assert.IsInstanceOfType<WindowsNewLine>(rule);
+
+            success = GrammarParser.TryParseAtomicRule(
+                "@nl{definitely, ignored: 'arguments'}",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            rule = result.Resolve();
+            Assert.IsInstanceOfType<WindowsNewLine>(rule);
+            #endregion
+
+            #region literal
+            success = GrammarParser.TryParseAtomicRule(
+                "\"literal\"",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            rule = result.Resolve();
+            Assert.IsInstanceOfType<TerminalLiteral>(rule);
+            var literal = rule.As<TerminalLiteral>();
+            Assert.IsFalse(literal.IsCaseInsensitive);
+            Assert.AreEqual("literal", literal.Tokens);
+
+            success = GrammarParser.TryParseAtomicRule(
+                "\"literal with falg\"{case-insensitive}",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            rule = result.Resolve();
+            Assert.IsInstanceOfType<TerminalLiteral>(rule);
+            literal = rule.As<TerminalLiteral>();
+            Assert.IsTrue(literal.IsCaseInsensitive);
+            Assert.AreEqual("literal with falg", literal.Tokens);
+            #endregion
+
+            #region Pattern
+            success = GrammarParser.TryParseAtomicRule(
+                "/the pattern/",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            rule = result.Resolve();
+            Assert.IsInstanceOfType<TerminalPattern>(rule);
+            var pattern = rule.As<TerminalPattern>();
+            Assert.AreEqual(IMatchType.Of(1), pattern.MatchType);
+            Assert.AreEqual("the pattern", pattern.Pattern.ToString());
+            #endregion
+        }
+        #endregion
+
+
+
+        #region Nested types
+        internal class WindowsNewLine : IAtomicRule
+        {
+            public bool TryRecognize(TokenReader reader, ProductionPath productionPath, ILanguageContext context, out IResult<ICSTNode> result)
+            {
+                var position = reader.Position;
+
+                if (!reader.TryGetToken(out var r)
+                    || '\r' != r[0])
+                {
+                    reader.Reset(position);
+                    result = Result.Of<ICSTNode>(UnrecognizedTokens.Of(productionPath, position));
+                    return false;
+                }
+
+                if (!reader.TryGetToken(out var n)
+                    || '\n' != n[0])
+                {
+                    reader.Reset(position);
+                    result = Result.Of<ICSTNode>(PartiallyRecognizedTokens.Of(productionPath, position, r));
+                    return false;
+                }
+
+                result = Result.Of(ICSTNode.Of(productionPath.Name, r + n));
+                return true;
+            }
+        }
+
+        internal class WindowsNewLineFactory : IAtomicRuleFactory
+        {
+            public IAtomicRule NewRule(MetaContext context, ImmutableDictionary<IAtomicRuleFactory.Argument, string> arguments)
+            {
+                return new WindowsNewLine();
+            }
         }
         #endregion
     }

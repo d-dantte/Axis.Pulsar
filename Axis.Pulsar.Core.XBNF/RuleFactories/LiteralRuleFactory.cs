@@ -20,7 +20,7 @@ public class LiteralRuleFactory : IAtomicRuleFactory
     public static Argument LiteralArgument => IAtomicRuleFactory.ContentArgument;
 
     /// <summary>
-    /// Flags recognizes a single flag, 'i', which turns on case-insensitivity.
+    /// case insensitive flag
     /// </summary>
     public static Argument CaseInsensitiveArgument => Argument.Of("case-insensitive");
 
