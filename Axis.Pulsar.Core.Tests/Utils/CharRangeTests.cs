@@ -144,6 +144,10 @@ namespace Axis.Pulsar.Core.Tests.Utils
             range = CharRange.Parse("1 - \u12ab");
             Assert.AreEqual('1', range.LowerBound);
             Assert.AreEqual('\u12ab', range.UpperBound);
+
+            range = CharRange.Parse("\\x2c - \\u12ab");
+            Assert.AreEqual(',', range.LowerBound);
+            Assert.AreEqual('\u12ab', range.UpperBound);
         }
 
         [TestMethod]

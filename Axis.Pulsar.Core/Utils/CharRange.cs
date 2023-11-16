@@ -128,7 +128,7 @@ public readonly struct CharRange:
 
     #region Static Helpers
     /// <summary>
-    /// 
+    /// Checks if the 2 given ranges intersect.
     /// </summary>
     /// <param name="first"></param>
     /// <param name="second"></param>
@@ -141,9 +141,13 @@ public readonly struct CharRange:
     }
 
     /// <summary>
-    /// 
+    /// Accepts a sting containing a 2 character representations separated by a dash. Whitespaces are
+    /// allowed between these 3 elements.
+    /// <para/>
+    /// Recognized special characters that must appear escaped are: '-', ' ', '\n', '\r', '\t'. these
+    /// must be represented using ascii or utf escaping. E.g, for '-', ascii: \x2d, utf: \u002d.
     /// </summary>
-    /// <param name="input"></param>
+    /// <param name="input">The string containing character range</param>
     /// <returns></returns>
     /// <exception cref="FormatException"></exception>
     public static CharRange Parse(string input)
@@ -168,9 +172,16 @@ public readonly struct CharRange:
     }
 
     /// <summary>
-    /// 
+    /// Parses a string representation of a character. This string expects a string containing a single character,
+    /// or a string containing Ascii or utf escaped characters.
+    /// <para/>
+    /// * Ascii escaping is represented as a 4-character string containing: '\', 'x', and a 2-digit hex number.
+    /// <para/>
+    /// * Utf escaping is represented as a 6-character string containing: '\', 'u', and a 4-digit hex number.
+    /// <para/>
+    /// * The only case where a 2-character length string is accepted is to escape the '\' character, i.e "\\"
     /// </summary>
-    /// <param name="charString"></param>
+    /// <param name="charString">The character string</param>
     /// <returns></returns>
     /// <exception cref="ArgumentException"></exception>
     public static char ParseChar(string charString)
@@ -179,8 +190,7 @@ public readonly struct CharRange:
             && (char.ToLower(charString[1]) == 'u' || char.ToLower(charString[1]) == 'x'))
             return (char)ushort.Parse(charString[2..], System.Globalization.NumberStyles.HexNumber);
 
-        else if (charString.Length == 2 && charString[0] == '\\'
-            && (charString[1] == '\\' || charString[1] == '\''))
+        else if (charString.Length == 2 && charString[0] == '\\' && (charString[1] == '\\'))
             return charString[1];
 
         else if (charString.Length == 1)

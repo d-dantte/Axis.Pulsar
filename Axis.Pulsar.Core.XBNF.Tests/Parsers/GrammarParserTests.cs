@@ -7,7 +7,6 @@ using Axis.Pulsar.Core.Grammar.Rules;
 using Axis.Pulsar.Core.Utils;
 using Axis.Pulsar.Core.XBNF.Definitions;
 using Axis.Pulsar.Core.XBNF.Parsers.Models;
-using Axis.Pulsar.Core.XBNF.RuleFactories;
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;
 
@@ -533,7 +532,9 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         }
         #endregion
 
+        #region Composite Rule
 
+        #endregion
 
         #region Nested types
         internal class WindowsNewLine : IAtomicRule
