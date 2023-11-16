@@ -1112,7 +1112,7 @@ public static class GrammarParser
                     // number value?
                     .OrTry<decimal>(
                         TryParseNumberArgValue,
-                        (value, @decimal) => @decimal.ToString())
+                        (value, @decimal) => @decimal.ToString(NumberFormatInfo.InvariantInfo))
 
                     // delimited content value?
                     .OrTry(
@@ -1205,8 +1205,13 @@ public static class GrammarParser
                 return false;
             }
 
-            if (decimal.TryParse(tokens.AsSpan(), NumberStyles.Any, null, out var @decimal))
+            if (decimal.TryParse(
+                tokens.AsSpan(),
+                NumberStyles.Any,
+                NumberFormatInfo.InvariantInfo,
+                out var @decimal))
             {
+                Console.Write($"tokens: {tokens.AsSpan()}, parsed: {@decimal}\r\n");
                 result = Result.Of(@decimal);
                 return true;
             }
