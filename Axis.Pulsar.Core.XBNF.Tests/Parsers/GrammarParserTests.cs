@@ -9,6 +9,7 @@ using Axis.Pulsar.Core.XBNF.Definitions;
 using Axis.Pulsar.Core.XBNF.Parsers.Models;
 using Axis.Pulsar.Core.XBNF.RuleFactories;
 using System.Collections.Immutable;
+using System.Text.RegularExpressions;
 
 namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 {
@@ -495,6 +496,39 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             var pattern = rule.As<TerminalPattern>();
             Assert.AreEqual(IMatchType.Of(1), pattern.MatchType);
             Assert.AreEqual("the pattern", pattern.Pattern.ToString());
+            Assert.AreEqual(RegexOptions.Compiled, pattern.Pattern.Options);
+
+            success = GrammarParser.TryParseAtomicRule(
+                "/the pattern/{flags: 'ixcn'}",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            rule = result.Resolve();
+            Assert.IsInstanceOfType<TerminalPattern>(rule);
+            pattern = rule.As<TerminalPattern>();
+            Assert.AreEqual(IMatchType.Of(1), pattern.MatchType);
+            Assert.AreEqual("the pattern", pattern.Pattern.ToString());
+            Assert.AreEqual(
+                RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture|
+                RegexOptions.CultureInvariant | RegexOptions.NonBacktracking,
+                pattern.Pattern.Options);
+            #endregion
+
+            #region char ranges
+            success = GrammarParser.TryParseAtomicRule(
+                "'a-d, p-s, ^., ^&, ^^'",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            rule = result.Resolve();
+            Assert.IsInstanceOfType<CharacterRanges>(rule);
+            var charRange = rule.As<CharacterRanges>();
+            Assert.AreEqual(3, charRange.ExcludeList.Length);
+            Assert.AreEqual(2, charRange.IncludeList.Length);
             #endregion
         }
         #endregion

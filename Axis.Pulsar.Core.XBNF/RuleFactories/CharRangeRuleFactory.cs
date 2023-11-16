@@ -135,28 +135,30 @@ public class CharRangeRuleFactory : IAtomicRuleFactory
             '\'', '\\', '^', '-', ',', ' '
         };
 
-        public string Decode(string escapedString)
+        public string Decode(string escapedRange)
         {
-            if (escapedString is null)
-                return escapedString!;
+            if (escapedRange is null)
+                return escapedRange!;
 
             var substrings = new List<Tokens>();
             var offset = 0;
 
             do
             {
-                var newOffset = escapedString.IndexOf("\\", offset);
+                var newOffset = escapedRange.IndexOf("\\", offset);
 
                 if (newOffset < 0)
-                    substrings.Add(Tokens.Of(escapedString, offset));
-
-                else 
+                {
+                    substrings.Add(Tokens.Of(escapedRange, offset));
+                    break;
+                }
+                else
                 {
                     if (newOffset > offset)
-                        substrings.Add(Tokens.Of(escapedString, offset, newOffset - offset));
+                        substrings.Add(Tokens.Of(escapedRange, offset, newOffset - offset));
 
                     // read the escape sequence
-                    var argChar = escapedString[newOffset + 1];
+                    var argChar = escapedRange[newOffset + 1];
                     Tokens replacement;
 
                     if (EscapeArgs.Contains(argChar))
@@ -174,7 +176,7 @@ public class CharRangeRuleFactory : IAtomicRuleFactory
                     else if ('u'.Equals(argChar))
                         replacement = short
                             .Parse(
-                                escapedString.AsSpan(newOffset + 2, 4),
+                                escapedRange.AsSpan(newOffset + 2, 4),
                                 NumberStyles.HexNumber)
                             .ApplyTo(code => (char)code)
                             .ApplyTo(@char => Tokens.Of(@char.ToString()));
@@ -192,7 +194,7 @@ public class CharRangeRuleFactory : IAtomicRuleFactory
                     };
                 }
             }
-            while (offset < escapedString.Length);
+            while (offset < escapedRange.Length);
 
             return substrings
                 .Select(s => s.ToString())

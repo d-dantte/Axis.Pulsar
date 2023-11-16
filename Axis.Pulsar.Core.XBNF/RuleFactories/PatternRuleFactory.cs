@@ -100,8 +100,8 @@ public class PatternRuleFactory : IAtomicRuleFactory
     private static Regex ParseRegex(ImmutableDictionary<Argument, string> arguments)
     {
         var pattern = arguments[PatternArgument];
-        var options = arguments[FlagsArgument]
-            .Aggregate(RegexOptions.None, (opt, @char) => opt |= @char switch
+        var options = arguments.TryGetValue(FlagsArgument, out var flags)
+            ? flags.Aggregate(RegexOptions.None, (opt, @char) => opt |= @char switch
             {
                 'i' => RegexOptions.IgnoreCase,
                 'm' => RegexOptions.Multiline,
@@ -113,7 +113,8 @@ public class PatternRuleFactory : IAtomicRuleFactory
                 'c' => RegexOptions.CultureInvariant,
                 'n' => RegexOptions.NonBacktracking,
                 _ => throw new FormatException($"Invalid regex flag: {@char}")
-            });
+            })
+            : RegexOptions.None;
 
         return new Regex(pattern, options | RegexOptions.Compiled);
     }
