@@ -3,6 +3,7 @@ using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Errors;
+using Axis.Pulsar.Core.Grammar.Groups;
 using Axis.Pulsar.Core.Grammar.Rules;
 using Axis.Pulsar.Core.Utils;
 using Axis.Pulsar.Core.XBNF.Definitions;
@@ -575,6 +576,172 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         #endregion
 
         #region Composite Rule
+
+        [TestMethod]
+        public void TryParseRecognitionThreshold_Tests()
+        {
+            var metaContext = MetaContext.Builder.NewBuilder().Build();
+
+            var success = GrammarParser.TryParseRecognitionThreshold(
+                ":2",
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            var threshold = result.Resolve();
+            Assert.AreEqual(2u, threshold);
+
+            success = GrammarParser.TryParseRecognitionThreshold(
+                ";2",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.IsErrorResult(out UnmatchedError _));
+
+            success = GrammarParser.TryParseRecognitionThreshold(
+                ":x2",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.IsErrorResult(out FaultyMatchError _));
+
+        }
+
+
+        [TestMethod]
+        public void TryCardinality_Tests()
+        {
+            var metaContext = MetaContext.Builder.NewBuilder().Build();
+
+            var success = GrammarParser.TryParseCardinality(
+                ".1",
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            var cardinality = result.Resolve();
+            Assert.AreEqual(Cardinality.OccursOnlyOnce(), cardinality);
+
+            success = GrammarParser.TryParseCardinality(
+                ".3,",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            cardinality = result.Resolve();
+            Assert.AreEqual(Cardinality.OccursAtLeast(3), cardinality);
+
+            success = GrammarParser.TryParseCardinality(
+                ".1,2",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            cardinality = result.Resolve();
+            Assert.AreEqual(Cardinality.Occurs(1, 2), cardinality);
+
+            success = GrammarParser.TryParseCardinality(
+                ".*",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            cardinality = result.Resolve();
+            Assert.AreEqual(Cardinality.OccursNeverOrMore(), cardinality);
+
+            success = GrammarParser.TryParseCardinality(
+                ".?",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            cardinality = result.Resolve();
+            Assert.AreEqual(Cardinality.OccursOptionally(), cardinality);
+
+            success = GrammarParser.TryParseCardinality(
+                ".+",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            cardinality = result.Resolve();
+            Assert.AreEqual(Cardinality.OccursAtLeastOnce(), cardinality);
+
+        }
+
+
+        [TestMethod]
+        public void TryProductionRef_Tests()
+        {
+            var metaContext = MetaContext.Builder.NewBuilder().Build();
+
+            var success = GrammarParser.TryParseProductionRef(
+                "$symbol.?",
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            var @ref = result.Resolve();
+            Assert.AreEqual("symbol", @ref.Symbol);
+            Assert.AreEqual(Cardinality.OccursOptionally(), @ref.Cardinality);
+
+            success = GrammarParser.TryParseProductionRef(
+                "$symbol",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            @ref = result.Resolve();
+            Assert.AreEqual("symbol", @ref.Symbol);
+            Assert.AreEqual(Cardinality.OccursOnlyOnce(), @ref.Cardinality);
+        }
+
+
+        [TestMethod]
+        public void TryAtomicRef_Tests()
+        {
+            var metaContext = MetaContext.Builder
+                .NewBuilder()
+                .WithDefaultAtomicRuleDefinitions()
+                .WithAtomicRuleDefinition(AtomicRuleDefinition.Of(
+                    "nl",
+                    new WindowsNewLineFactory()))
+                .Build();
+
+            var success = GrammarParser.TryParseAtomicRuleRef(
+                "@nl.?",
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            var @ref = result.Resolve();
+            Assert.AreEqual(Cardinality.OccursOptionally(), @ref.Cardinality);
+            Assert.IsInstanceOfType<WindowsNewLine>(@ref.Rule);
+
+            success = GrammarParser.TryParseAtomicRuleRef(
+                "/\\\\d/{flags:'i'}.2",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            @ref = result.Resolve();
+            Assert.AreEqual(Cardinality.OccursOnly(2), @ref.Cardinality);
+            Assert.IsInstanceOfType<TerminalPattern>(@ref.Rule);
+
+        }
 
         #endregion
 

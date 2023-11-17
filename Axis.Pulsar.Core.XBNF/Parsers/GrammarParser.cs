@@ -1017,7 +1017,6 @@ public static class GrammarParser
                 return false;
             }
 
-            var argSeparatorToken = Tokens.Default;
             var accumulator = ParserAccumulator
                 .Of(reader, context, new List<ArgumentPair>());
 
@@ -1042,13 +1041,11 @@ public static class GrammarParser
                         (args, silentBlock) => args,
                         args => args);
             }
-            while (!accumulator.IsPreviousOpErrored && reader.TryGetTokens(",", out argSeparatorToken));
-
-            // back up from the mis-matched separator
-            reader.Back();
+            while (!accumulator.IsPreviousOpErrored && reader.TryGetTokens(",", out _));
 
             if (accumulator.IsPreviousOpErrored)
             {
+                // allow non-unmatched errors to flow, else pass a faultymatch error.
                 result = !accumulator.IsPreviousOpUnmatched
                     ? accumulator.ToResult<ArgumentPair[]>()
                     : Result.Of<ArgumentPair[]>(
@@ -1056,6 +1053,17 @@ public static class GrammarParser
                             "atomic-rule-arguments",
                             position,
                             reader.Position - position));
+                reader.Reset(position);
+                return false;
+            }
+
+            if (!reader.TryGetTokens("}", out _))
+            {
+                result = Result.Of<ArgumentPair[]>(
+                    new FaultyMatchError(
+                        "atomic-rule-arguments",
+                        position,
+                        reader.Position - position));
                 reader.Reset(position);
                 return false;
             }
