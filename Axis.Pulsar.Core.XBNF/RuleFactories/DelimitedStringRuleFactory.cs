@@ -72,8 +72,14 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
     {
         ValidateArgs(arguments);
 
-        var ranges = CharRangeRuleFactory.ParseRanges(arguments[RangesArgument]);
-        var sequences = ParseSequences(arguments[SequencesArgument]);
+        var ranges = arguments.TryGetValue(RangesArgument, out var xvalue)
+            ? CharRangeRuleFactory.ParseRanges(xvalue)
+            : (Includes: Enumerable.Empty<CharRange>(), Excludes: Enumerable.Empty<CharRange>());
+
+        var sequences = arguments.TryGetValue(SequencesArgument, out var yvalue)
+            ? ParseSequences(yvalue)
+            : (Includes: Enumerable.Empty<Tokens>(), Excludes: Enumerable.Empty<Tokens>());
+
         var delimiters = ParseDelimiters(arguments);
         var acceptsEmpty = ParseAcceptsEmpty(arguments);
         var escapedDelimiter = arguments.TryGetValue(EscapedEndDelimiterArgument, out var value)

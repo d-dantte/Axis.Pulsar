@@ -430,6 +430,9 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 .WithAtomicRuleDefinition(AtomicRuleDefinition.Of(
                     "nl",
                     new WindowsNewLineFactory()))
+                .WithAtomicRuleDefinition(AtomicRuleDefinition.Of(
+                    "bleh",
+                    new DelimitedStringRuleFactory()))
                 .Build();
 
             #region NL
@@ -510,9 +513,33 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.AreEqual(IMatchType.Of(1), pattern.MatchType);
             Assert.AreEqual("the pattern", pattern.Pattern.ToString());
             Assert.AreEqual(
-                RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture|
+                RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture |
                 RegexOptions.CultureInvariant | RegexOptions.NonBacktracking,
                 pattern.Pattern.Options);
+
+            success = GrammarParser.TryParseAtomicRule(
+                "/the pattern/{match-type: '1'}",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            rule = result.Resolve();
+            pattern = rule.As<TerminalPattern>();
+            Assert.AreEqual(IMatchType.Of(1, 1), pattern.MatchType);
+            Assert.AreEqual("the pattern", pattern.Pattern.ToString());
+
+            success = GrammarParser.TryParseAtomicRule(
+                "/the pattern/{match-type: '1,+'}",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            rule = result.Resolve();
+            pattern = rule.As<TerminalPattern>();
+            Assert.AreEqual(IMatchType.Of(1, false), pattern.MatchType);
+            Assert.AreEqual("the pattern", pattern.Pattern.ToString());
             #endregion
 
             #region char ranges
@@ -528,6 +555,21 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             var charRange = rule.As<CharacterRanges>();
             Assert.AreEqual(3, charRange.ExcludeList.Length);
             Assert.AreEqual(2, charRange.IncludeList.Length);
+            #endregion
+
+            #region delimited strings
+
+            success = GrammarParser.TryParseAtomicRule(
+                "@bleh{start: '(', end: ')'}",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            rule = result.Resolve();
+            var dstring = rule.As<DelimitedString>();
+            Assert.AreEqual("(", dstring.StartDelimiter);
+            Assert.AreEqual(")", dstring.EndDelimiter);
             #endregion
         }
         #endregion
