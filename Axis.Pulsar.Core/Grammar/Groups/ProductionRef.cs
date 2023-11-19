@@ -6,19 +6,19 @@ using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar.Groups
 {
-    public class ProductionRef : IGroupElement
+    public class ProductionRef : IRuleRef<string>
     {
         public Cardinality Cardinality { get; }
 
         /// <summary>
         /// The production symbol
         /// </summary>
-        public string Symbol { get; }
+        public string Ref { get; }
 
         public ProductionRef(Cardinality cardinality, string productionSymbol)
         {
             Cardinality = cardinality.ThrowIfDefault(new ArgumentException($"Invalid {nameof(cardinality)}: default"));
-            Symbol = productionSymbol
+            Ref = productionSymbol
                 .ThrowIfNot(
                     IProduction.SymbolPattern.IsMatch,
                     new ArgumentException($"Invalid {nameof(productionSymbol)}: '{productionSymbol}'"));
@@ -39,7 +39,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             ArgumentNullException.ThrowIfNull(parentPath);
 
             var position = reader.Position;
-            var production = context.Grammar.GetProduction(Symbol);
+            var production = context.Grammar.GetProduction(Ref);
             if (!production.TryProcessRule(reader, parentPath, context, out var refResult))
             {
                 reader.Reset(position);

@@ -692,7 +692,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             var @ref = result.Resolve();
-            Assert.AreEqual("symbol", @ref.Symbol);
+            Assert.AreEqual("symbol", @ref.Ref);
             Assert.AreEqual(Cardinality.OccursOptionally(), @ref.Cardinality);
 
             success = GrammarParser.TryParseProductionRef(
@@ -703,7 +703,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             @ref = result.Resolve();
-            Assert.AreEqual("symbol", @ref.Symbol);
+            Assert.AreEqual("symbol", @ref.Ref);
             Assert.AreEqual(Cardinality.OccursOnlyOnce(), @ref.Cardinality);
         }
 
@@ -728,7 +728,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(result.IsDataResult());
             var @ref = result.Resolve();
             Assert.AreEqual(Cardinality.OccursOptionally(), @ref.Cardinality);
-            Assert.IsInstanceOfType<WindowsNewLine>(@ref.Rule);
+            Assert.IsInstanceOfType<WindowsNewLine>(@ref.Ref);
 
             success = GrammarParser.TryParseAtomicRuleRef(
                 "/\\\\d/{flags:'i'}.2",
@@ -739,10 +739,385 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(result.IsDataResult());
             @ref = result.Resolve();
             Assert.AreEqual(Cardinality.OccursOnly(2), @ref.Cardinality);
-            Assert.IsInstanceOfType<TerminalPattern>(@ref.Rule);
+            Assert.IsInstanceOfType<TerminalPattern>(@ref.Ref);
 
         }
 
+        [TestMethod]
+        public void TryParseElementList_Tests()
+        {
+            var metaContext = MetaContext.Builder
+                .NewBuilder()
+                .WithDefaultAtomicRuleDefinitions()
+                .WithAtomicRuleDefinition(AtomicRuleDefinition.Of(
+                    "nl",
+                    new WindowsNewLineFactory()))
+                .Build();
+
+            var success = GrammarParser.TryParseElementList(
+                "[$stuff '^a-z'.3 ]",
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            var options = result.Resolve();
+            Assert.AreEqual(2, options.Length);
+
+
+            success = GrammarParser.TryParseElementList(
+                "[ @EOF]",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            options = result.Resolve();
+            Assert.AreEqual(1, options.Length);
+
+
+            success = GrammarParser.TryParseElementList(
+                "[ $a $b $c   \t\t\n\r\n]",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            options = result.Resolve();
+            Assert.AreEqual(3, options.Length);
+
+
+            success = GrammarParser.TryParseElementList(
+                "[  ]",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.IsErrorResult(out FaultyMatchError fme));
+        }
+
+        [TestMethod]
+        public void TryParseChoice_Tests()
+        {
+            var metaContext = MetaContext.Builder
+                .NewBuilder()
+                .WithDefaultAtomicRuleDefinitions()
+                .WithAtomicRuleDefinition(AtomicRuleDefinition.Of(
+                    "nl",
+                    new WindowsNewLineFactory()))
+                .Build();
+
+
+            var success = GrammarParser.TryParseChoice(
+                "?[ $stuff $other-stuff ].1,5",
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            var choice = result.Resolve();
+            Assert.AreEqual(2, choice.Elements.Length);
+            Assert.AreEqual(Cardinality.Occurs(1, 5), choice.Cardinality);
+        }
+
+        [TestMethod]
+        public void TryParseSequence_Tests()
+        {
+            var metaContext = MetaContext.Builder
+                .NewBuilder()
+                .WithDefaultAtomicRuleDefinitions()
+                .WithAtomicRuleDefinition(AtomicRuleDefinition.Of(
+                    "nl",
+                    new WindowsNewLineFactory()))
+                .Build();
+
+
+            var success = GrammarParser.TryParseSequence(
+                "+[ $stuff $other-stuff ].1,5",
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            var sequence = result.Resolve();
+            Assert.AreEqual(2, sequence.Elements.Length);
+            Assert.AreEqual(Cardinality.Occurs(1, 5), sequence.Cardinality);
+
+
+            success = GrammarParser.TryParseSequence(
+                "+[ $stuff $other-stuff ]",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            sequence = result.Resolve();
+            Assert.AreEqual(2, sequence.Elements.Length);
+            Assert.AreEqual(Cardinality.OccursOnlyOnce(), sequence.Cardinality);
+        }
+
+        [TestMethod]
+        public void TryParseSet_Tests()
+        {
+            var metaContext = MetaContext.Builder
+                .NewBuilder()
+                .WithDefaultAtomicRuleDefinitions()
+                .WithAtomicRuleDefinition(AtomicRuleDefinition.Of(
+                    "nl",
+                    new WindowsNewLineFactory()))
+                .Build();
+
+
+            var success = GrammarParser.TryParseSet(
+                "#[ $stuff $other-stuff ]",
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            var set = result.Resolve();
+            Assert.AreEqual(2, set.Elements.Length);
+            Assert.AreEqual(Cardinality.OccursOnlyOnce(), set.Cardinality);
+
+
+            success = GrammarParser.TryParseSet(
+                "#5[ $stuff $other-stuff ]",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            set = result.Resolve();
+            Assert.AreEqual(2, set.Elements.Length);
+            Assert.AreEqual(Cardinality.OccursOnlyOnce(), set.Cardinality);
+            Assert.AreEqual(5, set.MinRecognitionCount);
+        }
+
+        [TestMethod]
+        public void TryParseGroup_Test()
+        {
+            var metaContext = MetaContext.Builder.NewBuilder().Build();
+
+            var success = GrammarParser.TryParseGroup(
+                "#[$tuff]",
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            Assert.IsInstanceOfType<Set>(result.Resolve());
+
+            success = GrammarParser.TryParseGroup(
+                "+[$tuff]",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            Assert.IsInstanceOfType<Sequence>(result.Resolve());
+
+            success = GrammarParser.TryParseGroup(
+                "?[$tuff]",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            Assert.IsInstanceOfType<Choice>(result.Resolve());
+        }
+
+        [TestMethod]
+        public void TryParseCompositeRule_Tests()
+        {
+            var metaContext = MetaContext.Builder.NewBuilder().Build();
+
+            var success = GrammarParser.TryParseCompositeRule(
+                "#[$tuff ?[$other-stuff $more-stuff].?]",
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            Assert.IsInstanceOfType<NonTerminal>(result.Resolve());
+        }
+
+        #endregion
+
+        #region Production
+
+        [TestMethod]
+        public void TryParseMapOperator_Tests()
+        {
+            var metaContext = MetaContext.Builder.NewBuilder().Build();
+
+            var success = GrammarParser.TryParseMapOperator(
+                "->",
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            var opTokens = result.Resolve();
+            Assert.IsTrue(opTokens.Equals("->"));
+        }
+
+        [TestMethod]
+        public void TryParseAtomicSymbolName_Tests()
+        {
+            var metaContext = MetaContext.Builder.NewBuilder().Build();
+
+            var success = GrammarParser.TryParseAtomicSymbolName(
+                "@name",
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            var name = result.Resolve();
+            Assert.AreEqual("name", name);
+
+            success = GrammarParser.TryParseAtomicSymbolName(
+                "@name-with-a-dash",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            name = result.Resolve();
+            Assert.AreEqual("name-with-a-dash", name);
+
+            success = GrammarParser.TryParseAtomicSymbolName(
+                "@name-with-1234-numbers-and-dash-",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            name = result.Resolve();
+            Assert.AreEqual("name-with-1234-numbers-and-dash-", name);
+
+            success = GrammarParser.TryParseAtomicSymbolName(
+                "@-name",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.IsErrorResult());
+
+            success = GrammarParser.TryParseAtomicSymbolName(
+                "@7name",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.IsErrorResult());
+        }
+
+        [TestMethod]
+        public void TryParseCompositeSymbolName_Tests()
+        {
+            var metaContext = MetaContext.Builder.NewBuilder().Build();
+
+            var success = GrammarParser.TryParseCompositeSymbolName(
+                "$name",
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            var name = result.Resolve();
+            Assert.AreEqual("name", name);
+
+            success = GrammarParser.TryParseCompositeSymbolName(
+                "$name-with-a-dash",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            name = result.Resolve();
+            Assert.AreEqual("name-with-a-dash", name);
+
+            success = GrammarParser.TryParseCompositeSymbolName(
+                "$name-with-1234-numbers-and-dash-",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            name = result.Resolve();
+            Assert.AreEqual("name-with-1234-numbers-and-dash-", name);
+
+            success = GrammarParser.TryParseCompositeSymbolName(
+                "$-name",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.IsErrorResult());
+
+            success = GrammarParser.TryParseCompositeSymbolName(
+                "$7name",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.IsErrorResult());
+        }
+
+        [TestMethod]
+        public void TryParseProduction_Tests()
+        {
+            var metaContext = MetaContext.Builder
+                .NewBuilder()
+                .WithDefaultAtomicRuleDefinitions()
+                .Build();
+
+            var success = GrammarParser.TryParseProduction(
+                "$name -> +[$stuff $other-stuff ?[$much-more $options].2 'a-z']",
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            var production = result.Resolve();
+            Assert.IsInstanceOfType<ICompositeRule>(production.Rule);
+
+            success = GrammarParser.TryParseProduction(
+                "$name -> 'a-z'",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            production = result.Resolve();
+            Assert.IsInstanceOfType<ICompositeRule>(production.Rule);
+            var nt = production.Rule as NonTerminal;
+            Assert.IsInstanceOfType<AtomicRuleRef>(nt!.Element);
+        }
+
+        [TestMethod]
+        public void TryParseGrammar_Tests()
+        {
+            var metaContext = MetaContext.Builder
+                .NewBuilder()
+                .WithDefaultAtomicRuleDefinitions()
+                .Build();
+
+            using var langDefStream = ResourceLoader.Load("SampleGrammar.sample-1.xbnf");
+            var langText = new StreamReader(langDefStream!).ReadToEnd();
+
+            var success = GrammarParser.TryParseGrammar(
+                langText,
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            var grammar = result.Resolve();
+            Assert.AreEqual(5, grammar.ProductionCount);
+            Assert.AreEqual("int", grammar.Root);
+        }
         #endregion
 
         #region Nested types

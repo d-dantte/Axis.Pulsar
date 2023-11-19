@@ -15,7 +15,7 @@ namespace Axis.Pulsar.Core.Grammar
         /// <summary>
         /// The primary group
         /// </summary>
-        IGroupElement RuleGroup { get; }
+        IGroupElement Element { get; }
 
         /// <summary>
         /// The recognition threshold.

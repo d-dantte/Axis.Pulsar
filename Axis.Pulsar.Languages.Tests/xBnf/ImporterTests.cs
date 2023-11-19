@@ -7,9 +7,7 @@ using Axis.Pulsar.Grammar.Language.Rules.CustomTerminals;
 using Axis.Pulsar.Grammar.Recognizers;
 using Axis.Pulsar.Grammar.Recognizers.Results;
 using Axis.Pulsar.Languages.xBNF;
-using System.Reflection.Metadata;
 using System.Text;
-using System.Text.RegularExpressions;
 using static Axis.Pulsar.Grammar.Language.Rules.CustomTerminals.DelimitedString;
 
 namespace Axis.Pulsar.Languages.Tests.xBnf

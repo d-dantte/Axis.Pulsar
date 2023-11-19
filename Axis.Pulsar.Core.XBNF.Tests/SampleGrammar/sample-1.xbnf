@@ -1,0 +1,11 @@
+﻿#
+# Comments
+#
+# Testing grammar
+
+
+$int -> ?[$null-int $binary-int $hex-int $regular-int]
+$null-int -> "null.int"
+$binary-int -> /^0[bB][01](_?[01])*$/{match-type: '3,+'}
+$hex-int -> /^0[xX][0-9A-Fa-f](_?[0-9A-Fa-f])*$/{match-type: '3,+'}
+$regular-int -> /^-?\d(_?\d)*$/{match-type: '2,+'}

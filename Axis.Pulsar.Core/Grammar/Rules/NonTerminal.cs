@@ -8,13 +8,13 @@ namespace Axis.Pulsar.Core.Grammar.Rules
 {
     public class NonTerminal : ICompositeRule
     {
-        public IGroupElement RuleGroup { get; }
+        public IGroupElement Element { get; }
 
         public uint RecognitionThreshold { get; }
 
         public NonTerminal(uint recognitionThreshold, IGroupElement ruleGroup)
         {
-            RuleGroup = ruleGroup ?? throw new ArgumentNullException(nameof(ruleGroup));
+            Element = ruleGroup ?? throw new ArgumentNullException(nameof(ruleGroup));
             RecognitionThreshold = recognitionThreshold;
         }
 
@@ -37,11 +37,11 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             ArgumentNullException.ThrowIfNull(nameof(productionPath));
 
             var position = reader.Position;
-            if (!RuleGroup.Cardinality.TryRepeat(
+            if (!Element.Cardinality.TryRepeat(
                 reader,
                 productionPath,
                 context,
-                RuleGroup,
+                Element,
                 out var groupResult))
             {
                 result = groupResult.AsError().MapNodeError(

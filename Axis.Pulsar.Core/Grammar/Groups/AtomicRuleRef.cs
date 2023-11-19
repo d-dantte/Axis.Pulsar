@@ -6,16 +6,16 @@ using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar.Groups
 {
-    public class AtomicRuleRef : IGroupElement
+    public class AtomicRuleRef : IRuleRef<IAtomicRule>
     {
         public Cardinality Cardinality { get; }
 
-        public IAtomicRule Rule { get; }
+        public IAtomicRule Ref { get; }
 
         public AtomicRuleRef(Cardinality cardinality, IAtomicRule rule)
         {
             Cardinality = cardinality.ThrowIfDefault(new ArgumentException($"Invalid {nameof(cardinality)}: default"));
-            Rule = rule ?? throw new ArgumentNullException(nameof(rule));
+            Ref = rule ?? throw new ArgumentNullException(nameof(rule));
         }
 
         public static AtomicRuleRef Of(
@@ -33,7 +33,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             ArgumentNullException.ThrowIfNull(parentPath);
 
             var position = reader.Position;
-            if (!Rule.TryRecognize(reader, parentPath, context, out var ruleResult))
+            if (!Ref.TryRecognize(reader, parentPath, context, out var ruleResult))
             {
                 reader.Reset(position);
 

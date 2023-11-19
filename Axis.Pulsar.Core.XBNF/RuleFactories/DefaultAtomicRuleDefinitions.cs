@@ -31,5 +31,13 @@ namespace Axis.Pulsar.Core.XBNF.RuleFactories
             AtomicContentDelimiterType.Quote,
             new CharRangeRuleFactory());
 
+        /// <summary>
+        /// 
+        /// </summary>
+        public static readonly AtomicRuleDefinition EOF = AtomicRuleDefinition.Of(
+            "EOF",
+            AtomicContentDelimiterType.None,
+            new EOFRuleFactory());
+
     }
 }

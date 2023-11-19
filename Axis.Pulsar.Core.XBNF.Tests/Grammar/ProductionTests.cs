@@ -44,14 +44,14 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Grammar
                     return false;
                 }));
 
-            var production = Production.Of("symbol", passingRuleMock.Object);
+            var production = XBNFProduction.Of("symbol", passingRuleMock.Object);
             var success = production.TryProcessRule("some tokens", null, null!, out var result);
             Assert.IsTrue(success);
             Assert.IsNotNull(result);
             Assert.IsTrue(result.IsDataResult());
 
 
-            production = Production.Of("symbol", failingRuleMock.Object);
+            production = XBNFProduction.Of("symbol", failingRuleMock.Object);
             success = production.TryProcessRule("some tokens", null, null!, out result);
             Assert.IsFalse(success);
             Assert.IsNotNull(result);

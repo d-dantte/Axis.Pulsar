@@ -71,6 +71,7 @@ public class MetaContext
         public Builder WithDefaultAtomicRuleDefinitions()
         {
             return this
+                .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.EOF)
                 .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.Literal)
                 .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.Pattern)
                 .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.CharacterRanges);

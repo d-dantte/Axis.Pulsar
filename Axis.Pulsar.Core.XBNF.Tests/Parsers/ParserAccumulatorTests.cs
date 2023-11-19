@@ -16,34 +16,27 @@ public class ParserAccumulatorTests
         Assert.ThrowsException<ArgumentNullException>(() => ParserAccumulator.Of(
             null!,
             metaContext,
-            0));
+            0,
+            "x"));
 
         Assert.ThrowsException<ArgumentNullException>(() => ParserAccumulator.Of(
             "something",
             null!,
-            0));
-
-        Assert.ThrowsException<ArgumentNullException>(() => ParserAccumulator.OfAlternative(
-            null!,
-            metaContext,
-            0));
-
-        Assert.ThrowsException<ArgumentNullException>(() => ParserAccumulator.OfAlternative(
-            "something",
-            null!,
-            0));
+            0,
+            "x"));
         #endregion
 
         var accummulator = ParserAccumulator.Of(
             "stuff",
             metaContext,
-            12);
+            12,
+            "x");
 
         Assert.AreEqual(metaContext, accummulator.Context);
         Assert.AreEqual("stuff", accummulator.Reader.Source);
         Assert.AreEqual(12, accummulator.Data);
 
-        accummulator = ParserAccumulator.OfAlternative(
+        accummulator = ParserAccumulator.Of(
             "stuff",
             metaContext,
             12,
@@ -52,12 +45,6 @@ public class ParserAccumulatorTests
         Assert.AreEqual(metaContext, accummulator.Context);
         Assert.AreEqual("stuff", accummulator.Reader.Source);
         Assert.AreEqual(12, accummulator.Data);
-        Assert.IsTrue(accummulator.IsPreviousOpErrored);
-        Assert.IsTrue(accummulator.IsPreviousOpUnmatched);
-        Exception error = null!;
-        accummulator.ConsumeError(err => error = err);
-        Assert.IsNotNull(error);
-        Assert.AreEqual("x-zymbol", (error as UnmatchedError)!.ExpectedSymbol);
     }
 
     [TestMethod]
@@ -67,7 +54,8 @@ public class ParserAccumulatorTests
         var accummulator = ParserAccumulator.Of(
             "stuff",
             metaContext,
-            12);
+            12,
+            "x");
         
         _ = accummulator.ThenTry<int>(
             TryParseSuccess,
@@ -85,6 +73,7 @@ public class ParserAccumulatorTests
         Assert.AreEqual(14, accummulator.Data);
         
         _ = accummulator.ThenTry<int>(
+            true,
             TryParseUnmatched,
             (x, y) => x + y);
 
@@ -93,7 +82,7 @@ public class ParserAccumulatorTests
         Assert.AreEqual(14, accummulator.Data); // <-- retains old value
         
         accummulator = ParserAccumulator
-            .Of("stuff", metaContext, 12)
+            .Of("stuff", metaContext, 12, "x")
             .ThenTry<int>(
                 TryParseFaultyMatch,
                 (x, y) => 20);
@@ -102,7 +91,7 @@ public class ParserAccumulatorTests
         Assert.AreEqual(12, accummulator.Data); // <-- retains old value
         
         accummulator = ParserAccumulator
-            .Of("stuff", metaContext, 12)
+            .Of("stuff", metaContext, 12, "x")
             .ThenTry<int>(
                 TryParseFaultyMatch,
                 (x, y) => 20,
@@ -112,7 +101,7 @@ public class ParserAccumulatorTests
         Assert.AreEqual(12, accummulator.Data); // <-- retains old value
         
         accummulator = ParserAccumulator
-            .Of("stuff", metaContext, 12)
+            .Of("stuff", metaContext, 12, "x")
             .ThenTry<int>(
                 TryParseUnknown,
                 (x, y) => 20);
@@ -121,7 +110,7 @@ public class ParserAccumulatorTests
         Assert.AreEqual(12, accummulator.Data); // <-- retains old value
         
         accummulator = ParserAccumulator
-            .Of("stuff", metaContext, 12)
+            .Of("stuff", metaContext, 12, "x")
             .ThenTry<int>(
                 TryParseUnknown,
                 (x, y) => 20,
@@ -138,18 +127,27 @@ public class ParserAccumulatorTests
         var accummulator = ParserAccumulator.Of(
             "stuff",
             metaContext,
-            12);
+            12,
+            "x");
         
         _ = accummulator.OrTry<int>(
             TryParseSuccess,
             (x, y) => x + y);
 
         Assert.IsFalse(accummulator.IsPreviousOpErrored);
+        Assert.AreEqual(12, accummulator.Data); // accumulator starts as "succeeded", so alternative is ignored
+
+        _ = accummulator
+            .ThenTry<int>(TryParseSuccess, (x, y) => x)
+            .OrTry<int>(TryParseSuccess, (x, y) => x + y);
+
+        Assert.IsFalse(accummulator.IsPreviousOpErrored);
         Assert.AreEqual(12, accummulator.Data); // previous op succeeded, so alternative is ignored
-        
-        
+
+
         accummulator = ParserAccumulator
-            .OfAlternative("stuff", metaContext, 12)
+            .Of("stuff", metaContext, 12, "x")
+            .ThenTry<int>(TryParseUnmatched, (x, y) => x)
             .OrTry<int>(
                 TryParseSuccess,
                 (x, y) => x + y);
@@ -159,7 +157,8 @@ public class ParserAccumulatorTests
         
         
         accummulator = ParserAccumulator
-            .OfAlternative("stuff", metaContext, 12)
+            .Of("stuff", metaContext, 12, "x")
+            .ThenTry<int>(TryParseUnmatched, (x, y) => x)
             .OrTry<int>(
                 TryParseUnmatched,
                 (x, y) => x + y,
@@ -170,7 +169,8 @@ public class ParserAccumulatorTests
         
         
         accummulator = ParserAccumulator
-            .OfAlternative("stuff", metaContext, 12)
+            .Of("stuff", metaContext, 12, "x")
+            .ThenTry<int>(TryParseUnmatched, (x, y) => x)
             .OrTry<int>(
                 TryParseFaultyMatch,
                 (x, y) => x + y,
@@ -180,7 +180,8 @@ public class ParserAccumulatorTests
         
         
         accummulator = ParserAccumulator
-            .OfAlternative("stuff", metaContext, 12)
+            .Of("stuff", metaContext, 12, "x")
+            .ThenTry<int>(TryParseUnmatched, (x, y) => x)
             .OrTry<int>(
                 TryParseUnknown,
                 (x, y) => x + y,

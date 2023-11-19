@@ -14,7 +14,6 @@ using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
 namespace Axis.Pulsar.Core.XBNF;
 
-
 public static class GrammarParser
 {
     private static readonly Regex DigitPattern = new Regex("^\\d+\\z", RegexOptions.Compiled);
@@ -40,12 +39,12 @@ public static class GrammarParser
         out IResult<IGrammar> result)
     {
         var position = reader.Position;
-        var productions = new List<Production>();
+        var productions = new List<XBNFProduction>();
 
         try
         {
             var accumulator = ParserAccumulator
-                .Of(reader, context, productions)
+                .Of(reader, context, productions, "grammar")
 
                 // optional initial silent block
                 .ThenTry<SilentBlock>(
@@ -54,7 +53,7 @@ public static class GrammarParser
                     prods => prods)
 
                 // initial production
-                .ThenTry<Production>(
+                .ThenTry<XBNFProduction>(
                     TryParseProduction,
                     (prods, prod) => prods.AddItem(prod));
 
@@ -64,11 +63,13 @@ public static class GrammarParser
 
                     // required silent block
                     .ThenTry<SilentBlock>(
+                        true,
                         TryParseSilentBlock,
                         (prods, _) => prods)
 
                     // required production
-                    .ThenTry<Production>(
+                    .ThenTry<XBNFProduction>(
+                        true,
                         TryParseProduction,
                         (prods, prod) => prods.AddItem(prod));
             }
@@ -99,7 +100,7 @@ public static class GrammarParser
     public static bool TryParseProduction(
         TokenReader reader,
         MetaContext context,
-        out IResult<Production> result)
+        out IResult<XBNFProduction> result)
     {
         var position = reader.Position;
 
@@ -108,7 +109,8 @@ public static class GrammarParser
             var accummulator = ParserAccumulator
                 .Of(reader,
                     context,
-                    KeyValuePair.Create<string, IRule>(null!, null!))
+                    KeyValuePair.Create<string, IRule>(null!, null!),
+                    "production")
 
                 // symbol name
                 .ThenTry<string>(
@@ -130,12 +132,12 @@ public static class GrammarParser
                     TryParseSilentBlock,
                     (kvp, _) => kvp)
 
-                // rule
+                // composite rule
                 .ThenTry<ICompositeRule>(
                     TryParseCompositeRule,
                     (kvp, rule) => kvp.Key.ValuePair((IRule)rule));
 
-            result = accummulator.ToResult(kvp => Production.Of(
+            result = accummulator.ToResult(kvp => XBNFProduction.Of(
                 kvp.Key,
                 kvp.Value));
 
@@ -144,7 +146,7 @@ public static class GrammarParser
         catch (Exception e)
         {
             reader.Reset(position);
-            result = Result.Of<Production>(new UnknownError(e));
+            result = Result.Of<XBNFProduction>(new UnknownError(e));
             return false;
         }
     }
@@ -256,6 +258,7 @@ public static class GrammarParser
             return false;
         }
     }
+    
     #endregion
 
     #region Composite
@@ -272,7 +275,8 @@ public static class GrammarParser
             var accumulator = ParserAccumulator
                 .Of(reader,
                     context,
-                    KeyValuePair.Create(0u, default(IGroupElement)!))
+                    KeyValuePair.Create(0u, default(IGroupElement)!),
+                    "composite-rule")
 
                 // optional recognition threshold
                 .ThenTry<uint>(
@@ -352,14 +356,14 @@ public static class GrammarParser
         try
         {
             var accumulator = ParserAccumulator
-                .OfAlternative(
-                    reader,
+                .Of(reader,
                     context,
                     default(IGroupElement)!,
                     "group-element")
 
                 // atomic rule ref
-                .OrTry<AtomicRuleRef>(
+                .ThenTry<AtomicRuleRef>(
+                    true,
                     TryParseAtomicRuleRef,
                     (_, ruleRef) => ruleRef)
 
@@ -396,7 +400,8 @@ public static class GrammarParser
             var accumulator = ParserAccumulator
                 .Of(reader,
                     context,
-                    KeyValuePair.Create(default(IAtomicRule)!, Cardinality.OccursOnlyOnce()))
+                    KeyValuePair.Create(default(IAtomicRule)!, Cardinality.OccursOnlyOnce()),
+                    "atomic-rule")
 
                 // required atomic rule
                 .ThenTry<IAtomicRule>(
@@ -435,7 +440,8 @@ public static class GrammarParser
             var accumulator = ParserAccumulator
                 .Of(reader,
                     context,
-                    KeyValuePair.Create(default(string)!, Cardinality.OccursOnlyOnce()))
+                    KeyValuePair.Create(default(string)!, Cardinality.OccursOnlyOnce()),
+                    "production-ref")
 
                 // required atomic rule
                 .ThenTry<string>(
@@ -472,14 +478,11 @@ public static class GrammarParser
         try
         {
             var accumulator = ParserAccumulator
-                .OfAlternative(
-                    reader,
-                    context,
-                    default(IGroup)!,
-                    "group")
+                .Of(reader, context, default(IGroup)!, "group")
 
                 // choice
-                .OrTry<Choice>(
+                .ThenTry<Choice>(
+                    true,
                     TryParseChoice,
                     (group, choice) => choice)
 
@@ -526,32 +529,42 @@ public static class GrammarParser
             if (!reader.TryGetPattern(DigitPattern, out var minMatchCount))
                 minMatchCount = Tokens.Empty;
 
-            // element list
-            if (!TryParseElementList(reader, context, out var elementListResult))
-            {
-                result = Result.Of<Set>(new FaultyMatchError(
-                    "set-group",
-                    position,
-                    reader.Position - position));
-                reader.Reset(position);
-                return false;
-            }
+            result = ParserAccumulator
+                .Of(reader,
+                    context,
+                    (list: default(IGroupElement[]), cardinality: default(Cardinality)),
+                    "set-group")
 
-            // cardinality
-            if (!TryParseCardinality(reader, context, out var cardinalityResult))
-            {
-                result = cardinalityResult.MapAs<Set>();
-                reader.Reset(position);
-                return false;
-            }
+                // required element list
+                .ThenTry<IGroupElement[]>(
+                    TryParseElementList,
+                    (info, list) => (list, info.cardinality))
 
-            result = cardinalityResult.Combine(
-                elementListResult,
-                (cardinality, elements) => Set.Of(
-                    cardinality,
-                    minMatchCount.IsEmpty ? null : int.Parse(minMatchCount.AsSpan()),
-                    elements));
-            return true;
+                // optional cardinality
+                .ThenTry<Cardinality>(
+                    TryParseCardinality,
+                    (info, cardinality) => (info.list, cardinality),
+                    info => (info.list, cardinality: Cardinality.OccursOnlyOnce()))
+
+                // transform unmatched errors
+                //.TransformError(e => e switch
+                //{
+                //    UnmatchedError => new FaultyMatchError(
+                //        "sequence-group",
+                //        position,
+                //        reader.Position - position),
+                //    _ => e
+                //})
+
+                // map to result
+                .ToResult(info => Set.Of(
+                    cardinality: info.cardinality,
+                    elements: info.list!,
+                    minRecognitionCount: int.Parse(minMatchCount.IsEmpty
+                        ? info.list!.Length.ToString().AsSpan()
+                        : minMatchCount.AsSpan())));
+
+            return result.IsDataResult();
         }
         catch (Exception e)
         {
@@ -579,27 +592,37 @@ public static class GrammarParser
                 return false;
             }
 
-            // element list
-            if (!TryParseElementList(reader, context, out var elementListResult))
-            {
-                result = Result.Of<Choice>(new FaultyMatchError(
-                    "choice-group",
-                    position,
-                    reader.Position - position));
-                reader.Reset(position);
-                return false;
-            }
+            result = ParserAccumulator
+                .Of(reader,
+                    context,
+                    (list: default(IGroupElement[]), cardinality: default(Cardinality)),
+                    "choice-group")
 
-            // cardinality
-            if (!TryParseCardinality(reader, context, out var cardinalityResult))
-            {
-                result = cardinalityResult.MapAs<Choice>();
-                reader.Reset(position);
-                return false;
-            }
+                // required element list
+                .ThenTry<IGroupElement[]>(
+                    TryParseElementList,
+                    (info, list) => (list, info.cardinality))
 
-            result = cardinalityResult.Combine(elementListResult, Choice.Of);
-            return true;
+                // optional cardinality
+                .ThenTry<Cardinality>(
+                    TryParseCardinality,
+                    (info, cardinality) => (info.list, cardinality),
+                    info => (info.list, cardinality: Cardinality.OccursOnlyOnce()))
+
+                // transform unmatched errors
+                //.TransformError(e => e switch
+                //{
+                //    UnmatchedError => new FaultyMatchError(
+                //        "sequence-group",
+                //        position,
+                //        reader.Position - position),
+                //    _ => e
+                //})
+
+                // map to result
+                .ToResult(info => Choice.Of(info.cardinality, info.list!));
+
+            return result.IsDataResult();
         }
         catch (Exception e)
         {
@@ -627,27 +650,37 @@ public static class GrammarParser
                 return false;
             }
 
-            // element list
-            if (!TryParseElementList(reader, context, out var elementListResult))
-            {
-                result = Result.Of<Sequence>(new FaultyMatchError(
-                    "sequence-group",
-                    position,
-                    reader.Position - position));
-                reader.Reset(position);
-                return false;
-            }
+            result = ParserAccumulator
+                .Of(reader,
+                    context,
+                    (list: default(IGroupElement[]), cardinality: default(Cardinality)),
+                    "sequence-group")
 
-            // cardinality
-            if (!TryParseCardinality(reader, context, out var cardinalityResult))
-            {
-                result = cardinalityResult.MapAs<Sequence>();
-                reader.Reset(position);
-                return false;
-            }
+                // required element list
+                .ThenTry<IGroupElement[]>(
+                    TryParseElementList,
+                    (info, list) => (list, info.cardinality))
 
-            result = cardinalityResult.Combine(elementListResult, Sequence.Of);
-            return true;
+                // optional cardinality
+                .ThenTry<Cardinality>(
+                    TryParseCardinality,
+                    (info, cardinality) => (info.list, cardinality),
+                    info => (info.list, cardinality: Cardinality.OccursOnlyOnce()))
+
+                // transform unmatched errors
+                //.TransformError(e => e switch
+                //{
+                //    UnmatchedError => new FaultyMatchError(
+                //        "sequence-group",
+                //        position,
+                //        reader.Position - position),
+                //    _ => e
+                //})
+
+                // map to result
+                .ToResult(info => Sequence.Of(info.cardinality, info.list!));
+
+            return result.IsDataResult();
         }
         catch (Exception e)
         {
@@ -758,33 +791,41 @@ public static class GrammarParser
                 return false;
             }
 
-            var elementList = new List<IGroupElement>();
+            var accumulator = ParserAccumulator
+                .Of(reader, context, new List<IGroupElement>(), "element-list")
 
-            do
+                // optional whitespace
+                .ThenTry<SilentBlock>(
+                    TryParseSilentBlock,
+                    (group, block) => group,
+                    group => group)
+
+                // required element
+                .ThenTry<IGroupElement>(
+                    TryParseGroupElement,
+                    (group, element) => group.AddItem(element));
+
+            // optional additional elements
+            while (!accumulator.IsPreviousOpErrored)
             {
-                // whitespace
-                _ = TryParseSilentBlock(reader, context, out _);
+                _ = accumulator
+                    // required whitespace
+                    .ThenTry<SilentBlock>(
+                        true,
+                        TryParseSilentBlock,
+                        (group, block) => group)
 
-                if (TryParseGroupElement(reader, context, out var elementResult))
-                    elementResult.Consume(elementList.Add);
+                    // required element
+                    .ThenTry<IGroupElement>(
+                        true,
+                        TryParseGroupElement,
+                        (group, element) => group.AddItem(element));
+            }            
 
-                else
-                {
-                    result = Result.Of<IGroupElement[]>(new FaultyMatchError(
-                        "element-list",
-                        position,
-                        reader.Position - position));
-                    reader.Reset(position);
-                    return false;
-                }
-
-                // possible whitespace after element
-                _ = TryParseSilentBlock(reader, context, out _);
-            }
-            while (reader.TryGetToken(out var commaToken) && ','.Equals(commaToken[0]));
-
-            reader.Back(); // back one space for the failed ',' match
-            if (!reader.TryGetTokens("]", out var closeBracket))
+            if (!reader.TryGetTokens("]", out var _)
+                || accumulator.IsPreviousOpFaultyMatch
+                || accumulator.IsPreviousOpUnknown
+                || accumulator.Data.Count == 0)
             {
                 result = Result.Of<IGroupElement[]>(new FaultyMatchError(
                     "element-list",
@@ -794,7 +835,7 @@ public static class GrammarParser
                 return false;
             }
 
-            result = elementList
+            result = accumulator.Data
                 .ToArray()
                 .ApplyTo(Result.Of);
             return true;
@@ -820,10 +861,13 @@ public static class GrammarParser
         try
         {
             result = ParserAccumulator
-                .Of(reader, context, (Name: string.Empty, Args: new List<ArgumentPair>()))
+                .Of(reader,
+                    context,
+                    (Name: string.Empty, Args: new List<ArgumentPair>()),
+                    "atomic-rule")
 
                 // parse atomic symbol name
-                .ThenTry<string>(TryParseAtomicSymbolName, (r, name) =>
+                .ThenTry<string>(true, TryParseAtomicSymbolName, (r, name) =>
                 {
                     r.Name = name;
                     return r;
@@ -892,35 +936,47 @@ public static class GrammarParser
 
         try
         {
-            var accumulator = ParserAccumulator.OfAlternative(
+            var accumulator = ParserAccumulator.Of(
                 reader, context,
-                new AtomicContentArgumentInfo(),
+                default(AtomicContentArgumentInfo)!,
                 "atomic-content");
 
-            foreach (var delimChar in AtomicContentDelimiterTypeExtensions.DelimiterCharacterSet)
+            if (reader.TryPeekToken(out var delimToken))
             {
-                accumulator = accumulator.OrTry(
-                    (TokenReader x, MetaContext y, out IResult<Tokens> z) => TryParseDelimitedContent(x, y, delimChar, delimChar, out z),
-                    (info, content) => info with
+                var initialAlternative = true;
+                foreach (var delimChar in AtomicContentDelimiterTypeExtensions.DelimiterCharacterSet)
+                {
+                    if (delimChar == delimToken[0])
                     {
-                        Content = content,
-                        ContentType = delimChar.DelimiterType()
-                    });
+                        accumulator = accumulator.OrTry(
+                            initialAlternative,
+                            (TokenReader x, MetaContext y, out IResult<Tokens> z) => TryParseDelimitedContent(x, y, delimChar, delimChar, out z),
+                            (info, content) => new AtomicContentArgumentInfo
+                            {
+                                Content = content,
+                                ContentType = delimChar.DelimiterType()
+                            });
 
-                // break if we already have a match
-                if (!accumulator.IsPreviousOpErrored)
-                    break;
+                        // break if we already have a match
+                        if (!accumulator.IsPreviousOpErrored)
+                            break;
+
+                        initialAlternative = false;
+                    }
+                }
             }
 
             if (accumulator.IsPreviousOpErrored)
             {
-                result = !accumulator.IsPreviousOpUnmatched
-                    ? accumulator.ToResult<AtomicContentArgumentInfo>()
-                    : Result.Of<AtomicContentArgumentInfo>(
-                        new FaultyMatchError(
-                            "atomic-content",
-                            position,
-                            reader.Position - position));
+                result = accumulator.ToResult<AtomicContentArgumentInfo>();
+                reader.Reset(position);
+                return false;
+            }
+            else if(accumulator.Data is null)
+            {
+                result = Result.Of<AtomicContentArgumentInfo>(new UnmatchedError(
+                    "atomic-content",
+                    position));
                 reader.Reset(position);
                 return false;
             }
@@ -1018,7 +1074,7 @@ public static class GrammarParser
             }
 
             var accumulator = ParserAccumulator
-                .Of(reader, context, new List<ArgumentPair>());
+                .Of(reader, context, new List<ArgumentPair>(), "atomic-rule-arguments");
 
             do
             {
@@ -1110,10 +1166,11 @@ public static class GrammarParser
                 _ = TryParseSilentBlock(reader, context, out _);
 
                 var accumulator = ParserAccumulator
-                    .Of(reader, context, "")
+                    .Of(reader, context, "", "atomic-rule-argument")
 
                     // bool value?
                     .ThenTry<bool>(
+                        true,
                         TryParseBooleanArgValue,
                         (value, @bool) => @bool.ToString())
 
@@ -1258,13 +1315,14 @@ public static class GrammarParser
             do
             {
                 accumulator = ParserAccumulator
-                    .OfAlternative<ISilentElement>(reader,
+                    .Of<ISilentElement>(reader,
                         context,
                         null!,
                         "silent-block")
 
                     // block comment
-                    .OrTry<BlockComment>(
+                    .ThenTry<BlockComment>(
+                        true,
                         TryParseBlockComment,
                         (_, comment) => comment)
 
