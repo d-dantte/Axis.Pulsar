@@ -43,10 +43,14 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             if (!production.TryProcessRule(reader, parentPath, context, out var refResult))
             {
                 reader.Reset(position);
+                result = refResult.AsError().ActualCause() switch
+                {
+                    IRecognitionError re => GroupRecognitionError
+                        .Of(re, 0)
+                        .ApplyTo(Result.Of<NodeSequence>),
 
-                result = refResult.AsError().MapGroupError(
-                    ute => GroupError.Of(ute, NodeSequence.Empty),
-                    pte => GroupError.Of(pte, NodeSequence.Empty));
+                    Exception e => refResult.MapAs<NodeSequence>()
+                };
 
                 return false;
             }

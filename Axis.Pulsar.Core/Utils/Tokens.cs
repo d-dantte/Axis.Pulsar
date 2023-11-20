@@ -10,8 +10,7 @@ namespace Axis.Pulsar.Core.Utils
         IDefaultValueProvider<Tokens>
     {
         private readonly string? _source;
-        private readonly int _offset;
-        private readonly int _count;
+        private readonly Segment _sourceSegment;
 
         /// <summary>
         /// Lazy-loaded hash of the individual characters of this token.
@@ -20,9 +19,13 @@ namespace Axis.Pulsar.Core.Utils
         /// </summary>
         private readonly Lazy<int> _valueHash;
 
-        public int Count => _count;
+        /// <summary>
+        ///  Deprecate this in favor of the <see cref="Tokens.SourceSegment"/> property
+        /// </summary>
+        [Obsolete("Replace uses of this with the 'Tokens.SourceSegment.Offset' property")]
+        public int Offset => _sourceSegment.Offset;
 
-        public int Offset => _offset;
+        public Segment SourceSegment => _sourceSegment;
 
         public string? Source => _source;
 
@@ -35,15 +38,25 @@ namespace Axis.Pulsar.Core.Utils
                 if (IsDefault)
                     throw new InvalidOperationException($"Invalid token instance: default");
 
-                if (index < 0 || index >= _count)
+                if (index < 0 || index >= _sourceSegment.Length)
                     throw new IndexOutOfRangeException();
 
-                return _source![_offset + index];
+                return _source![_sourceSegment.Offset + index];
             }
         }
 
+        public char this[Index index] => index.IsFromEnd switch
+        {
+            true => this[_sourceSegment.Length - index.Value],
+            false => this[index.Value]
+        };
+
+        public Tokens this[Range range] => range
+            .GetOffsetAndLength(_sourceSegment.Length)
+            .ApplyTo(Slice);
+
         #region Empty
-        public bool IsEmpty => !IsDefault && _count == 0;
+        public bool IsEmpty => !IsDefault && _sourceSegment.Length == 0;
 
         /// <summary>
         /// Returns the DEFAULT-EMPTY segment: a segment whose source-string is the empty string (see <see cref="string.Empty"/>)
@@ -58,28 +71,37 @@ namespace Axis.Pulsar.Core.Utils
         #endregion
 
         #region Constructors
+
+        public Tokens(
+            string sourceString,
+            Segment tokenSegment)
+        {
+            _source = sourceString ?? throw new ArgumentNullException(nameof(sourceString));
+            _sourceSegment = tokenSegment;
+
+            if (tokenSegment.Offset > sourceString.Length
+                || sourceString.Length < (tokenSegment.Offset + tokenSegment.Length))
+                throw new ArgumentException(
+                    $"Invalid args. source-length:{sourceString.Length}, "
+                    + $"offset:{tokenSegment.Offset}, segment-length:{tokenSegment.Length}");
+
+            _valueHash = new Lazy<int>(() => sourceString
+                .Substring(tokenSegment.Offset, tokenSegment.Length)
+                .Aggregate(0, HashCode.Combine));
+        }
+
         public Tokens(
             string sourceString,
             int offset,
             int length)
+            : this(sourceString, Segment.Of(
+                offset < 0
+                    ? throw new ArgumentException($"Invalid {nameof(offset)}: {offset}")
+                    : offset,
+                length < 0
+                    ? throw new ArgumentException($"Invalid {nameof(length)}: {length}")
+                    : length))
         {
-            _source = sourceString ?? throw new ArgumentNullException(nameof(sourceString));
-            _offset = offset < 0
-                ? throw new ArgumentException($"Invalid {nameof(offset)}: {offset}")
-                : offset;
-            _count = length < 0
-                ? throw new ArgumentException($"Invalid {nameof(length)}: {length}")
-                : length;
-
-            if (offset > sourceString.Length
-                || sourceString.Length < (offset + length))
-                throw new ArgumentException(
-                    $"Invalid args. source-length:{sourceString.Length}, "
-                    + $"offset:{offset}, segment-length:{length}");
-
-            _valueHash = new Lazy<int>(() => sourceString
-                .Substring(offset, length)
-                .Aggregate(0, HashCode.Combine));
         }
 
         public Tokens(string sourceString, int offset)
@@ -105,6 +127,11 @@ namespace Axis.Pulsar.Core.Utils
             int offset)
             => new(sourceString, offset);
 
+        public static Tokens Of(
+            string sourceString,
+            Segment tokenSegment)
+            => new(sourceString, tokenSegment);
+
         public static Tokens Of(string sourceString) => new(sourceString);
         #endregion
 
@@ -116,24 +143,24 @@ namespace Axis.Pulsar.Core.Utils
         public Tokens Slice(
             int offset,
             int length)
-            => new(_source!, offset + _offset, length);
+            => new(_source!, offset + _sourceSegment.Offset, length);
 
         public Tokens Slice(
             int offset)
-            => new(_source!, offset + _offset, _count - offset);
+            => new(_source!, offset + _sourceSegment.Offset, _sourceSegment.Length - offset);
         #endregion
 
-        public override int GetHashCode() => HashCode.Combine(_offset, _count, _valueHash?.Value ?? 0);
+        public override int GetHashCode() => HashCode.Combine(_sourceSegment.Offset, _sourceSegment.Length, _valueHash?.Value ?? 0);
 
         public override string? ToString()
         {
             if (_source is null)
                 return null;
 
-            if (_offset == 0 && _count == _source.Length)
+            if (_sourceSegment.Offset == 0 && _sourceSegment.Length == _source.Length)
                 return _source;
 
-            else return _source.Substring(_offset, _count);
+            else return _source.Substring(_sourceSegment.Offset, _sourceSegment.Length);
         }
 
         public char[]? ToArray()
@@ -162,9 +189,7 @@ namespace Axis.Pulsar.Core.Utils
             if (!Intersects(this, other))
                 throw new ArgumentException("Cannot merge non-intersecting tokens");
 
-            var newOffset = Math.Min(_offset, other._offset);
-            var newCount = Math.Max(_offset + _count, other._offset + other._count) - newOffset;
-            return Of(_source!, newOffset, newCount);
+            return Of(_source!, _sourceSegment + other._sourceSegment);
         }
 
         /// <summary>
@@ -183,7 +208,7 @@ namespace Axis.Pulsar.Core.Utils
         /// <param name="other">The token instance to concatenate</param>
         /// <returns>The new token created from joining both tokens</returns>
         /// <exception cref="InvalidOperationException">If the tokens cannot be joined</exception>
-        public Tokens Join(Tokens other)
+        public Tokens ConJoin(Tokens other)
         {
             if (!CanJoin(other))
                 throw new InvalidOperationException($"Invalid segment: non-combinable");
@@ -196,8 +221,7 @@ namespace Axis.Pulsar.Core.Utils
 
             return new Tokens(
                 _source!,
-                Math.Min(_offset, other._offset),
-                _count + other._count);
+                SourceSegment + other.SourceSegment);
         }
 
         /// <summary>
@@ -205,7 +229,7 @@ namespace Axis.Pulsar.Core.Utils
         /// </summary>
         /// <param name="count">Number of characters by which we will expand this token instance</param>
         /// <returns></returns>
-        public Tokens ExpandBy(int count) => new(_source!, _offset, count + count);
+        public Tokens ExpandBy(int count) => new(_source!, _sourceSegment.Offset, count + count);
 
         /// <summary>
         /// Returns a span representation of this token
@@ -213,11 +237,11 @@ namespace Axis.Pulsar.Core.Utils
         /// <returns></returns>
         public ReadOnlySpan<char> AsSpan()
             => !IsDefault
-                ? _source.AsSpan(_offset, _count)
+                ? _source.AsSpan(_sourceSegment.Offset, _sourceSegment.Length)
                 : default;
 
         /// <summary>
-        /// Calls <see cref="Tokens.Join(Tokens)"/> on each consecutive items in the given sequence.
+        /// Calls <see cref="Tokens.ConJoin(Tokens)"/> on each consecutive items in the given sequence.
         /// </summary>
         /// <param name="segmentTokens">A sequence of consecutively related <see cref="Tokens"/> instances</param>
         /// <returns>A new instance that is a combination of all the given consecutive instances</returns>
@@ -227,7 +251,7 @@ namespace Axis.Pulsar.Core.Utils
 
             return segmentTokens.Aggregate(
                 Tokens.Empty,
-                (segmentToken, next) => segmentToken.Join(next));
+                (segmentToken, next) => segmentToken.ConJoin(next));
         }
 
         #region Relationship Checks
@@ -275,7 +299,7 @@ namespace Axis.Pulsar.Core.Utils
         /// To be consecutive, the following needs to be true:
         /// <list type="number">
         /// <item>Both segments must have equivalent backing strings, i.e, <see cref="IsSourceEqual(Tokens)"/> must return true</item>
-        /// <item><c>_offset + _length</c> of this segment must be equal to <c>_offset</c> of <paramref name="other"/></item>
+        /// <item><c>_sourceSegment.Offset + _length</c> of this segment must be equal to <c>_sourceSegment.Offset</c> of <paramref name="other"/></item>
         /// </list>
         /// </summary>
         /// <param name="other"></param>
@@ -288,7 +312,7 @@ namespace Axis.Pulsar.Core.Utils
             if (!IsSourceEqual(other))
                 return false;
 
-            return other._offset == _offset + _count;
+            return other._sourceSegment.Offset == _sourceSegment.Offset + _sourceSegment.Length;
         }
 
         /// <summary>
@@ -314,9 +338,7 @@ namespace Axis.Pulsar.Core.Utils
             if (!first.IsSourceEqual(second))
                 return false;
 
-            return Extensions.Intersects(
-                (first._offset, first._offset + first._count - 1),
-                (second._offset, second._offset + second._count - 1));
+            return first._sourceSegment.Intersects(second._sourceSegment);
         }
 
         public override bool Equals(object? obj)
@@ -344,10 +366,10 @@ namespace Axis.Pulsar.Core.Utils
             if (IsEmpty && string.IsNullOrEmpty(value))
                 return true;
 
-            if (value!.Length != _count)
+            if (value!.Length != _sourceSegment.Length)
                 return false;
 
-            for(int index = 0; index < _count; index++)
+            for (int index = 0; index < _sourceSegment.Length; index++)
             {
                 if (char.ToLowerInvariant(value[index]) != char.ToLowerInvariant(this[index]))
                     return false;
@@ -364,10 +386,10 @@ namespace Axis.Pulsar.Core.Utils
             if (this.IsDefault)
                 return false;
 
-            if (value.Length != _count)
+            if (value.Length != _sourceSegment.Length)
                 return false;
 
-            for (int cnt = 0; cnt < _count; cnt++)
+            for (int cnt = 0; cnt < _sourceSegment.Length; cnt++)
             {
                 if (this[cnt] != value[cnt])
                     return false;
@@ -387,13 +409,13 @@ namespace Axis.Pulsar.Core.Utils
             if (IsEmpty && other.IsEmpty)
                 return true;
 
-            if (other.Count != _count)
+            if (other.SourceSegment.Length != _sourceSegment.Length)
                 return false;
 
-            if (IsSourceEqual(other) && _offset == other._offset)
+            if (IsSourceEqual(other) && _sourceSegment.Offset == other._sourceSegment.Offset)
                 return true;
 
-            for (int cnt = 0; cnt < _count; cnt++)
+            for (int cnt = 0; cnt < _sourceSegment.Length; cnt++)
             {
                 if (this[cnt] != other[cnt])
                     return false;
@@ -412,7 +434,7 @@ namespace Axis.Pulsar.Core.Utils
             return !(left == right);
         }
 
-        public static Tokens operator +(Tokens left, Tokens right) => left.Join(right);
+        public static Tokens operator +(Tokens left, Tokens right) => left.ConJoin(right);
         #endregion
 
         public bool Contains(string substring)
@@ -423,7 +445,7 @@ namespace Axis.Pulsar.Core.Utils
             if (substring is null)
                 return false;
 
-            return _source!.IndexOf(substring, _offset, _count) >= 0;
+            return _source!.IndexOf(substring, _sourceSegment.Offset, _sourceSegment.Length) >= 0;
         }
 
         public bool Contains(Tokens subtokens)
@@ -431,7 +453,7 @@ namespace Axis.Pulsar.Core.Utils
             if (IsDefault ^ subtokens.IsDefault)
                 return false;
 
-            if (subtokens.Count > Count)
+            if (subtokens.SourceSegment.Length > SourceSegment.Length)
                 return false;
 
             return AsSpan().Contains(subtokens.AsSpan(), StringComparison.InvariantCulture);
@@ -444,7 +466,7 @@ namespace Axis.Pulsar.Core.Utils
             if (IsDefault)
                 return false;
 
-            return _source!.IndexOfAny(chars, _offset, _count) >= 0;
+            return _source!.IndexOfAny(chars, _sourceSegment.Offset, _sourceSegment.Length) >= 0;
         }
     }
 }

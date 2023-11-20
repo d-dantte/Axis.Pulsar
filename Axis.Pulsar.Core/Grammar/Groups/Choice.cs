@@ -48,30 +48,17 @@ namespace Axis.Pulsar.Core.Grammar.Groups
 
                 reader.Reset(position);
 
-                if (result.IsErrorResult(out RecognitionRuntimeError _))
-                    return false;
+                if (result.IsErrorResult(out GroupRecognitionError gre)
+                    && gre.Cause is FailedRecognitionError)
+                    continue;
                 
-                else if (result.IsErrorResult(out GroupError ge))
-                {
-                    if (ge.NodeError is UnrecognizedTokens)
-                        continue;
-
-                    else return false;
-                }
-                else
-                {
-                    result = RecognitionRuntimeError
-                        .Of(result.AsError().ActualCause())
-                        .ApplyTo(Result.Of<NodeSequence>);
-                    return false;
-                }
+                else return false;
             }
 
             reader.Reset(position);
-            result = UnrecognizedTokens
+            result = FailedRecognitionError
                 .Of(parentPath, position)
-                .ApplyTo(ire => (ire, NodeSequence.Empty))
-                .ApplyTo(GroupError.Of)
+                .ApplyTo(GroupRecognitionError.Of)
                 .ApplyTo(Result.Of<NodeSequence>);
 
             return false;

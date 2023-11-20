@@ -6,18 +6,18 @@ namespace Axis.Pulsar.Core.Grammar.Errors
     /// <summary>
     /// 
     /// </summary>
-    internal interface INodeError
-    {
-        /// <summary>
-        /// 
-        /// </summary>
-        ProductionPath ProductionPath { get; }
+    // internal interface INodeError
+    // {
+    //     /// <summary>
+    //     /// 
+    //     /// </summary>
+    //     ProductionPath ProductionPath { get; }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        int Position { get; }
-    }
+    //     /// <summary>
+    //     /// 
+    //     /// </summary>
+    //     int Position { get; }
+    // }
 
 
     /// <summary>
@@ -27,25 +27,25 @@ namespace Axis.Pulsar.Core.Grammar.Errors
     /// <para/>
     /// In other words, where applicable, the <c>RecognitionThreshold</c> was not reached
     /// </summary>
-    public class UnrecognizedTokens : Exception, INodeError
-    {
-        public ProductionPath ProductionPath { get; }
+    // public class UnrecognizedTokens : Exception, INodeError
+    // {
+    //     public ProductionPath ProductionPath { get; }
 
-        public int Position { get; }
+    //     public int Position { get; }
 
-        public UnrecognizedTokens(ProductionPath productionPath, int position)
-        {
-            ProductionPath = productionPath ?? throw new ArgumentNullException(nameof(productionPath));
-            Position = position.ThrowIf(
-                i => i < 0,
-                new ArgumentOutOfRangeException($"Invalid {nameof(position)}: {position}"));
-        }
+    //     public UnrecognizedTokens(ProductionPath productionPath, int position)
+    //     {
+    //         ProductionPath = productionPath ?? throw new ArgumentNullException(nameof(productionPath));
+    //         Position = position.ThrowIf(
+    //             i => i < 0,
+    //             new ArgumentOutOfRangeException($"Invalid {nameof(position)}: {position}"));
+    //     }
 
-        public static UnrecognizedTokens Of(
-            ProductionPath productionPath,
-            int position)
-            => new(productionPath, position);
-    }
+    //     public static UnrecognizedTokens Of(
+    //         ProductionPath productionPath,
+    //         int position)
+    //         => new(productionPath, position);
+    // }
 
     /// <summary>
     /// Indicates that enough characters have been recognized to anticipate the correct symbol, but
@@ -56,47 +56,47 @@ namespace Axis.Pulsar.Core.Grammar.Errors
     /// all been recognized, but a '{' is read instead of a '(' while trying to recognize the parameter
     /// list, then a partial recognition has occured.
     /// </summary>
-    public class PartiallyRecognizedTokens : Exception, INodeError
-    {
-        private readonly Lazy<Tokens> _tokens;
+    // public class PartiallyRecognizedTokens : Exception, INodeError
+    // {
+    //     private readonly Lazy<Tokens> _tokens;
 
-        public Tokens PartialTokens => _tokens.Value;
+    //     public Tokens PartialTokens => _tokens.Value;
 
-        public int Position { get; }
+    //     public int Position { get; }
 
-        public ProductionPath ProductionPath { get; }
+    //     public ProductionPath ProductionPath { get; }
 
-        public PartiallyRecognizedTokens(
-            ProductionPath productionPath,
-            int position,
-            Func<Tokens> tokenProvider)
-        {
-            ProductionPath = productionPath ?? throw new ArgumentNullException(nameof(productionPath));
-            Position = position.ThrowIf(
-                p => p < 0,
-                new ArgumentException($"Invalid position: {position}"));
+    //     public PartiallyRecognizedTokens(
+    //         ProductionPath productionPath,
+    //         int position,
+    //         Func<Tokens> tokenProvider)
+    //     {
+    //         ProductionPath = productionPath ?? throw new ArgumentNullException(nameof(productionPath));
+    //         Position = position.ThrowIf(
+    //             p => p < 0,
+    //             new ArgumentException($"Invalid position: {position}"));
 
-            _tokens = new Lazy<Tokens>(tokenProvider);
-        }
+    //         _tokens = new Lazy<Tokens>(tokenProvider);
+    //     }
 
-        public PartiallyRecognizedTokens(
-            ProductionPath productionPath,
-            int position,
-            Tokens partialTokens)
-            : this(productionPath, position, () => partialTokens)
-        {
-        }
+    //     public PartiallyRecognizedTokens(
+    //         ProductionPath productionPath,
+    //         int position,
+    //         Tokens partialTokens)
+    //         : this(productionPath, position, () => partialTokens)
+    //     {
+    //     }
 
-        public static PartiallyRecognizedTokens Of(
-            ProductionPath productionPath,
-            int position,
-            Tokens partialTokens)
-            => new(productionPath, position, partialTokens);
+    //     public static PartiallyRecognizedTokens Of(
+    //         ProductionPath productionPath,
+    //         int position,
+    //         Tokens partialTokens)
+    //         => new(productionPath, position, partialTokens);
 
-        public static PartiallyRecognizedTokens Of(
-            ProductionPath productionPath,
-            int position,
-            Func<Tokens> tokenProvider)
-            => new(productionPath, position, tokenProvider);
-    }
+    //     public static PartiallyRecognizedTokens Of(
+    //         ProductionPath productionPath,
+    //         int position,
+    //         Func<Tokens> tokenProvider)
+    //         => new(productionPath, position, tokenProvider);
+    // }
 }

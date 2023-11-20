@@ -76,7 +76,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 .ThrowIfNull(new ArgumentNullException(nameof(legalSequences)))
                 .ThrowIfAny(t => t.IsDefault || t.IsEmpty, new ArgumentException("Invalid legal sequence: default/empty"))
                 .Distinct()
-                .OrderByDescending(t => t.Count)
+                .OrderByDescending(t => t.SourceSegment.Length)
                 .ToImmutableArray();
             IllegalSequences = illegalSequences
                 .ThrowIfNull(new ArgumentNullException(nameof(illegalSequences)))
@@ -113,37 +113,37 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             if (!TryRecognizeStartDelimiter(reader, out var startDelimTokens))
             {
                 reader.Reset(position);
-                result = UnrecognizedTokens
+                result = FailedRecognitionError
                     .Of(productionPath, position)
                     .ApplyTo(Result.Of<ICSTNode>);
 
                 return false;
             }
-            tokens = tokens.Join(startDelimTokens);
+            tokens = tokens.ConJoin(startDelimTokens);
 
             // String
             if (!TryRecognizeString(reader, out var stringTokens))
             {
                 reader.Reset(position);
-                result = PartiallyRecognizedTokens
-                    .Of(productionPath, position, tokens)
+                result = PartialRecognitionError
+                    .Of(productionPath, position, tokens.SourceSegment.EndOffset - position - 1)
                     .ApplyTo(Result.Of<ICSTNode>);
 
                 return false;
             }
-            tokens = tokens.Join(stringTokens);
+            tokens = tokens.ConJoin(stringTokens);
 
             // End Delimiter
             if (!TryRecognizeEndDelimiter(reader, out var endDelimTokens))
             {
                 reader.Reset(position);
-                result = PartiallyRecognizedTokens
-                    .Of(productionPath, position, tokens)
+                result = PartialRecognitionError
+                    .Of(productionPath, position, tokens.SourceSegment.EndOffset - position - 1)
                     .ApplyTo(Result.Of<ICSTNode>);
 
                 return false;
             }
-            tokens = tokens.Join(endDelimTokens);
+            tokens = tokens.ConJoin(endDelimTokens);
 
             result = ICSTNode
                 .Of(productionPath.Name, tokens)
@@ -250,13 +250,13 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             if (LegalSequences.IsEmpty)
                 return true;
 
-            for (int index = 0; index < tokens.Count; index++)
+            for (int index = 0; index < tokens.SourceSegment.Length; index++)
             {
                 var shift = LegalSequences
                     .Where(legalSequence =>
                     {
-                        var boundaryIndex = legalSequence.Count + index;
-                        if (boundaryIndex > capturedTokens.Count)
+                        var boundaryIndex = legalSequence.SourceSegment.Length + index;
+                        if (boundaryIndex > capturedTokens.SourceSegment.Length)
                             return false;
 
                         var subtoken = capturedTokens[index..boundaryIndex];
@@ -265,7 +265,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
 
                         return false;
                     })
-                    .Select(legalSequence => legalSequence.Count)
+                    .Select(legalSequence => legalSequence.SourceSegment.Length)
                     .FirstOrDefault();
 
                 if (shift > 0)

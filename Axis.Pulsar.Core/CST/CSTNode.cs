@@ -59,7 +59,7 @@ namespace Axis.Pulsar.Core.CST
                 var node = this;
                 _text = new Lazy<string>(() =>
                 {
-                    var tokenString = node.Tokens.Count > 20
+                    var tokenString = node.Tokens.SourceSegment.Length > 20
                         ? $"{node.Tokens[..20]}..."
                         : node.Tokens.ToString();
 

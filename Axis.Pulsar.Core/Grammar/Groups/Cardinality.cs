@@ -141,25 +141,25 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             }
             else
             {
-                var error = elementResult?.AsError().ActualCause();
+                reader.Reset(position);
                 var nodes = results
                     .FoldInto(_results => _results.Fold())
                     .Resolve();
 
-                result = error switch
+                result = elementResult?.AsError().ActualCause() switch
                 {
-                    GroupError ge => ge
-                        .Prepend(nodes)
+                    GroupRecognitionError gre => GroupRecognitionError
+                        .Of(gre.Cause, nodes.Count + gre.ElementCount)
                         .ApplyTo(Result.Of<NodeSequence>),
 
-                    RecognitionRuntimeError rre => Result.Of<NodeSequence>(rre),
+                    null => FailedRecognitionError
+                        .Of(productionPath, position)
+                        .ApplyTo(GroupRecognitionError.Of)
+                        .ApplyTo(Result.Of<NodeSequence>),
 
-                    _ => RecognitionRuntimeError
-                        .Of(error ?? new Exception($"Invalid cardinality - did not attempt any recognitions. '{this}'"))
-                        .ApplyTo(Result.Of<NodeSequence>)
+                    _ => elementResult!
                 };
 
-                reader.Reset(position);
                 return false;
             }
         }

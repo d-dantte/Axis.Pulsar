@@ -57,7 +57,7 @@ namespace Axis.Pulsar.Core.CST
 
         }
 
-        public static bool TryParse(string pathText, out  IResult<Path> result)
+        public static bool TryParse(string pathText, out IResult<Path> result)
         {
             result = Parse(pathText);
             return result is IResult<Path>.DataResult;
@@ -156,9 +156,9 @@ namespace Axis.Pulsar.Core.CST
                     || !'<'.Equals(openDelim[0]))
                 {
                     reader.Reset(position);
-                    result = Result.Of<ICSTNode>(new UnrecognizedTokens(
-                        tokensPath,
-                        position));
+                    result = FailedRecognitionError
+                        .Of(tokensPath, position)
+                        .ApplyTo(Result.Of<ICSTNode>);
                     return false;
                 }
                 #endregion
@@ -172,7 +172,7 @@ namespace Axis.Pulsar.Core.CST
                     {
                         if ('\\'.Equals(token[0]))
                         {
-                            tokens = tokens.Join(token);
+                            tokens = tokens.ConJoin(token);
                             isEscaping = true;
                         }
                         else if ('>'.Equals(token[0]))
@@ -180,22 +180,22 @@ namespace Axis.Pulsar.Core.CST
                             reader.Back(1);
                             break;
                         }
-                        else tokens = tokens.Join(token);
+                        else tokens = tokens.ConJoin(token);
                     }
                     else
                     {
                         if ('\\'.Equals(token[0]) || '>'.Equals(token[0]))
                         {
-                            tokens = tokens.Join(token);
+                            tokens = tokens.ConJoin(token);
                             isEscaping = false;
                         }
                         else
                         {
                             reader.Reset(position);
-                            result = Result.Of<ICSTNode>(new PartiallyRecognizedTokens(
-                                tokensPath,
-                                position,
-                                openDelim.Join(tokens)));
+                            var newLength = (openDelim.SourceSegment + tokens.SourceSegment).EndOffset - position + 1;
+                            result = PartialRecognitionError
+                                .Of(tokensPath, position, newLength)
+                                .ApplyTo(Result.Of<ICSTNode>);
                             return false;
                         }
                     }
@@ -207,17 +207,17 @@ namespace Axis.Pulsar.Core.CST
                     || !'>'.Equals(closeDelim[0]))
                 {
                     reader.Reset(position);
-                    result = Result.Of<ICSTNode>(new PartiallyRecognizedTokens(
-                        tokensPath,
-                        position,
-                        openDelim.Join(tokens)));
+                    var newLength = (openDelim.SourceSegment + tokens.SourceSegment).EndOffset - position + 1;
+                    result = PartialRecognitionError
+                        .Of(tokensPath, position, newLength)
+                        .ApplyTo(Result.Of<ICSTNode>);
                     return false;
                 }
                 #endregion
 
                 result = openDelim
-                    .Join(tokens)
-                    .Join(closeDelim)
+                    .ConJoin(tokens)
+                    .ConJoin(closeDelim)
                     .ApplyTo(tokens => ICSTNode.Of(tokensPath.Name, tokens))
                     .ApplyTo(Result.Of);
                 return true;
@@ -225,7 +225,7 @@ namespace Axis.Pulsar.Core.CST
             catch (Exception e)
             {
                 reader.Reset(position);
-                result = Result.Of<ICSTNode>(new RecognitionRuntimeError(e));
+                result = Result.Of<ICSTNode>(e);
                 return false;
             }
         }
@@ -245,9 +245,9 @@ namespace Axis.Pulsar.Core.CST
 
                 if (!reader.TryGetToken(out var delimiter))
                 {
-                    result = Result.Of<ICSTNode>(new UnrecognizedTokens(
-                        symbolNamePath,
-                        position));
+                    result = FailedRecognitionError
+                        .Of(symbolNamePath, position)
+                        .ApplyTo(Result.Of<ICSTNode>);
                     return false;
                 }
                 else if (char.IsAsciiLetter(delimiter[0]))
@@ -258,9 +258,9 @@ namespace Axis.Pulsar.Core.CST
                 else if (!':'.Equals(delimiter[0]))
                 {
                     reader.Reset(position);
-                    result = Result.Of<ICSTNode>(new UnrecognizedTokens(
-                        symbolNamePath,
-                        position));
+                    result = FailedRecognitionError
+                        .Of(symbolNamePath, position)
+                        .ApplyTo(Result.Of<ICSTNode>);
                     return false;
                 }
                 else hasDelimiter = true;
@@ -270,15 +270,15 @@ namespace Axis.Pulsar.Core.CST
                 if (!reader.TryGetPattern(IProduction.SymbolPattern, out var symbolName))
                 {
                     if (!hasDelimiter)
-                        result = Result.Of<ICSTNode>(new UnrecognizedTokens(
-                            symbolNamePath,
-                            position));
+                        result = FailedRecognitionError
+                            .Of(symbolNamePath, position)
+                            .ApplyTo(Result.Of<ICSTNode>);
 
-                    else result = Result.Of<ICSTNode>(
-                        new PartiallyRecognizedTokens(
-                            symbolNamePath,
+                    else result = PartialRecognitionError
+                        .Of(symbolNamePath,
                             position,
-                            delimiter));
+                            delimiter.SourceSegment.EndOffset - position + 1)
+                        .ApplyTo(Result.Of<ICSTNode>);
 
                     reader.Reset(position);
                     return false;
@@ -286,14 +286,14 @@ namespace Axis.Pulsar.Core.CST
                 #endregion
 
                 result = delimiter
-                    .Join(symbolName)
+                    .ConJoin(symbolName)
                     .ApplyTo(tokens => ICSTNode.Of(symbolNamePath.Name, tokens))
                     .ApplyTo(Result.Of<ICSTNode>);
                 return true;
             }
             catch (Exception e)
             {
-                result = Result.Of<ICSTNode>(new RecognitionRuntimeError(e));
+                result = Result.Of<ICSTNode>(e);
                 return false;
             }
         }
@@ -311,7 +311,7 @@ namespace Axis.Pulsar.Core.CST
                 #region delimiter
                 if (!reader.TryGetToken(out var delim))
                 {
-                    result = UnrecognizedTokens
+                    result = FailedRecognitionError
                         .Of(filterTypePath, position)
                         .ApplyTo(Result.Of<ICSTNode>);
                     return false;
@@ -332,24 +332,24 @@ namespace Axis.Pulsar.Core.CST
                     || !FilterTypeCharacters.Contains(char.ToLower(typeChar[0])))
                 {
                     reader.Reset(position);
-                    result = Result.Of<ICSTNode>(
-                        new PartiallyRecognizedTokens(
-                            filterTypePath,
+                    result =PartialRecognitionError
+                        .Of(filterTypePath,
                             position,
-                            delim));
+                            delim.SourceSegment.EndOffset - position + 1)
+                        .ApplyTo(Result.Of<ICSTNode>);;
                     return false;
                 }
                 #endregion
 
                 result = delim
-                    .Join(typeChar)
+                    .ConJoin(typeChar)
                     .ApplyTo(tokens => ICSTNode.Of(filterTypePath.Name, tokens))
                     .ApplyTo(Result.Of<ICSTNode>);
                 return true;
             }
             catch (Exception e)
             {
-                result = Result.Of<ICSTNode>(new RecognitionRuntimeError(e));
+                result = Result.Of<ICSTNode>(e);
                 return false;
             }
         }
@@ -367,9 +367,10 @@ namespace Axis.Pulsar.Core.CST
                 if (!TryRecognizeFilterType(reader, filterPath, out var filterType))
                 {
                     reader.Reset(position);
-                    result = filterType.AsError().MapNodeError(
-                        ute => UnrecognizedTokens.Of(filterPath, position),
-                        pte => pte);
+                    result = filterType.TransformError<ICSTNode, FailedRecognitionError>(
+                        fre => FailedRecognitionError.Of(
+                            filterPath,
+                            position));
                     return false;
                 }
 
@@ -517,7 +518,282 @@ namespace Axis.Pulsar.Core.CST
             }
         }
         #endregion
-    
+
+        #region Recognizers v2
+
+        internal static bool TryRecognizeTokens(
+            TokenReader reader,
+            ProductionPath parentPath,
+            object context,
+            out IResult<Tokens> result)
+        {
+            var position = reader.Position;
+            var tokensPath = parentPath.Next("tokens");
+
+            try
+            {
+                #region open delimiter
+                if (!reader.TryGetToken(out var openDelim)
+                    || !'<'.Equals(openDelim[0]))
+                {
+                    reader.Reset(position);
+                    result = FailedRecognitionError
+                        .Of(tokensPath, position)
+                        .ApplyTo(Result.Of<Tokens>);
+                    return false;
+                }
+                #endregion
+
+                #region tokens
+                var isEscaping = false;
+                var tokens = Tokens.Empty;
+                while (reader.TryGetToken(out var token))
+                {
+                    if (!isEscaping)
+                    {
+                        if ('\\'.Equals(token[0]))
+                        {
+                            tokens = tokens.ConJoin(token);
+                            isEscaping = true;
+                        }
+                        else if ('>'.Equals(token[0]))
+                        {
+                            reader.Back(1);
+                            break;
+                        }
+                        else tokens = tokens.ConJoin(token);
+                    }
+                    else
+                    {
+                        if ('\\'.Equals(token[0]) || '>'.Equals(token[0]))
+                        {
+                            tokens = tokens.ConJoin(token);
+                            isEscaping = false;
+                        }
+                        else
+                        {
+                            reader.Reset(position);
+                            var newLength = (openDelim.SourceSegment + tokens.SourceSegment).EndOffset - position + 1;
+                            result = PartialRecognitionError
+                                .Of(tokensPath, position, newLength)
+                                .ApplyTo(Result.Of<Tokens>);
+                            return false;
+                        }
+                    }
+                }
+                #endregion
+
+                #region close delimiter
+                if (!reader.TryGetToken(out var closeDelim)
+                    || !'>'.Equals(closeDelim[0]))
+                {
+                    reader.Reset(position);
+                    var newLength = (openDelim.SourceSegment + tokens.SourceSegment).EndOffset - position + 1;
+                    result = PartialRecognitionError
+                        .Of(tokensPath, position, newLength)
+                        .ApplyTo(Result.Of<Tokens>);
+                    return false;
+                }
+                #endregion
+
+                result = Result.Of(tokens);
+                return true;
+            }
+            catch (Exception e)
+            {
+                reader.Reset(position);
+                result = Result.Of<Tokens>(e);
+                return false;
+            }
+        }
+
+
+        internal static bool TryRecognizeSymbolName(
+            TokenReader reader,
+            ProductionPath parentPath,
+            object context,
+            out IResult<Tokens> result)
+        {
+            var position = reader.Position;
+            var symbolNamePath = parentPath.Next("symbol-name");
+
+            try
+            {
+                #region delimiter
+                var hasDelimiter = false;
+
+                if (!reader.TryGetToken(out var delimiter))
+                {
+                    result = FailedRecognitionError
+                        .Of(symbolNamePath, position)
+                        .ApplyTo(Result.Of<Tokens>);
+                    return false;
+                }
+                else if (char.IsAsciiLetter(delimiter[0]))
+                {
+                    reader.Back();
+                    delimiter = Tokens.Empty;
+                }
+                else if (!':'.Equals(delimiter[0]))
+                {
+                    reader.Reset(position);
+                    result = FailedRecognitionError
+                        .Of(symbolNamePath, position)
+                        .ApplyTo(Result.Of<Tokens>);
+                    return false;
+                }
+                else hasDelimiter = true;
+                #endregion
+
+                #region Name
+                if (!reader.TryGetPattern(IProduction.SymbolPattern, out var symbolName))
+                {
+                    if (!hasDelimiter)
+                        result = FailedRecognitionError
+                            .Of(symbolNamePath, position)
+                            .ApplyTo(Result.Of<Tokens>);
+
+                    else result = PartialRecognitionError
+                        .Of(symbolNamePath,
+                            position,
+                            delimiter.SourceSegment.EndOffset - position + 1)
+                        .ApplyTo(Result.Of<Tokens>);
+
+                    reader.Reset(position);
+                    return false;
+                }
+                #endregion
+
+                result = Result.Of(symbolName);
+                return true;
+            }
+            catch (Exception e)
+            {
+                result = Result.Of<Tokens>(e);
+                return false;
+            }
+        }
+
+
+        internal static bool TryRecognizeFilterType(
+            TokenReader reader,
+            ProductionPath parentPath,
+            object context,
+            out IResult<NodeType> result)
+        {
+            var position = reader.Position;
+            var filterTypePath = parentPath.Next("filter-type");
+
+            try
+            {
+                #region delimiter
+                if (!reader.TryGetToken(out var delim))
+                {
+                    result = FailedRecognitionError
+                        .Of(filterTypePath, position)
+                        .ApplyTo(Result.Of<NodeType>);
+                    return false;
+                }
+
+                if (!'@'.Equals(delim[0]))
+                {
+                    reader.Back();
+                    result = Result.Of(NodeType.Unspecified);
+                    return true;
+                }
+                #endregion
+
+                #region type
+                if (!reader.TryGetToken(out var typeChar)
+                    || !FilterTypeCharacters.Contains(char.ToLower(typeChar[0])))
+                {
+                    reader.Reset(position);
+                    result = PartialRecognitionError
+                        .Of(filterTypePath,
+                            position,
+                            delim.SourceSegment.EndOffset - position + 1)
+                        .ApplyTo(Result.Of<NodeType>);;
+                    return false;
+                }
+                #endregion
+
+                result = Result.Of((NodeType)typeChar[0]);
+                return true;
+            }
+            catch (Exception e)
+            {
+                result = Result.Of<NodeType>(e);
+                return false;
+            }
+        }
+
+        internal static bool TryRecognizeFilter(
+            TokenReader reader,
+            ProductionPath parentPath,
+            object  context,
+            out IResult<ICSTNode> result)
+        {
+            var position = reader.Position;
+            var filterPath = parentPath.Next("filter");
+
+            try
+            {
+                var accumulator = ParserAccumulator
+                    .Of(reader,
+                        filterPath,
+                        default(object)!,
+                        (type: default(NodeType), name: default(Tokens), tokens: default(Tokens)))
+
+                    // filter type
+                    .ThenTry<NodeType>(
+                        TryRecognizeFilterType,
+                        (data, ttype) => (type: ttype, data.name, data.tokens))
+
+                    // symbol name
+                    .ThenTry<Tokens>(
+
+                        
+                var tempPosition = reader.Position;
+                if (!TryRecognizeSymbolName(reader, filterPath, out var symbolName))
+                {
+                    if (symbolName.AsError().ActualCause() is PartiallyRecognizedTokens)
+                    {
+                        reader.Reset(tempPosition);
+                        result = symbolName;
+                        return false;
+                    }
+                    symbolName = Result.Of((ICSTNode)null!);
+                }
+
+                tempPosition = reader.Position;
+                if (!TryRecognizeTokens(reader, filterPath, out var tokens))
+                {
+                    if (tokens.AsError().ActualCause() is PartiallyRecognizedTokens)
+                    {
+                        reader.Reset(position);
+                        result = tokens;
+                        return false;
+                    }
+                    tokens = Result.Of((ICSTNode)null!);
+                }
+
+                result = filterType
+                    .Combine(symbolName, (type, name) => (type, name))
+                    .Combine(tokens, (tuple, tokens) => ArrayUtil
+                        .Of(tuple.type, tuple.name, tokens)
+                        .Where(n => n is not null))
+                    .Map(nodes => ICSTNode.Of(filterPath.Name, nodes.ToArray()));
+                return true;
+            }
+            catch (Exception e)
+            {
+                result = Result.Of<ICSTNode>(new RecognitionRuntimeError(e));
+                return false;
+            }
+        }
+
+        #endregion
+
         private static FormatException ToFormatException(IResult<ICSTNode>.ErrorResult errorResult)
         {
             ArgumentNullException.ThrowIfNull(errorResult);

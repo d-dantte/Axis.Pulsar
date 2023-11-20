@@ -34,22 +34,22 @@ namespace Axis.Pulsar.Core.Utils
                 seq => seq.IsEmpty || seq.IsDefault,
                 new ArgumentException($"Invalid {nameof(patternSequence)}: default/empty"));
 
-            PatternLength = pattern.Count;
+            PatternLength = pattern.SourceSegment.Length;
 
             Source = source.ThrowIf(
                 s => s.IsDefaultOrEmpty,
                 new ArgumentException($"Invalid {nameof(source)}: null/empty"));
 
             StartOffset = startOffset.ThrowIf(
-                offset => offset < 0 || offset >= source.Count,
+                offset => offset < 0 || offset >= source.SourceSegment.Length,
                 new ArgumentOutOfRangeException(
                     nameof(startOffset),
                     $"Value '{startOffset}' is < 0 or > {nameof(source)}.Length"));
 
             var patternHasher =  RollingHash.Of(
                 pattern.Source!,
-                pattern.Offset,
-                pattern.Count);
+                pattern.SourceSegment.Offset,
+                pattern.SourceSegment.Length);
             
             PatternHash = !patternHasher.TryNext(out var hash)
                 ? throw new InvalidOperationException($"Failed to calculate hash for pattern: {pattern}")
@@ -57,8 +57,8 @@ namespace Axis.Pulsar.Core.Utils
 
             _hasher = new Lazy<RollingHash>(() => RollingHash.Of(
                 source.Source!,
-                startOffset + source.Offset,
-                patternSequence.Count));
+                startOffset + source.SourceSegment.Offset,
+                patternSequence.SourceSegment.Length));
         }
 
         public static SubstringMatcher OfLookAhead(
@@ -89,7 +89,7 @@ namespace Axis.Pulsar.Core.Utils
                 int startOffset)
                 : base(patternSequence, source, startOffset)
             {
-                if (startOffset + patternSequence.Count > source.Count)
+                if (startOffset + patternSequence.SourceSegment.Length > source.SourceSegment.Length)
                     throw new ArgumentException("Invalid args: source.Count < startOffset + patternSequence.Count");
             }
 
@@ -125,7 +125,7 @@ namespace Axis.Pulsar.Core.Utils
                 isMatch = false;
                 var newCount = _consumedCharCount + 1;
 
-                if (StartOffset + newCount > Source.Count)
+                if (StartOffset + newCount > Source.SourceSegment.Length)
                     return false;
 
                 _consumedCharCount = newCount;

@@ -50,9 +50,14 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                 else
                 {
                     reader.Reset(position);
-                    result = elementResult.AsError().MapGroupError(
-                        (ge, ute) => ge.Prepend(nodes),
-                        (ge, pte) => ge.Prepend(nodes));
+                    result = elementResult.AsError().ActualCause() switch
+                    {
+                        GroupRecognitionError gre => GroupRecognitionError
+                            .Of(gre.Cause, nodes.Count + gre.ElementCount)
+                            .ApplyTo(Result.Of<NodeSequence>),
+
+                        _ => elementResult!
+                    };
 
                     return false;
                 }

@@ -37,8 +37,8 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             Cardinality cardinality,
             int? minRecognitionCount,
             params IGroupElement[] elements)
-            => new(cardinality, minRecognitionCount, elements);        
-        
+            => new(cardinality, minRecognitionCount, elements);
+
         public bool TryRecognize(
             TokenReader reader,
             ProductionPath parentPath,
@@ -55,6 +55,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             do
             {
                 isElementConsumed = false;
+                var stepPosition = reader.Position;
                 foreach (var elt in elementList)
                 {
                     if (elt.Cardinality.TryRepeat(reader, parentPath, context, elt, out var groupResult))
@@ -64,53 +65,32 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                         isElementConsumed = true;
                         break;
                     }
-                    else if (groupResult.IsErrorResult(out GroupError ge))
+                    else if (groupResult.IsErrorResult(out GroupRecognitionError gre)
+                        && gre.Cause is FailedRecognitionError)
                     {
-                        if (ge.NodeError is UnrecognizedTokens)
-                            continue;
-
-                        else if (ge.NodeError is PartiallyRecognizedTokens)
-                        {
-                            result = groupResult;
-                            return false;
-                        }
-                        else
-                        {
-                            result = RecognitionRuntimeError
-                                .Of((Exception)ge.NodeError)
-                                .ApplyTo(Result.Of<NodeSequence>);
-                            return false;
-                        }
+                        reader.Reset(stepPosition);
+                        continue;
                     }
                     else
                     {
-                        var error = !groupResult.IsErrorResult(out RecognitionRuntimeError rre)
-                            ? RecognitionRuntimeError.Of(groupResult.AsError().ActualCause())
-                            : rre;
-                        result = Result.Of<NodeSequence>(error);
+                        reader.Reset(stepPosition);
+                        result = groupResult;
                         return false;
                     }
                 }
             }
             while (isElementConsumed);
 
-            if (results.Count == Elements.Length)
+            if (results.Count == Elements.Length || results.Count >= MinRecognitionCount)
             {
                 result = results.FoldInto(_results => _results.Fold());
                 return true;
             }
             else
             {
-                var partialSequence = results
-                    .FoldInto(_results => _results.Fold())
-                    .Resolve();
-
-                INodeError nodeError = results.Count <= 0
-                    ? UnrecognizedTokens.Of(parentPath, position)
-                    : PartiallyRecognizedTokens.Of(parentPath, position, partialSequence.Tokens);
-
-                result = GroupError
-                    .Of(nodeError, partialSequence)
+                result = FailedRecognitionError
+                    .Of(parentPath, position)
+                    .ApplyTo(GroupRecognitionError.Of)
                     .ApplyTo(Result.Of<NodeSequence>);
                 return false;
             }

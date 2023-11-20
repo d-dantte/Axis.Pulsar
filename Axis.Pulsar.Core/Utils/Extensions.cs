@@ -1,4 +1,5 @@
-﻿using Axis.Luna.Extensions;
+﻿using Axis.Luna.Common.Results;
+using Axis.Luna.Extensions;
 
 namespace Axis.Pulsar.Core.Utils
 {
@@ -32,6 +33,47 @@ namespace Axis.Pulsar.Core.Utils
                 : (second, first);
 
             return less.upper >= greater.lower;
+        }
+
+        internal static IResult<TData> MapError<TData, TError>(this
+            IResult<TData> result,
+            Func<TError, TData> errorMapper)
+            where TError : Exception
+        {
+            ArgumentNullException.ThrowIfNull(result);
+            ArgumentNullException.ThrowIfNull(errorMapper);
+
+            if (result.IsErrorResult<TData, TError>(out _))
+                return result.MapError(err => errorMapper.Invoke((err as TError)!));
+
+            else return result;
+        }
+
+        internal static IResult<TData> TransformError<TData, TError>(this
+            IResult<TData> result,
+            Func<TError, Exception> errorMapper)
+            where TError : Exception
+        {
+            ArgumentNullException.ThrowIfNull(result);
+            ArgumentNullException.ThrowIfNull(errorMapper);
+
+            if (result.IsErrorResult(out TError error))
+                return Result.Of<TData>(errorMapper.Invoke(error));
+
+            else return result;
+        }
+
+        internal static IResult<TData> TransformError<TData>(this
+            IResult<TData> result,
+            Func<Exception, Exception> errorMapper)
+        {
+            ArgumentNullException.ThrowIfNull(result);
+            ArgumentNullException.ThrowIfNull(errorMapper);
+
+            if (result.IsErrorResult())
+                return Result.Of<TData>(errorMapper.Invoke(result.AsError().ActualCause()));
+
+            else return result;
         }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
-using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Utils;
 using System.Collections.Immutable;
 
@@ -63,7 +62,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 || !IncludeList.Any(range => range.Contains(token[0])))
             {
                 reader.Reset(position);
-                result = UnrecognizedTokens
+                result = FailedRecognitionError
                     .Of(productionPath, position)
                     .ApplyTo(Result.Of<ICSTNode>);
                 return false;

@@ -21,7 +21,9 @@ namespace Axis.Pulsar.Core.Grammar
 
         public static ProductionPath Of(string name, ProductionPath? parent = null) => new(name, parent);
 
-        public static implicit operator ProductionPath(string name) => new(name, null);
+        public static implicit operator ProductionPath(string path) => Parse(path);
+
+        public static implicit operator string(ProductionPath path) => path?.ToString() ?? throw new ArgumentNullException(nameof(path));
 
         public override int GetHashCode() => HashCode.Combine(_parent, _name);
 
@@ -42,5 +44,15 @@ namespace Axis.Pulsar.Core.Grammar
         }
 
         public ProductionPath Next(string content) => new(content, this);
+
+        public static ProductionPath Parse(string path)
+        {
+
+        }
+
+        public static bool TryParse(string path, out ProductionPath productionPath)
+        {
+
+        }
     }
 }

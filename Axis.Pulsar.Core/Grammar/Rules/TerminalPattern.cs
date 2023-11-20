@@ -2,7 +2,6 @@
 using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
-using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Utils;
 using System.Text.RegularExpressions;
 
@@ -49,9 +48,8 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                     open),
 
                 _ => Result.Of<ICSTNode>(
-                    new RecognitionRuntimeError(
-                        new InvalidOperationException(
-                            $"Invalid match type: {MatchType}")))
+                    new InvalidOperationException(
+                        $"Invalid match type: {MatchType}"))
             };
 
             return result.IsDataResult();
@@ -82,7 +80,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             }
 
             reader.Reset(position);
-            return UnrecognizedTokens
+            return FailedRecognitionError
                 .Of(productionPath, position)
                 .ApplyTo(Result.Of<ICSTNode>);
         }
@@ -115,7 +113,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                     .ApplyTo(Result.Of);
 
             else 
-                return UnrecognizedTokens
+                return FailedRecognitionError
                     .Of(productionPath, position)
                     .ApplyTo(Result.Of<ICSTNode>);
         }

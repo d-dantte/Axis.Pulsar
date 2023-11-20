@@ -53,16 +53,16 @@ namespace Axis.Pulsar.Core.Utils
             if (@string.IsDefaultOrEmpty)
                 throw new ArgumentException($"Invalid tokens: null/empty");
 
-            if (offset < 0 || offset >= @string.Count)
+            if (offset < 0 || offset >= @string.SourceSegment.Length)
                 throw new ArgumentOutOfRangeException(nameof(offset));
 
-            if (offset + length > @string.Count)
+            if (offset + length > @string.SourceSegment.Length)
                 throw new ArgumentOutOfRangeException(nameof(length));
         }
 
         public static Hash ComputeHash(Tokens @string)
         {
-            var impl = Of(@string, 0, @string.Count);
+            var impl = Of(@string, 0, @string.SourceSegment.Length);
             if (impl.TryNext(out var hash))
                 return hash;
 
@@ -129,7 +129,7 @@ namespace Axis.Pulsar.Core.Utils
             override public bool TryNext(out Hash result)
             {
                 var newOffset = _offset + 1;
-                if (newOffset + _windowLength > _source.Count)
+                if (newOffset + _windowLength > _source.SourceSegment.Length)
                 {
                     result = default;
                     return false;
@@ -240,7 +240,7 @@ namespace Axis.Pulsar.Core.Utils
             override public bool TryNext(out Hash result)
             {
                 var newOffset = _offset + 1;
-                if (newOffset + _windowLength > _source.Count)
+                if (newOffset + _windowLength > _source.SourceSegment.Length)
                 {
                     result = default;
                     return false;
@@ -254,7 +254,7 @@ namespace Axis.Pulsar.Core.Utils
             override public bool TryNext(int count, out Hash result)
             {
                 var finalOffset = _offset + count;
-                if (finalOffset + _windowLength > _source.Count)
+                if (finalOffset + _windowLength > _source.SourceSegment.Length)
                 {
                     result = default;
                     return false;

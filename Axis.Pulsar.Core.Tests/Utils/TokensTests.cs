@@ -270,7 +270,7 @@ namespace Axis.Pulsar.Core.Tests.Utils
             var @string = "1234512345";
             var ss = Tokens.Of(@string, 0, 2);
             var ss2 = Tokens.Of(@string, 2, 1);
-            var ss3 = ss.Join(ss2);
+            var ss3 = ss.ConJoin(ss2);
             Assert.AreEqual(3, ss3.Count);
             Assert.IsTrue(ss3.Equals("123"));
         }
@@ -316,17 +316,17 @@ namespace Axis.Pulsar.Core.Tests.Utils
             var empty2 = ss[0..0];
 
             Assert.ThrowsException<InvalidOperationException>(() =>
-                Tokens.Default.Join(ss));
+                Tokens.Default.ConJoin(ss));
             Assert.ThrowsException<InvalidOperationException>(() =>
-                Tokens.Default.Join(Tokens.Default));
+                Tokens.Default.ConJoin(Tokens.Default));
             Assert.ThrowsException<InvalidOperationException>(() =>
-                ss.Join(Tokens.Default));
+                ss.ConJoin(Tokens.Default));
             Assert.ThrowsException<InvalidOperationException>(() =>
-                ss.Join(ss5));
+                ss.ConJoin(ss5));
             Assert.ThrowsException<InvalidOperationException>(() =>
-                ss.Join(ss));
+                ss.ConJoin(ss));
             
-            var result = ss.Join(ss2);
+            var result = ss.ConJoin(ss2);
             Assert.AreEqual(ss.Count + ss2.Count, result.Count);
             Assert.AreEqual(ss.Offset, result.Offset);
         }
