@@ -19,17 +19,13 @@ namespace Axis.Pulsar.Core.Utils
         /// </summary>
         private readonly Lazy<int> _valueHash;
 
-        /// <summary>
-        ///  Deprecate this in favor of the <see cref="Tokens.SourceSegment"/> property
-        /// </summary>
-        [Obsolete("Replace uses of this with the 'Tokens.SourceSegment.Offset' property")]
-        public int Offset => _sourceSegment.Offset;
-
         public Segment SourceSegment => _sourceSegment;
 
         public string? Source => _source;
 
         public bool IsDefaultOrEmpty => IsDefault || IsEmpty;
+
+        #region Indexers
 
         public char this[int index]
         {
@@ -54,6 +50,8 @@ namespace Axis.Pulsar.Core.Utils
         public Tokens this[Range range] => range
             .GetOffsetAndLength(_sourceSegment.Length)
             .ApplyTo(Slice);
+
+        #endregion
 
         #region Empty
         public bool IsEmpty => !IsDefault && _sourceSegment.Length == 0;
@@ -137,6 +135,8 @@ namespace Axis.Pulsar.Core.Utils
 
         #region Implicits
         public static implicit operator Tokens(string sourceString) => new(sourceString);
+
+        public static implicit operator string(Tokens tokens) => tokens.ToString()!;
         #endregion
 
         #region Slice

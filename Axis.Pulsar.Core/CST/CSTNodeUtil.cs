@@ -9,7 +9,7 @@ namespace Axis.Pulsar.Core.CST
         /// </summary>
         /// <param name="searchPath">The search path</param>
         /// <returns>A collection of nodes found at the given path, or an empty enumerable</returns>
-        public static IEnumerable<ICSTNode> FindNodes(this ICSTNode root, Path searchPath)
+        public static IEnumerable<ICSTNode> FindNodes(this ICSTNode root, NodePath searchPath)
         {
             return searchPath.Segments
                 .Aggregate(NodeSequence.Of(root), (seq, segment) =>

@@ -14,8 +14,8 @@ namespace Axis.Pulsar.Core.Grammar
         internal ProductionPath(string name, ProductionPath? parent = null)
         {
             _parent = parent;
-            _name = name.ThrowIf(
-                string.IsNullOrWhiteSpace,
+            _name = name.ThrowIfNot(
+                IProduction.SymbolPattern.IsMatch,
                 new ArgumentNullException(nameof(name)));
         }
 
@@ -47,12 +47,27 @@ namespace Axis.Pulsar.Core.Grammar
 
         public static ProductionPath Parse(string path)
         {
+            if (!TryParse(path, out var ppath))
+                throw new FormatException($"Invalid path format: '{path}'");
 
+            return ppath;
         }
 
         public static bool TryParse(string path, out ProductionPath productionPath)
         {
+            productionPath = path
+                .ThrowIf(
+                    string.IsNullOrEmpty,
+                    new ArgumentException($"Invalid path: null/empty"))
+                .Split('/')
+                .Select(s => s.Trim())
+                .Aggregate(default(ProductionPath)!, (path, name) => path switch
+                {
+                    null => ProductionPath.Of(name),
+                    ProductionPath parent => parent.Next(name)
+                });
 
+            return productionPath is not null;
         }
     }
 }

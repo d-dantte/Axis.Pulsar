@@ -1,8 +1,11 @@
 ﻿using Axis.Luna.Common;
 using Axis.Luna.Extensions;
 
-namespace Axis.Pulsar.Core;
+namespace Axis.Pulsar.Core.Utils;
 
+/// <summary>
+/// 
+/// </summary>
 public readonly struct Segment
     : IDefaultValueProvider<Segment>
 {

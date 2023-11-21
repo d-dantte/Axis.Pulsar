@@ -5,14 +5,14 @@ using System.Text;
 
 namespace Axis.Pulsar.Core.CST
 {
-    public class Path
+    public class NodePath
     {
         private readonly ImmutableArray<Segment> _segments;
         private readonly Lazy<string> _text;
 
         public ImmutableArray<Segment> Segments => _segments;
 
-        public Path(params Segment[] segments)
+        public NodePath(params Segment[] segments)
         {
             ArgumentNullException.ThrowIfNull(segments);
 
@@ -29,13 +29,13 @@ namespace Axis.Pulsar.Core.CST
             });
         }
 
-        public static Path Of(params Segment[] segments) => new Path(segments);
+        public static NodePath Of(params Segment[] segments) => new NodePath(segments);
 
-        public static Path Of(IEnumerable<Segment> segments) => new Path(segments.ToArray());
+        public static NodePath Of(IEnumerable<Segment> segments) => new NodePath(segments.ToArray());
 
         public override bool Equals(object? obj)
         {
-            return obj is Path other
+            return obj is NodePath other
                 && Enumerable.SequenceEqual(_segments, other._segments);
         }
 
@@ -46,11 +46,11 @@ namespace Axis.Pulsar.Core.CST
 
         public override string ToString() => _text.Value;
 
-        public static bool operator ==(Path left, Path right) => left.Equals(right);
+        public static bool operator ==(NodePath left, NodePath right) => left.Equals(right);
 
-        public static bool operator !=(Path left, Path right) => !(left == right);
+        public static bool operator !=(NodePath left, NodePath right) => !(left == right);
 
-        public static implicit operator Path(string path) => PathParser.Parse(path).Resolve();
+        public static implicit operator NodePath(string path) => PathParser.Parse(path).Resolve();
     }
 
     public class Segment

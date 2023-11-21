@@ -1,5 +1,6 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Groups;
@@ -14,7 +15,7 @@ using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
 namespace Axis.Pulsar.Core.XBNF;
 
-public static class GrammarParser
+internal static class GrammarParser
 {
     private static readonly Regex DigitPattern = new Regex("^\\d+\\z", RegexOptions.Compiled);
 
@@ -33,7 +34,7 @@ public static class GrammarParser
 
     #region Production
 
-    public static bool TryParseGrammar(
+    internal static bool TryParseGrammar(
         TokenReader reader,
         MetaContext context,
         out IResult<IGrammar> result)
@@ -44,7 +45,7 @@ public static class GrammarParser
         try
         {
             var accumulator = ParserAccumulator
-                .Of(reader, context, productions, "grammar")
+                .Of(reader, ProductionPath.Of("grammar"), context, productions)
 
                 // optional initial silent block
                 .ThenTry<SilentBlock>(
@@ -97,8 +98,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseProduction(
+    internal static bool TryParseProduction(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<XBNFProduction> result)
     {
@@ -151,8 +153,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseCompositeSymbolName(
+    internal static bool TryParseCompositeSymbolName(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<string> result)
     {
@@ -164,7 +167,7 @@ public static class GrammarParser
                 || !'$'.Equals(token[0]))
             {
                 reader.Reset(position);
-                result = Result.Of<string>(new UnmatchedError(
+                result = Result.Of<string>(FailedRecognitionError.Of(
                     "composite-symbol-name",
                     position));
                 return false;
@@ -173,7 +176,7 @@ public static class GrammarParser
             if (!reader.TryGetPattern(IProduction.SymbolPattern, out var tokens))
             {
                 reader.Reset(position);
-                result = Result.Of<string>(new FaultyMatchError(
+                result = Result.Of<string>(PartialRecognitionError.Of(
                     "composite-symbol-name",
                     reader.Position,
                     reader.Position - position));
@@ -191,8 +194,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseAtomicSymbolName(
+    internal static bool TryParseAtomicSymbolName(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<string> result)
     {
@@ -204,7 +208,7 @@ public static class GrammarParser
                 || !'@'.Equals(token[0]))
             {
                 reader.Reset(position);
-                result = Result.Of<string>(new UnmatchedError(
+                result = Result.Of<string>(FailedRecognitionError.Of(
                     "atomic-symbol-name",
                     position));
                 return false;
@@ -213,7 +217,7 @@ public static class GrammarParser
             if (!reader.TryGetPattern(IProduction.SymbolPattern, out var tokens))
             {
                 reader.Reset(position);
-                result = Result.Of<string>(new FaultyMatchError(
+                result = Result.Of<string>(PartialRecognitionError.Of(
                     "atomic-symbol-name",
                     reader.Position,
                     reader.Position - position));
@@ -231,8 +235,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseMapOperator(
+    internal static bool TryParseMapOperator(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<Tokens> result)
     {
@@ -263,8 +268,9 @@ public static class GrammarParser
 
     #region Composite
 
-    public static bool TryParseCompositeRule(
+    internal static bool TryParseCompositeRule(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<ICompositeRule> result)
     {
@@ -305,8 +311,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseRecognitionThreshold(
+    internal static bool TryParseRecognitionThreshold(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<uint> result)
     {
@@ -317,7 +324,7 @@ public static class GrammarParser
             if (!reader.TryGetTokens(":", out var colonToken))
             {
                 reader.Reset(position);
-                result = Result.Of<uint>(new UnmatchedError(
+                result = Result.Of<uint>(FailedRecognitionError.Of(
                     "recognition-threshold",
                     position));
                 return false;
@@ -325,7 +332,7 @@ public static class GrammarParser
 
             if (!reader.TryGetPattern(DigitPattern, out var digitTokens))
             {
-                result = Result.Of<uint>(new FaultyMatchError(
+                result = Result.Of<uint>(PartialRecognitionError.Of(
                     "recognition-threshold",
                     position,
                     reader.Position - position));
@@ -346,8 +353,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseGroupElement(
+    internal static bool TryParseGroupElement(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<IGroupElement> result)
     {
@@ -388,8 +396,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseAtomicRuleRef(
+    internal static bool TryParseAtomicRuleRef(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<AtomicRuleRef> result)
     {
@@ -428,8 +437,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseProductionRef(
+    internal static bool TryParseProductionRef(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<ProductionRef> result)
     {
@@ -468,8 +478,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseGroup(
+    internal static bool TryParseGroup(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<IGroup> result)
     {
@@ -507,8 +518,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseSet(
+    internal static bool TryParseSet(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<Set> result)
     {
@@ -519,7 +531,7 @@ public static class GrammarParser
             if (!reader.TryGetTokens("#", out var delimiterToken))
             {
                 reader.Reset(position);
-                result = Result.Of<Set>(new UnmatchedError(
+                result = Result.Of<Set>(FailedRecognitionError.Of(
                     "set-group",
                     position));
                 return false;
@@ -549,7 +561,7 @@ public static class GrammarParser
                 // transform unmatched errors
                 //.TransformError(e => e switch
                 //{
-                //    UnmatchedError => new FaultyMatchError(
+                //    UnmatchedError => PartialRecognitionError.Of(
                 //        "sequence-group",
                 //        position,
                 //        reader.Position - position),
@@ -574,8 +586,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseChoice(
+    internal static bool TryParseChoice(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<Choice> result)
     {
@@ -586,7 +599,7 @@ public static class GrammarParser
             if (!reader.TryGetTokens("?", out var delimiterToken))
             {
                 reader.Reset(position);
-                result = Result.Of<Choice>(new UnmatchedError(
+                result = Result.Of<Choice>(FailedRecognitionError.Of(
                     "choice-group",
                     position));
                 return false;
@@ -612,7 +625,7 @@ public static class GrammarParser
                 // transform unmatched errors
                 //.TransformError(e => e switch
                 //{
-                //    UnmatchedError => new FaultyMatchError(
+                //    UnmatchedError => PartialRecognitionError.Of(
                 //        "sequence-group",
                 //        position,
                 //        reader.Position - position),
@@ -632,8 +645,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseSequence(
+    internal static bool TryParseSequence(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<Sequence> result)
     {
@@ -644,7 +658,7 @@ public static class GrammarParser
             if (!reader.TryGetTokens("+", out var delimiterToken))
             {
                 reader.Reset(position);
-                result = Result.Of<Sequence>(new UnmatchedError(
+                result = Result.Of<Sequence>(FailedRecognitionError.Of(
                     "sequence-group",
                     position));
                 return false;
@@ -670,7 +684,7 @@ public static class GrammarParser
                 // transform unmatched errors
                 //.TransformError(e => e switch
                 //{
-                //    UnmatchedError => new FaultyMatchError(
+                //    UnmatchedError => PartialRecognitionError.Of(
                 //        "sequence-group",
                 //        position,
                 //        reader.Position - position),
@@ -690,8 +704,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseCardinality(
+    internal static bool TryParseCardinality(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<Cardinality> result)
     {
@@ -703,7 +718,7 @@ public static class GrammarParser
                 || !'.'.Equals(delimiterToken[0]))
             {
                 reader.Reset(position);
-                result = Result.Of<Cardinality>(new UnmatchedError(
+                result = Result.Of<Cardinality>(FailedRecognitionError.Of(
                     "cardinality",
                     position));
                 return false;
@@ -712,7 +727,7 @@ public static class GrammarParser
             // min occurs value
             if (!reader.TryGetPattern(CardinalityMinOccurencePattern, out var minOccursTokens))
             {
-                result = Result.Of<Cardinality>(new FaultyMatchError(
+                result = Result.Of<Cardinality>(PartialRecognitionError.Of(
                     "cardinality",
                     position,
                     reader.Position - position));
@@ -738,7 +753,7 @@ public static class GrammarParser
             {
                 result = minOccursTokens[0] switch
                 {
-                    '*' or '?' or '+' => Result.Of<Cardinality>(new FaultyMatchError(
+                    '*' or '?' or '+' => Result.Of<Cardinality>(PartialRecognitionError.Of(
                         "cardinality",
                         position,
                         reader.Position - position)),
@@ -753,7 +768,7 @@ public static class GrammarParser
             {
                 result = minOccursTokens[0] switch
                 {
-                    '*' or '?' or '+' => Result.Of<Cardinality>(new FaultyMatchError(
+                    '*' or '?' or '+' => Result.Of<Cardinality>(PartialRecognitionError.Of(
                         "cardinality",
                         position,
                         reader.Position - position)),
@@ -772,8 +787,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseElementList(
+    internal static bool TryParseElementList(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<IGroupElement[]> result)
     {
@@ -784,7 +800,7 @@ public static class GrammarParser
             // open bracket
             if (!reader.TryGetTokens("[", out var openBracket))
             {
-                result = Result.Of<IGroupElement[]>(new UnmatchedError(
+                result = Result.Of<IGroupElement[]>(FailedRecognitionError.Of(
                     "element-list",
                     position));
                 reader.Reset(position);
@@ -827,7 +843,7 @@ public static class GrammarParser
                 || accumulator.IsPreviousOpUnknown
                 || accumulator.Data.Count == 0)
             {
-                result = Result.Of<IGroupElement[]>(new FaultyMatchError(
+                result = Result.Of<IGroupElement[]>(PartialRecognitionError.Of(
                     "element-list",
                     position,
                     reader.Position - position));
@@ -851,33 +867,33 @@ public static class GrammarParser
     #endregion
 
     #region Atomic
-    public static bool TryParseAtomicRule(
+    internal static bool TryParseAtomicRule(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<IAtomicRule> result)
     {
         var position = reader.Position;
+        var atomicRulePath = path.Next("atomic-rule");
 
         try
         {
             result = ParserAccumulator
                 .Of(reader,
+                    atomicRulePath,
                     context,
-                    (Name: string.Empty, Args: new List<ArgumentPair>()),
-                    "atomic-rule")
+                    (Name: string.Empty, Args: new List<ArgumentPair>()))
 
                 // parse atomic symbol name
-                .ThenTry<string>(true, TryParseAtomicSymbolName, (r, name) =>
-                {
-                    r.Name = name;
-                    return r;
-                })
+                .ThenTry<string>(
+                    TryParseAtomicSymbolName, 
+                    (r, name) => (Name: name, r.Args))
 
                 // or parse atomic content, and derive symbol name
                 .OrTry<AtomicContentArgumentInfo>(TryParseAtomicContent, (r, contentInfo) =>
                 {
                     if (!context.AtomicContentTypeMap.TryGetValue(contentInfo.ContentType, out var symbol))
-                        throw new FaultyMatchError(
+                        throw PartialRecognitionError.Of(
                             "atomic-rule",
                             position,
                             reader.Position - position);
@@ -904,7 +920,7 @@ public static class GrammarParser
                 .ToResult(r =>
                 {
                     if (!context.AtomicFactoryMap.TryGetValue(r.Name, out var factoryDef))
-                        throw new FaultyMatchError(
+                        throw PartialRecognitionError.Of(
                             "atomic-rule",
                             position,
                             reader.Position - position);
@@ -927,8 +943,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseAtomicContent(
+    internal static bool TryParseAtomicContent(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<AtomicContentArgumentInfo> result)
     {
@@ -974,7 +991,7 @@ public static class GrammarParser
             }
             else if(accumulator.Data is null)
             {
-                result = Result.Of<AtomicContentArgumentInfo>(new UnmatchedError(
+                result = Result.Of<AtomicContentArgumentInfo>(FailedRecognitionError.Of(
                     "atomic-content",
                     position));
                 reader.Reset(position);
@@ -992,7 +1009,7 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseDelimitedContent(
+    internal static bool TryParseDelimitedContent(
         TokenReader reader,
         MetaContext context,
         char startDelimiter,
@@ -1006,7 +1023,7 @@ public static class GrammarParser
             // start delim
             if (!reader.TryGetTokens(startDelimiter.ToString(), out var startDelimToken))
             {
-                result = Result.Of<Tokens>(new UnmatchedError(
+                result = Result.Of<Tokens>(FailedRecognitionError.Of(
                     "atomic-rule",
                     position));
                 reader.Reset(position);
@@ -1036,7 +1053,7 @@ public static class GrammarParser
             // end delim
             if (!reader.TryGetTokens(endDelimiter.ToString(), out var endDelimToken))
             {
-                result = Result.Of<Tokens>(new FaultyMatchError(
+                result = Result.Of<Tokens>(PartialRecognitionError.Of(
                     "atomic-rule",
                     position,
                     reader.Position - position));
@@ -1055,8 +1072,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseAtomicRuleArguments(
+    internal static bool TryParseAtomicRuleArguments(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<ArgumentPair[]> result)
     {
@@ -1066,7 +1084,7 @@ public static class GrammarParser
         {
             if (!reader.TryGetTokens("{", out var startDelimToken))
             {
-                result = Result.Of<ArgumentPair[]>(new UnmatchedError(
+                result = Result.Of<ArgumentPair[]>(FailedRecognitionError.Of(
                     "atomic-rule-arguments",
                     position));
                 reader.Reset(position);
@@ -1105,7 +1123,7 @@ public static class GrammarParser
                 result = !accumulator.IsPreviousOpUnmatched
                     ? accumulator.ToResult<ArgumentPair[]>()
                     : Result.Of<ArgumentPair[]>(
-                        new FaultyMatchError(
+                        PartialRecognitionError.Of(
                             "atomic-rule-arguments",
                             position,
                             reader.Position - position));
@@ -1116,7 +1134,7 @@ public static class GrammarParser
             if (!reader.TryGetTokens("}", out _))
             {
                 result = Result.Of<ArgumentPair[]>(
-                    new FaultyMatchError(
+                    PartialRecognitionError.Of(
                         "atomic-rule-arguments",
                         position,
                         reader.Position - position));
@@ -1137,8 +1155,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseArgument(
+    internal static bool TryParseArgument(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<ArgumentPair> result)
     {
@@ -1148,7 +1167,7 @@ public static class GrammarParser
         {
             if (!reader.TryGetPattern(Argument.ArgumentPattern, out var argKey))
             {
-                result = Result.Of<ArgumentPair>(new UnmatchedError(
+                result = Result.Of<ArgumentPair>(FailedRecognitionError.Of(
                     "atomic-rule-argument",
                     position));
                 reader.Reset(position);
@@ -1186,7 +1205,7 @@ public static class GrammarParser
 
                 if (accumulator.IsPreviousOpErrored)
                 {
-                    result = Result.Of<ArgumentPair>(new FaultyMatchError(
+                    result = Result.Of<ArgumentPair>(PartialRecognitionError.Of(
                         "atomic-rule-argument",
                         position,
                         reader.Position - position));
@@ -1210,8 +1229,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseBooleanArgValue(
+    internal static bool TryParseBooleanArgValue(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<bool> result)
     {
@@ -1232,7 +1252,7 @@ public static class GrammarParser
                 reader.Advance(4);
                 result = Result.Of(true);
             }
-            else result = Result.Of<bool>(new UnmatchedError("bool-arg-value", position));
+            else result = Result.Of<bool>(FailedRecognitionError.Of("bool-arg-value", position));
 
             return result.IsDataResult();
         }
@@ -1243,8 +1263,9 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseNumberArgValue(
+    internal static bool TryParseNumberArgValue(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<decimal> result)
     {
@@ -1266,7 +1287,7 @@ public static class GrammarParser
             if (tokens.IsEmpty)
             {
                 reader.Reset(position);
-                result = Result.Of<decimal>(new UnmatchedError("number-arg-value", position));
+                result = Result.Of<decimal>(FailedRecognitionError.Of("number-arg-value", position));
                 return false;
             }
 
@@ -1281,7 +1302,7 @@ public static class GrammarParser
                 return true;
             }
 
-            result = Result.Of<decimal>(new FaultyMatchError(
+            result = Result.Of<decimal>(PartialRecognitionError.Of(
                 "number-arg-value",
                 position,
                 reader.Position - position));
@@ -1300,69 +1321,57 @@ public static class GrammarParser
 
     #region Silent Block
 
-    public static bool TryParseSilentBlock(
+    internal static bool TryParseSilentBlock(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<SilentBlock> result)
     {
         var position = reader.Position;
+        var blockPath = path.Next("silent-block");
 
         try
         {
-            var list = new List<ISilentElement>();
-            ParserAccumulator<ISilentElement> accumulator = null!;
+            var accumulator = ParserAccumulator.Of(
+                reader,
+                blockPath,
+                context,
+                new List<ISilentElement>());
 
             do
             {
-                accumulator = ParserAccumulator
-                    .Of<ISilentElement>(reader,
-                        context,
-                        null!,
-                        "silent-block")
+                _ = accumulator
 
                     // block comment
                     .ThenTry<BlockComment>(
-                        true,
                         TryParseBlockComment,
-                        (_, comment) => comment)
+                        (list, comment) => list.AddItem((ISilentElement)comment))
 
                     // line comment
                     .OrTry<LineComment>(
                         TryParseLineComment,
-                        (_, comment) => comment)
+                        (list, comment) => list.AddItem((ISilentElement)comment))
 
                     // tab/space/line-feed/carriage-return
                     .OrTry<Whitespace>(
                         TryParseWhitespace,
-                        (_, whitespace) => whitespace)
-
-                    // if we parsed any of the silent elements
-                    .Consume(list.Add);
+                        (list, whitespace) => list.AddItem((ISilentElement)whitespace));
             }
-            while (!accumulator.IsPreviousOpErrored);
+            while (!accumulator.IsErrored);
 
+            result = accumulator
 
-            if (accumulator.IsPreviousOpFaultyMatch
-                || accumulator.IsPreviousOpUnknown)
-            {
-                if (accumulator.IsPreviousOpUnmatched && list.Count > 0)
-                    result = Result.Of<SilentBlock>(new FaultyMatchError(
-                        "silent-block",
-                        position,
-                        reader.Position - position));
+                // errors?
+                .MapError((list, err, recognitionCount) => (err, recognitionCount) switch
+                {
+                    (FailedRecognitionError, >= 1) => list,
+                    _ => err.Throw<List<ISilentElement>>()
+                })
 
-                else result = accumulator
-                    .ToResult()
-                    .MapAs<SilentBlock>();
+                // map to result
+                .ToResult(SilentBlock.Of);
 
-                reader.Reset(position);
-                return false;
-            }
-
-            result = SilentBlock
-                .Of(list)
-                .ApplyTo(Result.Of);
-            return true;
+            return result.IsDataResult();
         }
         catch (Exception e)
         {
@@ -1371,19 +1380,21 @@ public static class GrammarParser
         }
     }
 
-    public static bool TryParseBlockComment(
+    internal static bool TryParseBlockComment(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<BlockComment> result)
     {
         var position = reader.Position;
+        var blockCommentPath = path.Next("block-comment");
 
         try
         {
             if (!reader.TryGetTokens("/*", out var delimiter))
             {
-                result = Result.Of<BlockComment>(new UnmatchedError(
-                    "block-comment",
+                result = Result.Of<BlockComment>(FailedRecognitionError.Of(
+                    blockCommentPath,
                     position));
                 reader.Reset(position);
                 return false;
@@ -1406,7 +1417,7 @@ public static class GrammarParser
                 contentToken += token;
             }
 
-            result = Result.Of<BlockComment>(new FaultyMatchError(
+            result = Result.Of<BlockComment>(PartialRecognitionError.Of(
                 "block-comment",
                 position,
                 reader.Position - position));
@@ -1415,13 +1426,14 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
-            result = Result.Of<BlockComment>(new UnknownError(e));
+            result = Result.Of<BlockComment>(e);
             return false;
         }
     }
 
-    public static bool TryParseLineComment(
+    internal static bool TryParseLineComment(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<LineComment> result)
     {
@@ -1431,7 +1443,7 @@ public static class GrammarParser
         {
             if (!reader.TryGetTokens("#", out var delimiter))
             {
-                result = Result.Of<LineComment>(new UnmatchedError(
+                result = Result.Of<LineComment>(FailedRecognitionError.Of(
                     "line-comment",
                     position));
                 reader.Reset(position);
@@ -1459,13 +1471,14 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
-            result = Result.Of<LineComment>(new UnknownError(e));
+            result = Result.Of<LineComment>(e);
             return false;
         }
     }
 
-    public static bool TryParseWhitespace(
+    internal static bool TryParseWhitespace(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         out IResult<Whitespace> result)
     {
@@ -1479,7 +1492,7 @@ public static class GrammarParser
                 && '\n' != whitespaceToken[0]
                 && '\r' != whitespaceToken[0]))
             {
-                result = Result.Of<Whitespace>(new UnmatchedError(
+                result = Result.Of<Whitespace>(FailedRecognitionError.Of(
                     "whitespace",
                     position));
                 reader.Reset(position);
@@ -1493,7 +1506,7 @@ public static class GrammarParser
         }
         catch (Exception e)
         {
-            result = Result.Of<Whitespace>(new UnknownError(e));
+            result = Result.Of<Whitespace>(e);
             return false;
         }
     }

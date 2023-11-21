@@ -8,9 +8,9 @@ using Axis.Pulsar.Core.Utils;
 namespace Axis.Pulsar.Core.CST
 {
     /// <summary>
-    /// Parse strings into the <see cref="Path"/> structure.
+    /// Parse strings into the <see cref="NodePath"/> structure.
     /// <para/>
-    /// The <see cref="Path"/> syntax takes the form
+    /// The <see cref="NodePath"/> syntax takes the form
     /// <code>
     ///     path ::= segment(/segment)*
     ///     segment ::= filter(|filter)*;
@@ -34,492 +34,24 @@ namespace Axis.Pulsar.Core.CST
             .Select(nt => (char)nt)
             .ToHashSet();
 
+        public static bool TryParse(string pathText, out IResult<NodePath> result)
+        {
+            result = Parse(pathText);
+            return result.IsDataResult();
+        }
 
-        public static IResult<Path> Parse(string pathText)
+        public static IResult<NodePath> Parse(string pathText)
         {
             if (string.IsNullOrEmpty(pathText))
                 throw new ArgumentException("Invalid path: null/empty");
 
             if (!TryRecognizePath(pathText, out var result))
-                return Result.Of<Path>(ToFormatException(result.AsError()));
+                return Result.Of<NodePath>(ToFormatException(result.AsError()));
 
-            try
-            {
-                var root = result.Resolve();
-                var path = ToPath(root);
-
-                return Result.Of(path);
-            }
-            catch (Exception e)
-            {
-                return Result.Of<Path>(e);
-            }
-
+            return result;
         }
-
-        public static bool TryParse(string pathText, out IResult<Path> result)
-        {
-            result = Parse(pathText);
-            return result is IResult<Path>.DataResult;
-        }
-
-        #region Converters
-        internal static Path ToPath(ICSTNode pathNode)
-        {
-            return pathNode switch
-            {
-                ICSTNode.NonTerminal root => root.Nodes
-                    .Where(n => n.Name.Equals(NodeName_Segment))
-                    .Select(ToSegment)
-                    .ToArray()
-                    .ApplyTo(Path.Of),
-
-                _ => throw new ArgumentException($"Invalid node: {pathNode?.GetType().ToString() ?? "null"}")
-            };
-        }
-
-        internal static Segment ToSegment(ICSTNode segmentNode)
-        {
-            return segmentNode switch
-            {
-                ICSTNode.NonTerminal root => root.Nodes
-                    .Where(n => n.Name.Equals(NodeName_Filter))
-                    .Select(ToNodeFilter)
-                    .ToArray()
-                    .ApplyTo(Segment.Of),
-
-                _ => throw new ArgumentException($"Invalid node: {segmentNode?.GetType().ToString() ?? "null"}")
-            };
-        }
-
-        internal static NodeFilter ToNodeFilter(ICSTNode filterNode)
-        {
-            if (filterNode is not ICSTNode.NonTerminal filterNTNode)
-                throw new ArgumentException($"Invalid node: {filterNode?.GetType().ToString() ?? "null"}");
-
-            return NodeFilter.Of(
-                ToNodeType(filterNTNode.Nodes.First(n => NodeName_Filter_Type.Equals(n.Name))),
-                ToSymbolName(filterNTNode.Nodes.FirstOrDefault(n => NodeName_Symbol_Name.Equals(n.Name))),
-                ToTokens(filterNTNode.Nodes.FirstOrDefault(n => NodeName_Tokens.Equals(n.Name))));
-        }
-
-        internal static NodeType ToNodeType(ICSTNode filterTypeNode)
-        {
-            ArgumentNullException.ThrowIfNull(filterTypeNode);
-
-            if (filterTypeNode.Tokens.IsEmpty)
-                return NodeType.Unspecified;
-
-            else return filterTypeNode.Tokens[1] switch
-            {
-                'u' => NodeType.Unspecified,
-                't' => NodeType.Terminal,
-                'n' => NodeType.NonTerminal,
-                _ => throw new InvalidOperationException(
-                    $"Invalid filter type character: '{filterTypeNode.Tokens[1]}'")
-            };
-        }
-
-        internal static string? ToSymbolName(ICSTNode? symbolNameNode)
-        {
-            if (symbolNameNode is null)
-                return null;
-
-            var tokens = symbolNameNode.Tokens;
-            return tokens[0] == ':'
-                ? tokens[1..].ToString()
-                : tokens.ToString();
-        }
-
-        internal static string? ToTokens(ICSTNode? tokenNode)
-        {
-            if (tokenNode is null)
-                return null;
-
-            return tokenNode.Tokens[1..^1].ToString();
-        }
-        #endregion
 
         #region Recognizers
-        internal static bool TryRecognizeTokens(
-            TokenReader reader,
-            ProductionPath parentPath,
-            out IResult<ICSTNode> result)
-        {
-            var position = reader.Position;
-            var tokensPath = parentPath.Next("tokens");
-
-            try
-            {
-                #region open delimiter
-                if (!reader.TryGetToken(out var openDelim)
-                    || !'<'.Equals(openDelim[0]))
-                {
-                    reader.Reset(position);
-                    result = FailedRecognitionError
-                        .Of(tokensPath, position)
-                        .ApplyTo(Result.Of<ICSTNode>);
-                    return false;
-                }
-                #endregion
-
-                #region tokens
-                var isEscaping = false;
-                var tokens = Tokens.Empty;
-                while (reader.TryGetToken(out var token))
-                {
-                    if (!isEscaping)
-                    {
-                        if ('\\'.Equals(token[0]))
-                        {
-                            tokens = tokens.ConJoin(token);
-                            isEscaping = true;
-                        }
-                        else if ('>'.Equals(token[0]))
-                        {
-                            reader.Back(1);
-                            break;
-                        }
-                        else tokens = tokens.ConJoin(token);
-                    }
-                    else
-                    {
-                        if ('\\'.Equals(token[0]) || '>'.Equals(token[0]))
-                        {
-                            tokens = tokens.ConJoin(token);
-                            isEscaping = false;
-                        }
-                        else
-                        {
-                            reader.Reset(position);
-                            var newLength = (openDelim.SourceSegment + tokens.SourceSegment).EndOffset - position + 1;
-                            result = PartialRecognitionError
-                                .Of(tokensPath, position, newLength)
-                                .ApplyTo(Result.Of<ICSTNode>);
-                            return false;
-                        }
-                    }
-                }
-                #endregion
-
-                #region close delimiter
-                if (!reader.TryGetToken(out var closeDelim)
-                    || !'>'.Equals(closeDelim[0]))
-                {
-                    reader.Reset(position);
-                    var newLength = (openDelim.SourceSegment + tokens.SourceSegment).EndOffset - position + 1;
-                    result = PartialRecognitionError
-                        .Of(tokensPath, position, newLength)
-                        .ApplyTo(Result.Of<ICSTNode>);
-                    return false;
-                }
-                #endregion
-
-                result = openDelim
-                    .ConJoin(tokens)
-                    .ConJoin(closeDelim)
-                    .ApplyTo(tokens => ICSTNode.Of(tokensPath.Name, tokens))
-                    .ApplyTo(Result.Of);
-                return true;
-            }
-            catch (Exception e)
-            {
-                reader.Reset(position);
-                result = Result.Of<ICSTNode>(e);
-                return false;
-            }
-        }
-
-        internal static bool TryRecognizeSymbolName(
-            TokenReader reader,
-            ProductionPath parentPath,
-            out IResult<ICSTNode> result)
-        {
-            var position = reader.Position;
-            var symbolNamePath = parentPath.Next("symbol-name");
-
-            try
-            {
-                #region delimiter
-                var hasDelimiter = false;
-
-                if (!reader.TryGetToken(out var delimiter))
-                {
-                    result = FailedRecognitionError
-                        .Of(symbolNamePath, position)
-                        .ApplyTo(Result.Of<ICSTNode>);
-                    return false;
-                }
-                else if (char.IsAsciiLetter(delimiter[0]))
-                {
-                    reader.Back();
-                    delimiter = Tokens.Empty;
-                }
-                else if (!':'.Equals(delimiter[0]))
-                {
-                    reader.Reset(position);
-                    result = FailedRecognitionError
-                        .Of(symbolNamePath, position)
-                        .ApplyTo(Result.Of<ICSTNode>);
-                    return false;
-                }
-                else hasDelimiter = true;
-                #endregion
-
-                #region Name
-                if (!reader.TryGetPattern(IProduction.SymbolPattern, out var symbolName))
-                {
-                    if (!hasDelimiter)
-                        result = FailedRecognitionError
-                            .Of(symbolNamePath, position)
-                            .ApplyTo(Result.Of<ICSTNode>);
-
-                    else result = PartialRecognitionError
-                        .Of(symbolNamePath,
-                            position,
-                            delimiter.SourceSegment.EndOffset - position + 1)
-                        .ApplyTo(Result.Of<ICSTNode>);
-
-                    reader.Reset(position);
-                    return false;
-                }
-                #endregion
-
-                result = delimiter
-                    .ConJoin(symbolName)
-                    .ApplyTo(tokens => ICSTNode.Of(symbolNamePath.Name, tokens))
-                    .ApplyTo(Result.Of<ICSTNode>);
-                return true;
-            }
-            catch (Exception e)
-            {
-                result = Result.Of<ICSTNode>(e);
-                return false;
-            }
-        }
-
-        internal static bool TryRecognizeFilterType(
-            TokenReader reader,
-            ProductionPath parentPath,
-            out IResult<ICSTNode> result)
-        {
-            var position = reader.Position;
-            var filterTypePath = parentPath.Next("filter-type");
-
-            try
-            {
-                #region delimiter
-                if (!reader.TryGetToken(out var delim))
-                {
-                    result = FailedRecognitionError
-                        .Of(filterTypePath, position)
-                        .ApplyTo(Result.Of<ICSTNode>);
-                    return false;
-                }
-
-                if (!'@'.Equals(delim[0]))
-                {
-                    reader.Back();
-                    result = ICSTNode
-                        .Of(filterTypePath.Name, Tokens.Empty)
-                        .ApplyTo(Result.Of);
-                    return true;
-                }
-                #endregion
-
-                #region type
-                if (!reader.TryGetToken(out var typeChar)
-                    || !FilterTypeCharacters.Contains(char.ToLower(typeChar[0])))
-                {
-                    reader.Reset(position);
-                    result =PartialRecognitionError
-                        .Of(filterTypePath,
-                            position,
-                            delim.SourceSegment.EndOffset - position + 1)
-                        .ApplyTo(Result.Of<ICSTNode>);;
-                    return false;
-                }
-                #endregion
-
-                result = delim
-                    .ConJoin(typeChar)
-                    .ApplyTo(tokens => ICSTNode.Of(filterTypePath.Name, tokens))
-                    .ApplyTo(Result.Of<ICSTNode>);
-                return true;
-            }
-            catch (Exception e)
-            {
-                result = Result.Of<ICSTNode>(e);
-                return false;
-            }
-        }
-
-        internal static bool TryRecognizeFilter(
-            TokenReader reader,
-            ProductionPath parentPath,
-            out IResult<ICSTNode> result)
-        {
-            var position = reader.Position;
-            var filterPath = parentPath.Next("filter");
-
-            try
-            {
-                if (!TryRecognizeFilterType(reader, filterPath, out var filterType))
-                {
-                    reader.Reset(position);
-                    result = filterType.TransformError<ICSTNode, FailedRecognitionError>(
-                        fre => FailedRecognitionError.Of(
-                            filterPath,
-                            position));
-                    return false;
-                }
-
-                var tempPosition = reader.Position;
-                if (!TryRecognizeSymbolName(reader, filterPath, out var symbolName))
-                {
-                    if (symbolName.AsError().ActualCause() is PartiallyRecognizedTokens)
-                    {
-                        reader.Reset(tempPosition);
-                        result = symbolName;
-                        return false;
-                    }
-                    symbolName = Result.Of((ICSTNode)null!);
-                }
-
-                tempPosition = reader.Position;
-                if (!TryRecognizeTokens(reader, filterPath, out var tokens))
-                {
-                    if (tokens.AsError().ActualCause() is PartiallyRecognizedTokens)
-                    {
-                        reader.Reset(position);
-                        result = tokens;
-                        return false;
-                    }
-                    tokens = Result.Of((ICSTNode)null!);
-                }
-
-                result = filterType
-                    .Combine(symbolName, (type, name) => (type, name))
-                    .Combine(tokens, (tuple, tokens) => ArrayUtil
-                        .Of(tuple.type, tuple.name, tokens)
-                        .Where(n => n is not null))
-                    .Map(nodes => ICSTNode.Of(filterPath.Name, nodes.ToArray()));
-                return true;
-            }
-            catch (Exception e)
-            {
-                result = Result.Of<ICSTNode>(new RecognitionRuntimeError(e));
-                return false;
-            }
-        }
-
-        internal static bool TryRecognizeSegment(
-            TokenReader reader,
-            ProductionPath parentPath,
-            out IResult<ICSTNode> result)
-        {
-            var position = reader.Position;
-            var segmentPath = parentPath.Next("segment");
-
-            try
-            {
-                if (!TryRecognizeFilter(reader, segmentPath, out var filterResult))
-                {
-                    reader.Reset(position);
-                    result = filterResult.AsError().MapNodeError(
-                        ute => UnrecognizedTokens.Of(segmentPath, position),
-                        pte => pte);
-                    return false;
-                }
-
-                var alternates = new List<ICSTNode>();
-                filterResult.Consume(alternates.Add);
-
-                while (reader.TryGetTokens("|", out var filterSeparator))
-                {
-                    alternates.Add(ICSTNode.Of("filter-separator", filterSeparator));
-                    var tempPosition = reader.Position;
-
-                    if (!TryRecognizeFilter(reader, segmentPath, out var alternateFilterResult))
-                    {
-                        reader.Reset(position);
-                        result = filterResult.AsError().MapNodeError(
-                            ute => PartiallyRecognizedTokens.Of(
-                                segmentPath,
-                                tempPosition,
-                                Tokens.Of(reader.Source, position, tempPosition - position)),
-                            pte => pte);
-                        return false;
-                    }
-                    alternateFilterResult.Consume(alternates.Add);
-                }
-
-                result = ICSTNode
-                    .Of(segmentPath.Name, alternates.ToArray())
-                    .ApplyTo(Result.Of);
-                return true;
-            }
-            catch (Exception e)
-            {
-                result = Result.Of<ICSTNode>(new RecognitionRuntimeError(e));
-                return false;
-            }
-        }
-
-        internal static bool TryRecognizePath(
-            TokenReader reader,
-            out IResult<ICSTNode> result)
-        {
-            var position = reader.Position;
-            var path = ProductionPath.Of("path");
-
-            try
-            {
-                if (!TryRecognizeSegment(reader, path, out var segmentResult))
-                {
-                    reader.Reset(position);
-                    result = segmentResult.AsError().MapNodeError(
-                        ute => UnrecognizedTokens.Of(path, position),
-                        pte => pte);
-                    return false;
-                }
-
-                var alternates = new List<ICSTNode>();
-                segmentResult.Consume(alternates.Add);
-
-                while (reader.TryGetTokens("/", out var segmentSeparator))
-                {
-                    alternates.Add(ICSTNode.Of("segment-separator", segmentSeparator));
-                    var tempPosition = reader.Position;
-
-                    if (!TryRecognizeSegment(reader, path, out var alternateFilterResult))
-                    {
-                        reader.Reset(position);
-                        result = segmentResult.AsError().MapNodeError(
-                            ute => PartiallyRecognizedTokens.Of(
-                                path,
-                                tempPosition,
-                                Tokens.Of(reader.Source, position, tempPosition - position)),
-                            pte => pte);
-                        return false;
-                    }
-                    alternateFilterResult.Consume(alternates.Add);
-                }
-
-                result = ICSTNode
-                    .Of(path.Name, alternates.ToArray())
-                    .ApplyTo(Result.Of);
-                return true;
-            }
-            catch (Exception e)
-            {
-                result = Result.Of<ICSTNode>(new RecognitionRuntimeError(e));
-                return false;
-            }
-        }
-        #endregion
-
-        #region Recognizers v2
 
         internal static bool TryRecognizeTokens(
             TokenReader reader,
@@ -607,7 +139,6 @@ namespace Axis.Pulsar.Core.CST
             }
         }
 
-
         internal static bool TryRecognizeSymbolName(
             TokenReader reader,
             ProductionPath parentPath,
@@ -674,7 +205,6 @@ namespace Axis.Pulsar.Core.CST
             }
         }
 
-
         internal static bool TryRecognizeFilterType(
             TokenReader reader,
             ProductionPath parentPath,
@@ -731,14 +261,14 @@ namespace Axis.Pulsar.Core.CST
             TokenReader reader,
             ProductionPath parentPath,
             object  context,
-            out IResult<ICSTNode> result)
+            out IResult<NodeFilter> result)
         {
             var position = reader.Position;
             var filterPath = parentPath.Next("filter");
 
             try
             {
-                var accumulator = ParserAccumulator
+                result = ParserAccumulator
                     .Of(reader,
                         filterPath,
                         default(object)!,
@@ -751,58 +281,157 @@ namespace Axis.Pulsar.Core.CST
 
                     // symbol name
                     .ThenTry<Tokens>(
+                        TryRecognizeSymbolName,
+                        (data, name) => (data.type, name, data.tokens))
 
-                        
-                var tempPosition = reader.Position;
-                if (!TryRecognizeSymbolName(reader, filterPath, out var symbolName))
-                {
-                    if (symbolName.AsError().ActualCause() is PartiallyRecognizedTokens)
+                    // tokens
+                    .ThenTry<Tokens>(
+                        TryRecognizeTokens,
+                        (data, tokens) => (data.type, data.name, tokens))
+
+                    // errors?
+                    .TransformError((data, err, recognitionCount) => (err, recognitionCount) switch
                     {
-                        reader.Reset(tempPosition);
-                        result = symbolName;
-                        return false;
-                    }
-                    symbolName = Result.Of((ICSTNode)null!);
-                }
+                        (FailedRecognitionError, >= 1) => PartialRecognitionError.Of(
+                            filterPath,
+                            position,
+                            reader.Position - position + 1),
 
-                tempPosition = reader.Position;
-                if (!TryRecognizeTokens(reader, filterPath, out var tokens))
-                {
-                    if (tokens.AsError().ActualCause() is PartiallyRecognizedTokens)
-                    {
-                        reader.Reset(position);
-                        result = tokens;
-                        return false;
-                    }
-                    tokens = Result.Of((ICSTNode)null!);
-                }
+                        _ => err
+                    })
 
-                result = filterType
-                    .Combine(symbolName, (type, name) => (type, name))
-                    .Combine(tokens, (tuple, tokens) => ArrayUtil
-                        .Of(tuple.type, tuple.name, tokens)
-                        .Where(n => n is not null))
-                    .Map(nodes => ICSTNode.Of(filterPath.Name, nodes.ToArray()));
-                return true;
+                    // map to result
+                    .ToResult(data => NodeFilter.Of(
+                        data.type,
+                        data.name,
+                        data.tokens));
+
+                return result.IsDataResult();
             }
             catch (Exception e)
             {
-                result = Result.Of<ICSTNode>(new RecognitionRuntimeError(e));
+                result = Result.Of<NodeFilter>(e);
+                return false;
+            }
+        }
+
+        internal static bool TryRecognizeSegment(
+            TokenReader reader,
+            ProductionPath parentPath,
+            object context,
+            out IResult<Segment> result)
+        {
+            var position = reader.Position;
+            var segmentPath = parentPath.Next("segment");
+
+            try
+            {
+                var accumulator = ParserAccumulator
+                    .Of(reader,
+                        segmentPath,
+                        default(object)!,
+                        new List<NodeFilter>())
+
+                    // filter
+                    .ThenTry<NodeFilter>(
+                        TryRecognizeFilter,
+                        (filters, filter) => filters.AddItem(filter));
+
+                while (reader.TryGetTokens("|", out var filterSeparator))
+                {
+                    _ = accumulator.ThenTry<NodeFilter>(
+                        TryRecognizeFilter,
+                        (filters, filter) => filters.AddItem(filter));
+                }
+
+                result = accumulator
+
+                    // errors?
+                    .TransformError((data, err, recognitionCount) => (err, recognitionCount) switch
+                    {
+                        (FailedRecognitionError, >= 1) => PartialRecognitionError.Of(
+                            segmentPath,
+                            position,
+                            reader.Position - position + 1),
+
+                        _ => err
+                    })
+
+                    // map to result
+                    .ToResult(data => Segment.Of(data.ToArray()));
+
+                return result.IsDataResult();
+            }
+            catch (Exception e)
+            {
+                result = Result.Of<Segment>(e);
+                return false;
+            }
+        }
+
+        internal static bool TryRecognizePath(
+            TokenReader reader,
+            out IResult<NodePath> result)
+        {
+            var position = reader.Position;
+            var nodePath = ProductionPath.Of("node-path");
+
+            try
+            {
+                var accumulator = ParserAccumulator
+                    .Of(reader,
+                        nodePath,
+                        default(object)!,
+                        new List<Segment>())
+
+                    // segment
+                    .ThenTry<Segment>(
+                        TryRecognizeSegment,
+                        (segments, segment) => segments.AddItem(segment));
+
+                while (reader.TryGetTokens("/", out var segmentSeparator))
+                {
+                    _ = accumulator.ThenTry<Segment>(
+                        TryRecognizeSegment,
+                        (segments, segment) => segments.AddItem(segment));
+                }
+
+                result = accumulator
+
+                    // errors?
+                    .TransformError((data, err, recognitionCount) => (err, recognitionCount) switch
+                    {
+                        (FailedRecognitionError, >= 1) => PartialRecognitionError.Of(
+                            nodePath,
+                            position,
+                            reader.Position - position + 1),
+
+                        _ => err
+                    })
+
+                    // map to result
+                    .ToResult(data => NodePath.Of(data.ToArray()));
+
+                return result.IsDataResult();
+            }
+            catch (Exception e)
+            {
+                result = Result.Of<NodePath>(e);
                 return false;
             }
         }
 
         #endregion
 
-        private static FormatException ToFormatException(IResult<ICSTNode>.ErrorResult errorResult)
+        private static FormatException ToFormatException(IResult<NodePath>.ErrorResult errorResult)
         {
             ArgumentNullException.ThrowIfNull(errorResult);
 
             return errorResult.ActualCause() switch
             {
-                INodeError ne => new FormatException(
-                    $"Invalid path format: error detected at position {ne.Position}"),
-                _ => new FormatException($"Invalid path format: unknown error")
+                IRecognitionError re => new FormatException(
+                    $"Invalid path format: error detected at position {re.TokenSegment.Offset}"),
+                Exception e => new FormatException($"Invalid path format: unclassified error", e)
             };
         }
     }

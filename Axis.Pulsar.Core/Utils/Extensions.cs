@@ -75,5 +75,14 @@ namespace Axis.Pulsar.Core.Utils
 
             else return result;
         }
+
+        internal static TItems AddItem<TItems, TItem>(this TItems items, TItem item)
+        where TItems : ICollection<TItem>
+        {
+            ArgumentNullException.ThrowIfNull(items);
+
+            items.Add(item);
+            return items;
+        }
     }
 }

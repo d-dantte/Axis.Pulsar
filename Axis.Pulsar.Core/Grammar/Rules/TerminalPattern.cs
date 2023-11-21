@@ -69,7 +69,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 {
                     var match = pattern.Match(
                         tokens.Source!,
-                        tokens.Offset,
+                        tokens.SourceSegment.Offset,
                         length);
 
                     if (match.Success && match.Length == length)

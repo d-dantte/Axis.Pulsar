@@ -1,5 +1,4 @@
 ﻿using Axis.Luna.Common.Results;
-using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Utils;
 
@@ -58,15 +57,26 @@ public class ParserAccumulator<TData, TSymbolID, TContext>
             {
                 tresult
                     .Map(tdata => mapper.Invoke(_data, tdata))
-                    .Consume(data => _data = data);
-                _recognitionCount++;
+                    .Consume(data =>
+                    {
+                        _data = data;
+                        _recognitionCount++;
+                    });
             }
             else if (tresult.IsErrorResult(out FailedRecognitionError fre)
                 && defaultMapper is not null)
             {
                 _reader.Reset(position);
-                _data = defaultMapper!.Invoke(_data);
-                _recognitionCount++; // ????
+
+                try
+                {
+                    _data = defaultMapper!.Invoke(_data);
+                    _recognitionCount++; // ????
+                }
+                catch(Exception e)
+                {
+                    _error = e;
+                }
             }
             else
             {
@@ -111,8 +121,16 @@ public class ParserAccumulator<TData, TSymbolID, TContext>
                 && defaultMapper is not null)
             {
                 _reader.Reset(position);
-                _data = defaultMapper!.Invoke(_data);
-                _recognitionCount++; // ????
+
+                try
+                {
+                    _data = defaultMapper!.Invoke(_data);
+                    _recognitionCount++; // ????
+                }
+                catch (Exception e)
+                {
+                    _error = e;
+                }
             }
             else
             {
@@ -149,6 +167,47 @@ public class ParserAccumulator<TData, TSymbolID, TContext>
 
         if (!IsErrored)
             consumer.Invoke(_data);
+
+        return this;
+    }
+
+    public ParserAccumulator<TData, TSymbolID, TContext> MapError(Func<TData, Exception, int, TData> mapper)
+    {
+        ArgumentNullException.ThrowIfNull(mapper);
+
+        if (IsErrored)
+        {
+            try
+            {
+                _data = mapper.Invoke(_data, _error!, _recognitionCount);
+                _error = null;
+            }
+            catch(Exception e)
+            {
+                _error = e;
+            }
+        }
+
+        return this;
+    }
+
+    public ParserAccumulator<TData, TSymbolID, TContext> MapError<TError>(Func<TData, TError, int, TData> mapper)
+    where TError : Exception
+    {
+        ArgumentNullException.ThrowIfNull(mapper);
+
+        if (_error is TError terror)
+        {
+            try
+            {
+                _data = mapper.Invoke(_data, terror!, _recognitionCount);
+                _error = null;
+            }
+            catch (Exception e)
+            {
+                _error = e;
+            }
+        }
 
         return this;
     }
