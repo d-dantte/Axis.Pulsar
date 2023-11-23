@@ -5,7 +5,7 @@ using Axis.Pulsar.Core.XBNF.RuleFactories;
 
 namespace Axis.Pulsar.Core.XBNF;
 
-internal class MetaContext
+public class MetaContext
 {
     public ImmutableDictionary<string, AtomicRuleDefinition> AtomicFactoryMap { get; }
 

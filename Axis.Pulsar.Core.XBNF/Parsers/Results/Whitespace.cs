@@ -21,7 +21,7 @@ public class Whitespace :
     {
         Content = whitespaceToken
             .ThrowIf(
-                t => t.Count != 1,
+                t => t.SourceSegment.Length != 1,
                 new ArgumentException($"Invalid token: {whitespaceToken}"))
             .ThrowIfNot(
                 t => _WhitespaceChars.Contains(t[0]),

@@ -146,18 +146,16 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                     .FoldInto(_results => _results.Fold())
                     .Resolve();
 
-                result = elementResult?.AsError().ActualCause() switch
+                result = elementResult switch
                 {
-                    GroupRecognitionError gre => GroupRecognitionError
-                        .Of(gre.Cause, nodes.Count + gre.ElementCount)
-                        .ApplyTo(Result.Of<NodeSequence>),
-
                     null => FailedRecognitionError
                         .Of(productionPath, position)
                         .ApplyTo(GroupRecognitionError.Of)
                         .ApplyTo(Result.Of<NodeSequence>),
 
-                    _ => elementResult!
+                    _ => elementResult.TransformError((GroupRecognitionError gre) => GroupRecognitionError.Of(
+                            gre.Cause,
+                            nodes.Count + gre.ElementCount))
                 };
 
                 return false;

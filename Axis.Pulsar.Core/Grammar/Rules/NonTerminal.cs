@@ -46,7 +46,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 out var groupResult))
             {
                 result = groupResult
-                    .TransformError<NodeSequence, GroupRecognitionError>(gre =>
+                    .TransformError((GroupRecognitionError gre) =>
                     {
                         if (gre.Cause is FailedRecognitionError fre
                             && gre.ElementCount >= RecognitionThreshold)

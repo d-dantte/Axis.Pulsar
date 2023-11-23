@@ -46,7 +46,7 @@ namespace Axis.Pulsar.Core.CST
                 throw new ArgumentException("Invalid path: null/empty");
 
             if (!TryRecognizePath(pathText, out var result))
-                return Result.Of<NodePath>(ToFormatException(result.AsError()));
+                return Result.Of<NodePath>(ToFormatException(result));
 
             return result;
         }
@@ -423,16 +423,22 @@ namespace Axis.Pulsar.Core.CST
 
         #endregion
 
-        private static FormatException ToFormatException(IResult<NodePath>.ErrorResult errorResult)
+        private static FormatException ToFormatException(IResult<NodePath> errorResult)
         {
             ArgumentNullException.ThrowIfNull(errorResult);
 
-            return errorResult.ActualCause() switch
+            if (errorResult.IsErrorResult(out Exception error))
             {
-                IRecognitionError re => new FormatException(
-                    $"Invalid path format: error detected at position {re.TokenSegment.Offset}"),
-                Exception e => new FormatException($"Invalid path format: unclassified error", e)
-            };
+
+                return error switch
+                {
+                    IRecognitionError re => new FormatException(
+                        $"Invalid path format: error detected at position {re.TokenSegment.Offset}"),
+                    Exception e => new FormatException($"Invalid path format: unclassified error", e)
+                };
+            }
+
+            throw new ArgumentException($"Invalid result: not error-reuslt");
         }
     }
 }

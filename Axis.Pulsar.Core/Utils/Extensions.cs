@@ -49,33 +49,6 @@ namespace Axis.Pulsar.Core.Utils
             else return result;
         }
 
-        internal static IResult<TData> TransformError<TData, TError>(this
-            IResult<TData> result,
-            Func<TError, Exception> errorMapper)
-            where TError : Exception
-        {
-            ArgumentNullException.ThrowIfNull(result);
-            ArgumentNullException.ThrowIfNull(errorMapper);
-
-            if (result.IsErrorResult(out TError error))
-                return Result.Of<TData>(errorMapper.Invoke(error));
-
-            else return result;
-        }
-
-        internal static IResult<TData> TransformError<TData>(this
-            IResult<TData> result,
-            Func<Exception, Exception> errorMapper)
-        {
-            ArgumentNullException.ThrowIfNull(result);
-            ArgumentNullException.ThrowIfNull(errorMapper);
-
-            if (result.IsErrorResult())
-                return Result.Of<TData>(errorMapper.Invoke(result.AsError().ActualCause()));
-
-            else return result;
-        }
-
         internal static TItems AddItem<TItems, TItem>(this TItems items, TItem item)
         where TItems : ICollection<TItem>
         {

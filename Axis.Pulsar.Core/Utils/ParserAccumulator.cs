@@ -81,7 +81,7 @@ public class ParserAccumulator<TData, TSymbolID, TContext>
             else
             {
                 _reader.Reset(position);
-                _error = tresult.AsError().ActualCause();
+                tresult.ConsumeError(e => _error = e);
             }
         }
 
@@ -135,7 +135,7 @@ public class ParserAccumulator<TData, TSymbolID, TContext>
             else
             {
                 _reader.Reset(position);
-                _error = tresult.AsError().ActualCause();
+                tresult.ConsumeError(e => _error = e);
             }
         }
 
