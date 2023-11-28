@@ -5,5 +5,6 @@
     /// </summary>
     public interface IAtomicRule : IRule
     {
+        string Id { get; }
     }
 }

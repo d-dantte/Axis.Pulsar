@@ -25,6 +25,8 @@ namespace Axis.Pulsar.Core.Utils
             }
         }
 
+        public Tokens CurrentPattern => Source.Slice(CurrentOffset, PatternLength);
+
         protected SubstringMatcher(
             Tokens patternSequence,
             Tokens source,
@@ -80,6 +82,33 @@ namespace Axis.Pulsar.Core.Utils
         /// <returns>True if a new token could be consumed, false otherwise</returns>
         public abstract bool TryNextWindow(out bool isMatch);
 
+        /// <summary>
+        /// Skips ahead a certain number of characters, so the next window to be tried after this call is <c>count + 1</c>.
+        /// If the end of the source token is reached before <paramref name="count"/> characters can be read, the window is
+        /// left at the end of the string, and <c>false</c> is returned
+        /// </summary>
+        /// <param name="count">The number of characters to skip</param>
+        /// <param name="skipped">The number of characters that was actually skipped</param>
+        /// <returns>True if skipping was possible, false otherwise</returns>
+        public bool TrySkip(int count, out int skipped)
+        {
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count));
+
+            else if(count == 0)
+            {
+                skipped = 0;
+                return true;
+            }
+
+            var oldOffset = CurrentOffset;
+            _ = _hasher.Value.TryNext(count, out _);
+            var newOffset = CurrentOffset;
+            skipped = newOffset - oldOffset;
+
+            return skipped > 0;
+        }
+
 
         internal class LookAheadMatcher : SubstringMatcher
         {
@@ -125,6 +154,7 @@ namespace Axis.Pulsar.Core.Utils
                 isMatch = false;
                 var newCount = _consumedCharCount + 1;
 
+                // have we consumed beyond the source string?
                 if (StartOffset + newCount > Source.SourceSegment.Length)
                     return false;
 

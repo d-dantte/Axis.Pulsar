@@ -126,8 +126,8 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                     return true;
                 }));
 
-            var unrecognizedElementMock = new Mock<IGroupElement>();
-            unrecognizedElementMock
+            var failedRecognitionElementMock = new Mock<IGroupElement>();
+            failedRecognitionElementMock
                 .Setup(m => m.TryRecognize(
                     It.IsAny<TokenReader>(),
                     It.IsAny<ProductionPath>(),
@@ -140,9 +140,9 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                     out IResult<NodeSequence> result) =>
                 {
                     result = Result.Of<NodeSequence>(
-                        new GroupError(
-                            nodes: NodeSequence.Empty,
-                            error: UnrecognizedTokens.Of(
+                        new GroupRecognitionError(
+                            elementCount: 0,
+                            cause: FailedRecognitionError.Of(
                                 ProductionPath.Of("bleh"),
                                 10)));
                     return false;
@@ -169,16 +169,16 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                     }
 
                     result = Result.Of<NodeSequence>(
-                        new GroupError(
-                            nodes: NodeSequence.Empty,
-                            error: UnrecognizedTokens.Of(
+                        new GroupRecognitionError(
+                            elementCount: 0,
+                            cause: FailedRecognitionError.Of(
                                 ProductionPath.Of("bleh"),
                                 10)));
                     return false;
                 }));
 
-            var runtimeFailureElementMock = new Mock<IGroupElement>();
-            runtimeFailureElementMock
+            var nonRecognitionErrorElementMock = new Mock<IGroupElement>();
+            nonRecognitionErrorElementMock
                 .Setup(m => m.TryRecognize(
                     It.IsAny<TokenReader>(),
                     It.IsAny<ProductionPath>(),
@@ -218,30 +218,26 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 "stuff",
                 ProductionPath.Of("root"),
                 null!,
-                unrecognizedElementMock.Object,
+                failedRecognitionElementMock.Object,
                 out result);
-            var ge = result.AsError().ActualCause() as GroupError;
-            var ns = ge.Nodes;
-            Assert.AreEqual(0, ns.Count);
+            Assert.IsTrue(result.IsErrorResult(out GroupRecognitionError ge));
+            Assert.AreEqual(0, ge.ElementCount);
 
             cardinality = Cardinality.Occurs(1, 21);
             recognized = cardinality.TryRepeat(
                 "stuff",
                 ProductionPath.Of("root"),
                 null!,
-                runtimeFailureElementMock.Object,
+                nonRecognitionErrorElementMock.Object,
                 out result);
-            Assert.IsTrue(result.IsErrorResult());
-            Assert.IsInstanceOfType(
-                result.AsError().ActualCause(),
-                typeof(RecognitionRuntimeError));
+            Assert.IsTrue(result.IsErrorResult(out Exception _));
 
             cardinality = Cardinality.Occurs(0, 21);
             recognized = cardinality.TryRepeat(
                 "stuff",
                 ProductionPath.Of("root"),
                 null!,
-                unrecognizedElementMock.Object,
+                failedRecognitionElementMock.Object,
                 out result);
             Assert.IsTrue(result.IsDataResult());
             Assert.AreEqual(0, result.Resolve().Count);
@@ -254,9 +250,8 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 null!,
                 conditionedFailureElementMock.Object,
                 out result);
-            ge = result.AsError().ActualCause() as GroupError;
-            ns = ge.Nodes;
-            Assert.AreEqual(2, ns.Count);
+            Assert.IsTrue(result.IsErrorResult(out ge));
+            Assert.AreEqual(2, ge.ElementCount);
         }
     }
 }

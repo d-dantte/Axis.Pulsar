@@ -22,6 +22,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             Cardinality = cardinality;
             Elements = elements
                 .ThrowIfNull(new ArgumentNullException(nameof(elements)))
+                .ThrowIf(items => items.IsEmpty(), new ArgumentException("Invalid elements: empty"))
                 .ThrowIfAny(e => e is null, new ArgumentException($"Invalid element: null"))
                 .ApplyTo(ImmutableArray.CreateRange);
         }

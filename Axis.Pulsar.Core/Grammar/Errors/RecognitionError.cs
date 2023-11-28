@@ -30,10 +30,7 @@ public class FailedRecognitionError :
         int position)
     {
         TokenSegment = Segment.Of(position);
-
-        Symbol = symbol.ThrowIfNot(
-            IProduction.SymbolPattern.IsMatch,
-            new ArgumentException($"Invalid {nameof(symbol)}: symbol pattern mis-match"));
+        Symbol = symbol;
     }
 
     public static FailedRecognitionError Of(
@@ -59,10 +56,7 @@ public class PartialRecognitionError :
         int length)
     {
         TokenSegment = Segment.Of(position, length);
-
-        Symbol = symbol.ThrowIfNot(
-            IProduction.SymbolPattern.IsMatch,
-            new ArgumentException($"Invalid {nameof(symbol)}: symbol pattern mis-match"));
+        Symbol = symbol;
     }
 
     public static PartialRecognitionError Of(

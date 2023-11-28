@@ -7,6 +7,7 @@ using Axis.Pulsar.Core.Grammar.Groups;
 using Axis.Pulsar.Core.Grammar.Rules;
 using Axis.Pulsar.Core.Utils;
 using Axis.Pulsar.Core.XBNF.Definitions;
+using Axis.Pulsar.Core.XBNF.Parsers;
 using Axis.Pulsar.Core.XBNF.Parsers.Models;
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;
@@ -21,11 +22,13 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         [TestMethod]
         public void TryParseWhtespsace_Tests()
         {            
-            var metaContext = MetaContext.Builder.NewBuilder().Build();
+            var metaContext = MetaContextBuilder.NewBuilder().Build();
+            var parentPath = ProductionPath.Of("parent");
 
             // new line
             var success = GrammarParser.TryParseWhitespace(
                 "\n",
+                parentPath,
                 metaContext,
                 out var result);
 
@@ -37,6 +40,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             // carriage return
             success = GrammarParser.TryParseWhitespace(
                 "\r",
+                parentPath,
                 metaContext,
                 out result);
 
@@ -48,6 +52,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             // tab
             success = GrammarParser.TryParseWhitespace(
                 "\t",
+                parentPath,
                 metaContext,
                 out result);
 
@@ -59,6 +64,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             // space
             success = GrammarParser.TryParseWhitespace(
                 " ",
+                parentPath,
                 metaContext,
                 out result);
 
@@ -70,77 +76,84 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             // any other char
             success = GrammarParser.TryParseWhitespace(
                 "\v",
+                parentPath,
                 metaContext,
                 out result);
 
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult(out UnmatchedError ume));
+            Assert.IsTrue(result.IsErrorResult(out FailedRecognitionError ume));
 
         }
 
         [TestMethod]
         public void TryParseLineComment_Tests()
         {
-            var metaContext = MetaContext.Builder.NewBuilder().Build();
+            var metaContext = MetaContextBuilder.NewBuilder().Build();
+            var parentPath = ProductionPath.Of("parent");
 
             // comment
             var comment = "# and stuff that doesn't end in a new line";
             var success = GrammarParser.TryParseLineComment(
                 comment,
+                parentPath,
                 metaContext,
                 out var result);
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             var lc = result.Resolve();
-            Assert.AreEqual(comment[1..], lc.Content);
+            Assert.AreEqual(comment[1..], lc.Content.ToString());
 
             // comment with new line
             comment = "# and stuff that ends in a new line\nOther stuff not part of the comment";
             success = GrammarParser.TryParseLineComment(
                 comment,
+                parentPath,
                 metaContext,
                 out result);
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             lc = result.Resolve();
-            Assert.AreEqual(comment[1..35], lc.Content);
+            Assert.AreEqual(comment[1..35], lc.Content.ToString());
 
             // comment with carriage return
             comment = "# and stuff that ends in a new line\rOther stuff not part of the comment";
             success = GrammarParser.TryParseLineComment(
                 comment,
+                parentPath,
                 metaContext,
                 out result);
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             lc = result.Resolve();
-            Assert.AreEqual(comment[1..35], lc.Content);
+            Assert.AreEqual(comment[1..35], lc.Content.ToString());
 
             // comment with windows new-line
             comment = "# and stuff that ends in a new line\r\nOther stuff not part of the comment";
             success = GrammarParser.TryParseLineComment(
                 comment,
+                parentPath,
                 metaContext,
                 out result);
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             lc = result.Resolve();
-            Assert.AreEqual(comment[1..35], lc.Content);
+            Assert.AreEqual(comment[1..35], lc.Content.ToString());
         }
 
         [TestMethod]
         public void TryParseBlockComment_Tests()
         {
-            var metaContext = MetaContext.Builder.NewBuilder().Build();
+            var metaContext = MetaContextBuilder.NewBuilder().Build();
 
             // same-line block comment
             TokenReader comment = "/* and stuff that doesn't end * in a new line */";
             var success = GrammarParser.TryParseBlockComment(
                 comment,
+                "parent",
                 metaContext,
                 out var result);
 
@@ -148,12 +161,13 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(result.IsDataResult());
             Assert.IsTrue(comment.IsConsumed);
             var bc = result.Resolve();
-            Assert.AreEqual(comment.Source[2..^2], bc.Content);
+            Assert.AreEqual(comment.Source[2..^2], bc.Content.ToString());
 
             // same-line block comment
             comment = "/* and stuff\n that \rdoesn't \r\nend * \n\rin a new line \n*/";
             success = GrammarParser.TryParseBlockComment(
                 comment,
+                "parent",
                 metaContext,
                 out result);
 
@@ -161,16 +175,17 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(result.IsDataResult());
             Assert.IsTrue(comment.IsConsumed);
             bc = result.Resolve();
-            Assert.AreEqual(comment.Source[2..^2], bc.Content);
+            Assert.AreEqual(comment.Source[2..^2], bc.Content.ToString());
         }
 
         [TestMethod]
         public void TryParseSilentBlock_Tests()
         {
-            var metaContext = MetaContext.Builder.NewBuilder().Build();
+            var metaContext = MetaContextBuilder.NewBuilder().Build();
             TokenReader block = " some text after a space";
             var success = GrammarParser.TryParseSilentBlock(
                 block,
+                "parent",
                 metaContext,
                 out var result);
 
@@ -178,12 +193,13 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(result.IsDataResult());
             var sb = result.Resolve();
             Assert.AreEqual(1, sb.Elements.Length);
-            Assert.AreEqual(" ", sb.Elements[0].Content);
+            Assert.AreEqual(" ", sb.Elements[0].Content.ToString());
 
 
             block = " \n# comment\r\nsome text after a space";
             success = GrammarParser.TryParseSilentBlock(
                 block,
+                "parent",
                 metaContext,
                 out result);
 
@@ -201,6 +217,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             block = " \n# comment\n/*\r\n*/some text after a space";
             success = GrammarParser.TryParseSilentBlock(
                 block,
+                "parent",
                 metaContext,
                 out result);
 
@@ -217,16 +234,18 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
         #endregion
 
+
         #region Atomic Rule
 
         [TestMethod]
         public void TryParseArgument_Tests()
         {
-            var metaContext = MetaContext.Builder.NewBuilder().Build();
+            var metaContext = MetaContextBuilder.NewBuilder().Build();
 
             // args
             var success = GrammarParser.TryParseArgument(
                 "arg-name",
+                "parent",
                 metaContext,
                 out var result);
 
@@ -239,6 +258,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             // args / value
             success = GrammarParser.TryParseArgument(
                 "arg-name :'value'",
+                "parent",
                 metaContext,
                 out result);
 
@@ -251,6 +271,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             // args / value
             success = GrammarParser.TryParseArgument(
                 "arg-name : 'value2'",
+                "parent",
                 metaContext,
                 out result);
 
@@ -263,6 +284,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             // args / bool
             success = GrammarParser.TryParseArgument(
                 "arg-name : true",
+                "parent",
                 metaContext,
                 out result);
 
@@ -275,6 +297,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             // args / number
             success = GrammarParser.TryParseArgument(
                 "arg-name : 34",
+                "parent",
                 metaContext,
                 out result);
 
@@ -287,6 +310,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseArgument(
                 "arg-name : 34.54",
+                "parent",
                 metaContext,
                 out result);
 
@@ -300,11 +324,12 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         [TestMethod]
         public void TryParseAtomicRuleArguments_Tests()
         {
-            var metaContext = MetaContext.Builder.NewBuilder().Build();
+            var metaContext = MetaContextBuilder.NewBuilder().Build();
 
             // args
             var success = GrammarParser.TryParseAtomicRuleArguments(
                 "{arg-name}",
+                "parent",
                 metaContext,
                 out var result);
 
@@ -316,6 +341,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             // args / value
             success = GrammarParser.TryParseAtomicRuleArguments(
                 "{arg-name :'value', arg-2-flag, arg-3:'bleh'\n#abcd\n/*bleh */}",
+                "parent",
                 metaContext,
                 out result);
 
@@ -328,11 +354,12 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         [TestMethod]
         public void TryParseDelimitedContent_Tests()
         {
-            var metaContext = MetaContext.Builder.NewBuilder().Build();
+            var metaContext = MetaContextBuilder.NewBuilder().Build();
 
             // quote
             var success = GrammarParser.TryParseDelimitedContent(
                 "'the content\\''",
+                "parent",
                 metaContext,
                 '\'',
                 '\'',
@@ -347,11 +374,12 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         [TestMethod]
         public void TryParseAtomicContent_Tests()
         {
-            var metaContext = MetaContext.Builder.NewBuilder().Build();
+            var metaContext = MetaContextBuilder.NewBuilder().Build();
 
             // quote
             var success = GrammarParser.TryParseAtomicContent(
                 "'the content\\''",
+                "parent",
                 metaContext,
                 out var result);
 
@@ -364,6 +392,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             // double quote
             success = GrammarParser.TryParseAtomicContent(
                 "\"the content\\\"\"",
+                "parent",
                 metaContext,
                 out result);
 
@@ -376,6 +405,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             // grave
             success = GrammarParser.TryParseAtomicContent(
                 "`the content\\``",
+                "parent",
                 metaContext,
                 out result);
 
@@ -388,6 +418,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             // sol
             success = GrammarParser.TryParseAtomicContent(
                 "/the content\\//",
+                "parent",
                 metaContext,
                 out result);
 
@@ -400,6 +431,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             // back-sol
             success = GrammarParser.TryParseAtomicContent(
                 "\\the content\\\\\\",
+                "parent",
                 metaContext,
                 out result);
 
@@ -412,6 +444,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             // vertical bar
             success = GrammarParser.TryParseAtomicContent(
                 "|the content\\||",
+                "parent",
                 metaContext,
                 out result);
 
@@ -425,7 +458,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         [TestMethod]
         public void TryParseAtomicRule_Tests()
         {
-            var metaContext = MetaContext.Builder
+            var metaContext = MetaContextBuilder
                 .NewBuilder()
                 .WithDefaultAtomicRuleDefinitions()
                 .WithAtomicRuleDefinition(AtomicRuleDefinition.Of(
@@ -439,6 +472,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             #region NL
             var success = GrammarParser.TryParseAtomicRule(
                 "@nl",
+                "parent",
                 metaContext,
                 out var result);
 
@@ -449,6 +483,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseAtomicRule(
                 "@nl{definitely, ignored: 'arguments'}",
+                "parent",
                 metaContext,
                 out result);
 
@@ -461,6 +496,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             #region literal
             success = GrammarParser.TryParseAtomicRule(
                 "\"literal\"",
+                "parent",
                 metaContext,
                 out result);
 
@@ -474,6 +510,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseAtomicRule(
                 "\"literal with falg\"{case-insensitive}",
+                "parent",
                 metaContext,
                 out result);
 
@@ -489,6 +526,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             #region Pattern
             success = GrammarParser.TryParseAtomicRule(
                 "/the pattern/",
+                "parent",
                 metaContext,
                 out result);
 
@@ -503,6 +541,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseAtomicRule(
                 "/the pattern/{flags: 'ixcn'}",
+                "parent",
                 metaContext,
                 out result);
 
@@ -520,6 +559,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseAtomicRule(
                 "/the pattern/{match-type: '1'}",
+                "parent",
                 metaContext,
                 out result);
 
@@ -532,6 +572,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseAtomicRule(
                 "/the pattern/{match-type: '1,+'}",
+                "parent",
                 metaContext,
                 out result);
 
@@ -546,6 +587,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             #region char ranges
             success = GrammarParser.TryParseAtomicRule(
                 "'a-d, p-s, ^., ^&, ^^'",
+                "parent",
                 metaContext,
                 out result);
 
@@ -562,6 +604,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseAtomicRule(
                 "@bleh{start: '(', end: ')'}",
+                "parent",
                 metaContext,
                 out result);
 
@@ -573,6 +616,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.AreEqual(")", dstring.EndDelimiter);
             #endregion
         }
+
         #endregion
 
         #region Composite Rule
@@ -580,10 +624,11 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         [TestMethod]
         public void TryParseRecognitionThreshold_Tests()
         {
-            var metaContext = MetaContext.Builder.NewBuilder().Build();
+            var metaContext = MetaContextBuilder.NewBuilder().Build();
 
             var success = GrammarParser.TryParseRecognitionThreshold(
-                ":2",
+                ":2 ",
+                "parent",
                 metaContext,
                 out var result);
 
@@ -593,20 +638,22 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.AreEqual(2u, threshold);
 
             success = GrammarParser.TryParseRecognitionThreshold(
-                ";2",
+                ";2 ",
+                "parent",
                 metaContext,
                 out result);
 
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult(out UnmatchedError _));
+            Assert.IsTrue(result.IsErrorResult(out FailedRecognitionError _));
 
             success = GrammarParser.TryParseRecognitionThreshold(
-                ":x2",
+                ":x2 ",
+                "parent",
                 metaContext,
                 out result);
 
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult(out FaultyMatchError _));
+            Assert.IsTrue(result.IsErrorResult(out PartialRecognitionError _));
 
         }
 
@@ -614,10 +661,11 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         [TestMethod]
         public void TryCardinality_Tests()
         {
-            var metaContext = MetaContext.Builder.NewBuilder().Build();
+            var metaContext = MetaContextBuilder.NewBuilder().Build();
 
             var success = GrammarParser.TryParseCardinality(
                 ".1",
+                "parent",
                 metaContext,
                 out var result);
 
@@ -628,6 +676,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseCardinality(
                 ".3,",
+                "parent",
                 metaContext,
                 out result);
 
@@ -638,6 +687,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseCardinality(
                 ".1,2",
+                "parent",
                 metaContext,
                 out result);
 
@@ -648,6 +698,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseCardinality(
                 ".*",
+                "parent",
                 metaContext,
                 out result);
 
@@ -658,6 +709,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseCardinality(
                 ".?",
+                "parent",
                 metaContext,
                 out result);
 
@@ -668,6 +720,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseCardinality(
                 ".+",
+                "parent",
                 metaContext,
                 out result);
 
@@ -682,10 +735,11 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         [TestMethod]
         public void TryProductionRef_Tests()
         {
-            var metaContext = MetaContext.Builder.NewBuilder().Build();
+            var metaContext = MetaContextBuilder.NewBuilder().Build();
 
             var success = GrammarParser.TryParseProductionRef(
                 "$symbol.?",
+                "parent",
                 metaContext,
                 out var result);
 
@@ -697,6 +751,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseProductionRef(
                 "$symbol",
+                "parent",
                 metaContext,
                 out result);
 
@@ -711,7 +766,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         [TestMethod]
         public void TryAtomicRef_Tests()
         {
-            var metaContext = MetaContext.Builder
+            var metaContext = MetaContextBuilder
                 .NewBuilder()
                 .WithDefaultAtomicRuleDefinitions()
                 .WithAtomicRuleDefinition(AtomicRuleDefinition.Of(
@@ -721,6 +776,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             var success = GrammarParser.TryParseAtomicRuleRef(
                 "@nl.?",
+                "parent",
                 metaContext,
                 out var result);
 
@@ -732,6 +788,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseAtomicRuleRef(
                 "/\\\\d/{flags:'i'}.2",
+                "parent",
                 metaContext,
                 out result);
 
@@ -744,9 +801,45 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         }
 
         [TestMethod]
+        public void TryGroupElement_Tests()
+        {
+            var metaContext = MetaContextBuilder
+                .NewBuilder()
+                .WithDefaultAtomicRuleDefinitions()
+                .WithAtomicRuleDefinition(AtomicRuleDefinition.Of(
+                    "nl",
+                    new WindowsNewLineFactory()))
+                .Build();
+
+            var success = GrammarParser.TryParseGroupElement(
+                "@nl",
+                "parent",
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            var element = result.Resolve();
+            Assert.AreEqual(Cardinality.OccursOnlyOnce(), element.Cardinality);
+            Assert.IsInstanceOfType<AtomicRuleRef>(element);
+
+            success = GrammarParser.TryParseGroupElement(
+                "$stuff",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            element = result.Resolve();
+            Assert.AreEqual(Cardinality.OccursOnlyOnce(), element.Cardinality);
+            Assert.IsInstanceOfType<ProductionRef>(element);
+        }
+
+        [TestMethod]
         public void TryParseElementList_Tests()
         {
-            var metaContext = MetaContext.Builder
+            var metaContext = MetaContextBuilder
                 .NewBuilder()
                 .WithDefaultAtomicRuleDefinitions()
                 .WithAtomicRuleDefinition(AtomicRuleDefinition.Of(
@@ -756,6 +849,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             var success = GrammarParser.TryParseElementList(
                 "[$stuff '^a-z'.3 ]",
+                "parent",
                 metaContext,
                 out var result);
 
@@ -767,6 +861,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseElementList(
                 "[ @EOF]",
+                "parent",
                 metaContext,
                 out result);
 
@@ -778,6 +873,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseElementList(
                 "[ $a $b $c   \t\t\n\r\n]",
+                "parent",
                 metaContext,
                 out result);
 
@@ -789,17 +885,18 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseElementList(
                 "[  ]",
+                "parent",
                 metaContext,
                 out result);
 
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult(out FaultyMatchError fme));
+            Assert.IsTrue(result.IsErrorResult(out PartialRecognitionError fme));
         }
 
         [TestMethod]
         public void TryParseChoice_Tests()
         {
-            var metaContext = MetaContext.Builder
+            var metaContext = MetaContextBuilder
                 .NewBuilder()
                 .WithDefaultAtomicRuleDefinitions()
                 .WithAtomicRuleDefinition(AtomicRuleDefinition.Of(
@@ -810,6 +907,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             var success = GrammarParser.TryParseChoice(
                 "?[ $stuff $other-stuff ].1,5",
+                "parent",
                 metaContext,
                 out var result);
 
@@ -823,7 +921,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         [TestMethod]
         public void TryParseSequence_Tests()
         {
-            var metaContext = MetaContext.Builder
+            var metaContext = MetaContextBuilder
                 .NewBuilder()
                 .WithDefaultAtomicRuleDefinitions()
                 .WithAtomicRuleDefinition(AtomicRuleDefinition.Of(
@@ -834,6 +932,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             var success = GrammarParser.TryParseSequence(
                 "+[ $stuff $other-stuff ].1,5",
+                "parent",
                 metaContext,
                 out var result);
 
@@ -846,6 +945,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseSequence(
                 "+[ $stuff $other-stuff ]",
+                "parent",
                 metaContext,
                 out result);
 
@@ -859,7 +959,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         [TestMethod]
         public void TryParseSet_Tests()
         {
-            var metaContext = MetaContext.Builder
+            var metaContext = MetaContextBuilder
                 .NewBuilder()
                 .WithDefaultAtomicRuleDefinitions()
                 .WithAtomicRuleDefinition(AtomicRuleDefinition.Of(
@@ -870,6 +970,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             var success = GrammarParser.TryParseSet(
                 "#[ $stuff $other-stuff ]",
+                "parent",
                 metaContext,
                 out var result);
 
@@ -882,6 +983,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseSet(
                 "#5[ $stuff $other-stuff ]",
+                "parent",
                 metaContext,
                 out result);
 
@@ -896,10 +998,13 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         [TestMethod]
         public void TryParseGroup_Test()
         {
-            var metaContext = MetaContext.Builder.NewBuilder().Build();
+            var metaContext = MetaContextBuilder
+                .NewBuilder()
+                .Build();
 
             var success = GrammarParser.TryParseGroup(
                 "#[$tuff]",
+                "parent",
                 metaContext,
                 out var result);
 
@@ -909,6 +1014,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseGroup(
                 "+[$tuff]",
+                "parent",
                 metaContext,
                 out result);
 
@@ -918,21 +1024,49 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseGroup(
                 "?[$tuff]",
+                "parent",
                 metaContext,
                 out result);
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             Assert.IsInstanceOfType<Choice>(result.Resolve());
+
+            metaContext = MetaContextBuilder
+                .NewBuilder()
+                .WithDefaultAtomicRuleDefinitions()
+                .Build();
+            success = GrammarParser.TryParseGroup(
+                context: metaContext,
+                result: out result,
+                path: "parent",
+                reader: @"+[
+	'{'
+	$block-space.?
+	$property.?
+	+[
+		$block-space.?
+		'\,'
+		$block-space.?
+		$property
+	].?
+	$block-space.?
+	'}'
+]");
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            Assert.IsInstanceOfType<Sequence>(result.Resolve());
         }
 
         [TestMethod]
         public void TryParseCompositeRule_Tests()
         {
-            var metaContext = MetaContext.Builder.NewBuilder().Build();
+            var metaContext = MetaContextBuilder.NewBuilder().Build();
 
             var success = GrammarParser.TryParseCompositeRule(
                 "#[$tuff ?[$other-stuff $more-stuff].?]",
+                "parent",
                 metaContext,
                 out var result);
 
@@ -948,10 +1082,11 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         [TestMethod]
         public void TryParseMapOperator_Tests()
         {
-            var metaContext = MetaContext.Builder.NewBuilder().Build();
+            var metaContext = MetaContextBuilder.NewBuilder().Build();
 
             var success = GrammarParser.TryParseMapOperator(
                 "->",
+                "parent",
                 metaContext,
                 out var result);
 
@@ -964,10 +1099,11 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         [TestMethod]
         public void TryParseAtomicSymbolName_Tests()
         {
-            var metaContext = MetaContext.Builder.NewBuilder().Build();
+            var metaContext = MetaContextBuilder.NewBuilder().Build();
 
             var success = GrammarParser.TryParseAtomicSymbolName(
                 "@name",
+                "parent",
                 metaContext,
                 out var result);
 
@@ -978,6 +1114,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseAtomicSymbolName(
                 "@name-with-a-dash",
+                "parent",
                 metaContext,
                 out result);
 
@@ -988,6 +1125,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseAtomicSymbolName(
                 "@name-with-1234-numbers-and-dash-",
+                "parent",
                 metaContext,
                 out result);
 
@@ -998,6 +1136,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseAtomicSymbolName(
                 "@-name",
+                "parent",
                 metaContext,
                 out result);
 
@@ -1006,6 +1145,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseAtomicSymbolName(
                 "@7name",
+                "parent",
                 metaContext,
                 out result);
 
@@ -1016,10 +1156,11 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         [TestMethod]
         public void TryParseCompositeSymbolName_Tests()
         {
-            var metaContext = MetaContext.Builder.NewBuilder().Build();
+            var metaContext = MetaContextBuilder.NewBuilder().Build();
 
             var success = GrammarParser.TryParseCompositeSymbolName(
                 "$name",
+                "parent",
                 metaContext,
                 out var result);
 
@@ -1030,6 +1171,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseCompositeSymbolName(
                 "$name-with-a-dash",
+                "parent",
                 metaContext,
                 out result);
 
@@ -1040,6 +1182,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseCompositeSymbolName(
                 "$name-with-1234-numbers-and-dash-",
+                "parent",
                 metaContext,
                 out result);
 
@@ -1050,6 +1193,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseCompositeSymbolName(
                 "$-name",
+                "parent",
                 metaContext,
                 out result);
 
@@ -1058,6 +1202,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseCompositeSymbolName(
                 "$7name",
+                "parent",
                 metaContext,
                 out result);
 
@@ -1068,13 +1213,14 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         [TestMethod]
         public void TryParseProduction_Tests()
         {
-            var metaContext = MetaContext.Builder
+            var metaContext = MetaContextBuilder
                 .NewBuilder()
                 .WithDefaultAtomicRuleDefinitions()
                 .Build();
 
             var success = GrammarParser.TryParseProduction(
                 "$name -> +[$stuff $other-stuff ?[$much-more $options].2 'a-z']",
+                "parent",
                 metaContext,
                 out var result);
 
@@ -1085,6 +1231,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseProduction(
                 "$name -> 'a-z'",
+                "parent",
                 metaContext,
                 out result);
 
@@ -1099,13 +1246,14 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         [TestMethod]
         public void TryParseGrammar_Tests()
         {
-            var metaContext = MetaContext.Builder
+            var metaContext = MetaContextBuilder
                 .NewBuilder()
                 .WithDefaultAtomicRuleDefinitions()
                 .Build();
 
-            using var langDefStream = ResourceLoader.Load("SampleGrammar.sample-1.xbnf");
+            using var langDefStream = ResourceLoader.Load("SampleGrammar.Int1.xbnf");
             var langText = new StreamReader(langDefStream!).ReadToEnd();
+            
 
             var success = GrammarParser.TryParseGrammar(
                 langText,
@@ -1120,9 +1268,12 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         }
         #endregion
 
+
         #region Nested types
         internal class WindowsNewLine : IAtomicRule
         {
+            public string Id { get; set; } = string.Empty;
+
             public bool TryRecognize(TokenReader reader, ProductionPath productionPath, ILanguageContext context, out IResult<ICSTNode> result)
             {
                 var position = reader.Position;
@@ -1131,7 +1282,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                     || '\r' != r[0])
                 {
                     reader.Reset(position);
-                    result = Result.Of<ICSTNode>(UnrecognizedTokens.Of(productionPath, position));
+                    result = Result.Of<ICSTNode>(FailedRecognitionError.Of(productionPath, position));
                     return false;
                 }
 
@@ -1139,7 +1290,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                     || '\n' != n[0])
                 {
                     reader.Reset(position);
-                    result = Result.Of<ICSTNode>(PartiallyRecognizedTokens.Of(productionPath, position, r));
+                    result = Result.Of<ICSTNode>(PartialRecognitionError.Of(productionPath, position, r.SourceSegment.Length));
                     return false;
                 }
 
@@ -1150,9 +1301,12 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
         internal class WindowsNewLineFactory : IAtomicRuleFactory
         {
-            public IAtomicRule NewRule(MetaContext context, ImmutableDictionary<IAtomicRuleFactory.Argument, string> arguments)
+            public IAtomicRule NewRule(
+                string id,
+                MetaContext context,
+                ImmutableDictionary<IAtomicRuleFactory.Argument, string> arguments)
             {
-                return new WindowsNewLine();
+                return new WindowsNewLine { Id = id };
             }
         }
         #endregion

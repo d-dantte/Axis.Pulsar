@@ -91,14 +91,14 @@ namespace Axis.Pulsar.Core.Tests.CST
     public class SegmentTests
     {
         [TestMethod]
-        public void MAtches_Tests()
+        public void Matches_Tests()
         {
             var str = "t1-tokenst2-tokens";
             var tnode1 = ICSTNode.Of("t1", Tokens.Of(str, 0, 9));
             var tnode2 = ICSTNode.Of("t2", Tokens.Of(str, 9, 9));
             var ntnode = ICSTNode.Of("nt", tnode1, tnode2);
 
-            var nodefilter = Segment.Of(
+            var nodefilter = PathSegment.Of(
                 NodeFilter.Of(
                     NodeType.Unspecified,
                     null,
@@ -107,7 +107,7 @@ namespace Axis.Pulsar.Core.Tests.CST
             Assert.IsFalse(nodefilter.Matches(tnode2));
             Assert.IsFalse(nodefilter.Matches(ntnode));
 
-            nodefilter = Segment.Of(
+            nodefilter = PathSegment.Of(
                 NodeFilter.Of(
                     NodeType.Unspecified,
                     null,
@@ -120,7 +120,7 @@ namespace Axis.Pulsar.Core.Tests.CST
             Assert.IsTrue(nodefilter.Matches(tnode2));
             Assert.IsFalse(nodefilter.Matches(ntnode));
 
-            nodefilter = Segment.Of(
+            nodefilter = PathSegment.Of(
                 NodeFilter.Of(
                     NodeType.Unspecified,
                     null,

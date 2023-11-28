@@ -1,6 +1,5 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Pulsar.Core.Grammar;
-using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Rules;
 using Axis.Pulsar.Core.Utils;
 using System.Text.RegularExpressions;
@@ -15,6 +14,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
         {
             // closed match
             var literal = new TerminalPattern(
+                "t",
                 new Regex("[a-hA-H ]{4,9}", RegexOptions.Compiled),
                 IMatchType.Of(4, 9));
 
@@ -27,7 +27,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             var node = result.Resolve();
-            Assert.AreEqual("dummy-path", node.Name);
+            Assert.AreEqual("t", node.Name);
             Assert.AreEqual(Tokens.Of("abcd efgh"), node.Tokens);
 
 
@@ -39,7 +39,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             node = result.Resolve();
-            Assert.AreEqual("dummy-path", node.Name);
+            Assert.AreEqual("t", node.Name);
             Assert.AreEqual(Tokens.Of("abcd e"), node.Tokens);
 
 
@@ -49,7 +49,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 null!,
                 out result);
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult(out UnrecognizedTokens ute));
+            Assert.IsTrue(result.IsErrorResult(out FailedRecognitionError ute));
         }
     }
 }

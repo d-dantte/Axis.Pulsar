@@ -48,12 +48,14 @@ public class PatternRuleFactory : IAtomicRuleFactory
     #endregion
 
     public IAtomicRule NewRule(
+        string ruleId,
         MetaContext context,
         ImmutableDictionary<Argument, string> arguments)
     {
         ValidateArgs(arguments);
 
         return TerminalPattern.Of(
+            ruleId,
             ParseRegex(arguments),
             ParseMatchType(arguments));
     }

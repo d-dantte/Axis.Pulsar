@@ -90,23 +90,21 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
             // unrecognized production
             var unrecognizedProduction = MockProduction(
                 "up", false,
-                UnrecognizedTokens
+                FailedRecognitionError
                     .Of(ProductionPath.Of("up"), 2)
                     .ApplyTo(Result.Of<ICSTNode>));
 
             // partially recognized production
             var partialyRecognizedProduction = MockProduction(
                 "pp", false,
-                PartiallyRecognizedTokens
-                    .Of(ProductionPath.Of("pp"), 2, "partial tokens")
+                PartialRecognitionError
+                    .Of(ProductionPath.Of("pp"), 2, 6)
                     .ApplyTo(Result.Of<ICSTNode>));
 
             // runtime error production
             var runtimeErrorProduction = MockProduction(
                 "re", false,
-                RecognitionRuntimeError
-                    .Of(new Exception())
-                    .ApplyTo(Result.Of<ICSTNode>));
+                Result.Of<ICSTNode>(new Exception()));
 
             // grammar
             var grammar = MockGrammar(
@@ -133,7 +131,8 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
             Assert.IsFalse(success);
             Assert.IsNotNull(result);
             Assert.IsTrue(result.IsErrorResult());
-            Assert.IsTrue(result.IsErrorResult(out GroupError ge, ge => ge.NodeError is UnrecognizedTokens));
+            Assert.IsTrue(result.IsErrorResult(out GroupRecognitionError ge));
+            Assert.IsTrue(ge.Cause is FailedRecognitionError);
 
 
             pref = ProductionRef.Of(Cardinality.OccursOnlyOnce(), "pp");
@@ -141,15 +140,15 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
             Assert.IsFalse(success);
             Assert.IsNotNull(result);
             Assert.IsTrue(result.IsErrorResult());
-            Assert.IsTrue(result.IsErrorResult(out ge, ge => ge.NodeError is PartiallyRecognizedTokens));
+            Assert.IsTrue(result.IsErrorResult(out ge));
+            Assert.IsTrue(ge.Cause is PartialRecognitionError);
 
 
             pref = ProductionRef.Of(Cardinality.OccursOnlyOnce(), "re");
             success = pref.TryRecognize("some tokens", path, context, out result);
             Assert.IsFalse(success);
             Assert.IsNotNull(result);
-            Assert.IsTrue(result.IsErrorResult());
-            Assert.IsTrue(result.IsErrorResult(out RecognitionRuntimeError re));
+            Assert.IsTrue(result.IsErrorResult(out Exception _));
         }
     }
 }

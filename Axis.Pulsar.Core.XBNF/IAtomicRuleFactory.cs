@@ -34,10 +34,12 @@ public interface IAtomicRuleFactory
     /// <summary>
     /// Creates a new <see cref="IAtomicRule"/> instance given a list of arguments.
     /// </summary>
+    /// <param name="ruleId"></param>
     /// <param name="context"></param>
     /// <param name="arguments"></param>
     /// <returns></returns>
     IAtomicRule NewRule(
+        string ruleId,
         MetaContext context,
         ImmutableDictionary<Argument, string> arguments);
 

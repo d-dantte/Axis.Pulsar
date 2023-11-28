@@ -1,6 +1,10 @@
 ﻿using Axis.Luna.Common.Results;
+using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.Grammar;
+using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.IO;
 using Axis.Pulsar.Core.XBNF.Definitions;
+using Axis.Pulsar.Core.XBNF.Parsers;
 using Axis.Pulsar.Core.XBNF.RuleFactories;
 
 namespace Axis.Pulsar.Core.XBNF.Lang
@@ -19,14 +23,30 @@ namespace Axis.Pulsar.Core.XBNF.Lang
             _ = GrammarParser.TryParseGrammar(inputTokens, _metaContext, out var grammarResult);
 
             return grammarResult
+
+                // validate the grammar
+                .WithData(grammar => GrammarValidator
+                    .Validate(grammar)
+                    .ThrowIf(
+                        r => !r.IsValidGrammar,
+                        r => new GrammarValidationException(r)))
+
+                // create the language context from the grammar
                 .Map(grammar => new XBNFLanguageContext(
                     grammar,
                     _metaContext))
+
+                // convert IRecognitionErrors to FormatException
+                .TransformError(err => err switch { 
+                    IRecognitionError rerror => RecognitionFormatException.Of(rerror, inputTokens),
+                    _ => err
+                })
+
+                // get the result
                 .Resolve();
         }
 
         #region Nested types
-
 
         public class Builder
         {
@@ -45,7 +65,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
             {
                 ArgumentNullException.ThrowIfNull(ruleDefinition);
 
-                _atomicFactoryMap[ruleDefinition.Symbol] = ruleDefinition;
+                _atomicFactoryMap[ruleDefinition.Id] = ruleDefinition;
                 return this;
             }
 
@@ -60,7 +80,8 @@ namespace Axis.Pulsar.Core.XBNF.Lang
                     .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.EOF)
                     .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.Literal)
                     .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.Pattern)
-                    .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.CharacterRanges);
+                    .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.CharacterRanges)
+                    .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.DelimitedString);
             }
 
             #endregion

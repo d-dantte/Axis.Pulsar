@@ -8,11 +8,11 @@ namespace Axis.Pulsar.Core.Utils.EscapeMatchers
         IEscapeTransformer
     {
         internal static Regex EscapeSequencePattern = new Regex(
-            "^\\\\[\\\\\'\"\\nrfbtv0a]\\z",
+            "\\\\['\"\\\\nrfbtv0a]",
             RegexOptions.Compiled);
 
         internal static Regex RawSequencePattern = new Regex(
-            "^[\'\"\\\\\n\r\f\b\t\v\0\a]\\z",
+            "['\"\\\\\n\r\f\b\t\v\0\a]",
             RegexOptions.Compiled);
 
         public string EscapeDelimiter => "\\";

@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 
 namespace Axis.Pulsar.Core.XBNF;
 
-public class Whitespace :
+internal class Whitespace :
     ISilentElement,
     IEquatable<Whitespace>
 {

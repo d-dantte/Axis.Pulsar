@@ -39,7 +39,8 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                 result = ruleResult
                     .TransformError(err => err switch
                     {
-                        IRecognitionError re => GroupRecognitionError.Of(re, 0),
+                        FailedRecognitionError
+                        or PartialRecognitionError => GroupRecognitionError.Of((IRecognitionError)err, 0),
                         _ => err
                     })
                     .MapAs<NodeSequence>();

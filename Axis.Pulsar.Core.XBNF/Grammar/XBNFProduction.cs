@@ -35,6 +35,14 @@ public class XBNFProduction : IProduction
         out IResult<ICSTNode> result)
     {
         var productionPath = parentPath?.Next(Symbol) ?? ProductionPath.Of(Symbol);
-        return Rule.TryRecognize(reader, productionPath, context, out result);
+
+        if (!Rule.TryRecognize(reader, productionPath, context, out result))
+            return false;
+
+        if (!context.ProductionValidators.TryGetValue(Symbol, out var validator))
+            return true;
+
+        result = result.WithData(node => validator.Validate(productionPath, context, node));
+        return result.IsDataResult();
     }
 }

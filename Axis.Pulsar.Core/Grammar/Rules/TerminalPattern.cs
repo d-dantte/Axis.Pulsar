@@ -9,20 +9,26 @@ namespace Axis.Pulsar.Core.Grammar.Rules
 {
     public class TerminalPattern : IAtomicRule
     {
+        public string Id { get; }
+
         public Regex Pattern { get; }
 
         public IMatchType MatchType { get; }
 
-        public TerminalPattern(Regex pattern, IMatchType matchType)
+        public TerminalPattern(string id, Regex pattern, IMatchType matchType)
         {
             Pattern = pattern ?? throw new ArgumentNullException(nameof(pattern));
             MatchType = matchType ?? throw new ArgumentNullException(nameof(matchType));
+            Id = id.ThrowIfNot(
+                IProduction.SymbolPattern.IsMatch,
+                new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
         }
 
         public static TerminalPattern Of(
+            string id,
             Regex pattern,
             IMatchType matchType)
-            => new(pattern, matchType);
+            => new(id, pattern, matchType);
 
         public bool TryRecognize(
             TokenReader reader,
@@ -33,17 +39,18 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             ArgumentNullException.ThrowIfNull(reader);
             ArgumentNullException.ThrowIfNull(productionPath);
 
+            var patternPath = productionPath.Next(Id);
             result = MatchType switch
             {
                 IMatchType.Closed closed => RecognizeClosedPattern(
                     reader,
-                    productionPath,
+                    patternPath,
                     Pattern,
                     closed),
 
                 IMatchType.Open open => RecognizeOpenPattern(
                     reader,
-                    productionPath,
+                    patternPath,
                     Pattern,
                     open),
 
@@ -94,18 +101,22 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             var position = reader.Position;
             var length = 0;
             var mismatchCount = 0;
+            Tokens tokens = default;
 
-            while (reader.TryPeekTokens(++length, out var tokens))
+            while (reader.TryPeekTokens(++length, true, out tokens))
             {
                 if (pattern.IsMatch(tokens.AsSpan()))
                     mismatchCount = 0;
 
-                mismatchCount++;
-                if (mismatchCount > matchType.MaxMismatch)
-                    break;
+                else
+                {
+                    mismatchCount++;
+                    if (mismatchCount > matchType.MaxMismatch)
+                        break;
+                }
             }
 
-            var trueLength = length - mismatchCount;
+            var trueLength = tokens.SourceSegment.Length - mismatchCount;
             if ((trueLength == 0 && matchType.AllowsEmptyTokens)
                 || trueLength > 0)
                 return ICSTNode

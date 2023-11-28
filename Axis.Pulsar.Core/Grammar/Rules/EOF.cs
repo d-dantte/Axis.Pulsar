@@ -1,7 +1,6 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
-using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar.Rules
@@ -11,10 +10,14 @@ namespace Axis.Pulsar.Core.Grammar.Rules
     /// </summary>
     public class EOF : IAtomicRule
     {
-        public static EOF Instance { get; } = new EOF();
+        public string Id { get; }
 
-        private EOF()
-        {}
+        public EOF(string id)
+        {
+            Id = id.ThrowIfNot(
+                IProduction.SymbolPattern.IsMatch,
+                new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
+        }
 
         public bool TryRecognize(
             TokenReader reader,
@@ -26,11 +29,12 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             ArgumentNullException.ThrowIfNull(productionPath);
 
             var position = reader.Position;
+            var eofPath = productionPath.Next(Id);
 
             if (!reader.TryGetToken(out _))
             {
                 result = ICSTNode
-                    .Of(productionPath.Name, Tokens.Empty)
+                    .Of(eofPath.Name, Tokens.Empty)
                     .ApplyTo(Result.Of);
                 return true;
             }
@@ -38,7 +42,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             {
                 reader.Reset(position);
                 result = FailedRecognitionError
-                    .Of(productionPath, position)
+                    .Of(eofPath, position)
                     .ApplyTo(Result.Of<ICSTNode>);
                 return false;
             }

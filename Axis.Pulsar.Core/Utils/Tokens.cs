@@ -1,16 +1,17 @@
 ﻿using Axis.Luna.Common;
 using Axis.Luna.Common.Utils;
 using Axis.Luna.Extensions;
+using System.Collections;
 
 namespace Axis.Pulsar.Core.Utils
 {
     public readonly struct Tokens :
+        IEnumerable<char>,
         IEquatable<Tokens>,
         IReadonlyIndexer<int, char>,
         IDefaultValueProvider<Tokens>
     {
-        private readonly string? _source;
-        private readonly Segment _sourceSegment;
+        #region Fields
 
         /// <summary>
         /// Lazy-loaded hash of the individual characters of this token.
@@ -19,11 +20,18 @@ namespace Axis.Pulsar.Core.Utils
         /// </summary>
         private readonly Lazy<int> _valueHash;
 
+        private readonly string? _source;
+        private readonly Segment _sourceSegment;
+
+        #endregion
+
+        #region Properties
         public Segment SourceSegment => _sourceSegment;
 
         public string? Source => _source;
 
         public bool IsDefaultOrEmpty => IsDefault || IsEmpty;
+        #endregion
 
         #region Indexers
 
@@ -150,7 +158,11 @@ namespace Axis.Pulsar.Core.Utils
             => new(_source!, offset + _sourceSegment.Offset, _sourceSegment.Length - offset);
         #endregion
 
-        public override int GetHashCode() => HashCode.Combine(_sourceSegment.Offset, _sourceSegment.Length, _valueHash?.Value ?? 0);
+        #region object Overrides
+        public override int GetHashCode() => HashCode.Combine(
+            _sourceSegment.Offset,
+            _sourceSegment.Length,
+            _valueHash?.Value ?? 0);
 
         public override string? ToString()
         {
@@ -162,7 +174,9 @@ namespace Axis.Pulsar.Core.Utils
 
             else return _source.Substring(_sourceSegment.Offset, _sourceSegment.Length);
         }
+        #endregion
 
+        #region API
         public char[]? ToArray()
         {
             return !IsDefault
@@ -253,6 +267,130 @@ namespace Axis.Pulsar.Core.Utils
                 Tokens.Empty,
                 (segmentToken, next) => segmentToken.ConJoin(next));
         }
+
+        public bool Contains(string substring)
+        {
+            if (IsDefault)
+                return false;
+
+            if (substring is null)
+                return false;
+
+            return _source!.IndexOf(substring, _sourceSegment.Offset, _sourceSegment.Length) >= 0;
+        }
+
+        public bool Contains(Tokens subtokens)
+        {
+            if (IsDefault ^ subtokens.IsDefault)
+                return false;
+
+            if (subtokens.SourceSegment.Length > SourceSegment.Length)
+                return false;
+
+            return AsSpan().Contains(subtokens.AsSpan(), StringComparison.InvariantCulture);
+        }
+
+        public bool Contains(char c) => ContainsAny(c);
+
+        public bool ContainsAny(params char[] chars)
+        {
+            if (IsDefault)
+                return false;
+
+            return _source!.IndexOfAny(chars, _sourceSegment.Offset, _sourceSegment.Length) >= 0;
+        }
+
+        /// <summary>
+        /// Splits this token into an array of tokens seprated by the given delimiters
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <param name="length"></param>
+        /// <param name="delimiters">The delimiters to split with</param>
+        /// <returns></returns>
+        public (Tokens Delimiter, Tokens Tokens)[] Split(
+            int offset,
+            int length,
+            params Tokens[] delimiters)
+        {
+            #region Validate
+            if (offset < 0 || offset >= _sourceSegment.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            if (length + offset > _sourceSegment.Length)
+                throw new ArgumentOutOfRangeException(nameof(length));
+
+            _ = delimiters
+                .ThrowIfNull(
+                    new ArgumentNullException(nameof(delimiters)))
+                .ThrowIf(
+                    d => d.IsEmpty(),
+                    new ArgumentException($"Invalid '{nameof(delimiters)}': empty array"))
+                .ThrowIfAny(
+                    d => d.IsDefaultOrEmpty,
+                    new ArgumentException($"Invalid delimiter: default/empty"));
+            #endregion
+
+            var auxTokens = Slice(offset, length);
+            var parts = new List<(Tokens Delimiter, Tokens Tokens)>();
+
+            // delimiter matchers
+            var delimMatchers = delimiters
+                .OrderByDescending(delim => delim.SourceSegment.Length)
+                .Select(delim => SubstringMatcher.OfLookAhead(delim, auxTokens))
+                .ToArray();
+
+            for (int cnt = 0; cnt < length; cnt++)
+            {
+                var match = delimMatchers
+                    .Select(m => (
+                        isMatch: m.TryNextWindow(out var matched) && matched,
+                        delim: m.CurrentPattern))
+                    .ToArray() // run every matcher
+                    .FirstOrDefault(tuple => tuple.isMatch);
+
+                if (match.isMatch)
+                {
+                    parts.Add((
+                        Delimiter: match.delim,
+                        Tokens: Tokens.Empty));
+
+                    // skip all matchers by match.delim.SourceSegment.Length characters
+                    var skipCount = match.delim.SourceSegment.Length - 1;
+                    delimMatchers.ForAll(m => m.TrySkip(skipCount, out _));
+                    cnt += skipCount;
+                }
+
+                else if (parts.Count == 0)
+                    parts.Add((
+                        Delimiter: Tokens.Empty,
+                        Tokens: auxTokens.Slice(cnt, 1)));
+
+                else parts[^1] = (
+                    parts[^1].Delimiter,
+                    Tokens: parts[^1].Tokens + auxTokens.Slice(cnt, 1));
+            }
+
+            return parts.ToArray();
+        }
+
+        public (Tokens Delimiter, Tokens Tokens)[] Split(
+            int offset,
+            params Tokens[] delimiters)
+            => Split(offset, SourceSegment.Length - offset, delimiters);
+
+        public (Tokens Delimiter, Tokens Tokens)[] Split(
+            params Tokens[] delimiters)
+            => Split(0, SourceSegment.Length, delimiters);
+
+        #endregion
+
+        #region IEnumerable
+
+        public IEnumerator<char> GetEnumerator() => new TokenEnumerator(this);
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        #endregion
 
         #region Relationship Checks
 
@@ -437,36 +575,50 @@ namespace Axis.Pulsar.Core.Utils
         public static Tokens operator +(Tokens left, Tokens right) => left.ConJoin(right);
         #endregion
 
-        public bool Contains(string substring)
+        #region Nested types
+        internal class TokenEnumerator: IEnumerator<char>
         {
-            if (IsDefault)
-                return false;
+            private readonly Tokens _tokens;
+            private int _index;
+            private bool _disposed;
 
-            if (substring is null)
-                return false;
+            internal TokenEnumerator(Tokens tokens)
+            {
+                _disposed = false;
+                _index = -1;
+                _tokens = tokens.ThrowIfDefault(
+                    new ArgumentException($"Invalid {nameof(tokens)}: default instance"));
+            }
 
-            return _source!.IndexOf(substring, _sourceSegment.Offset, _sourceSegment.Length) >= 0;
+            public char Current => AssertDisposed(() => _tokens[_index]);
+
+            object IEnumerator.Current => Current;
+
+            public void Dispose() => _disposed = true;
+
+            public bool MoveNext() => AssertDisposed(() =>
+            {
+                var newIndex = _index + 1;
+
+                if (newIndex > _tokens.SourceSegment.Length)
+                    return false;
+
+                _index = newIndex;
+                return _index < _tokens.SourceSegment.Length;
+            });
+
+            public void Reset() => AssertDisposed(() => _index = -1);
+
+            private T AssertDisposed<T>(Func<T> func)
+            {
+                ArgumentNullException.ThrowIfNull(func);
+
+                if (_disposed)
+                    throw new InvalidOperationException("Enumerator is disposed");
+
+                return func.Invoke();
+            }
         }
-
-        public bool Contains(Tokens subtokens)
-        {
-            if (IsDefault ^ subtokens.IsDefault)
-                return false;
-
-            if (subtokens.SourceSegment.Length > SourceSegment.Length)
-                return false;
-
-            return AsSpan().Contains(subtokens.AsSpan(), StringComparison.InvariantCulture);
-        }
-
-        public bool Contains(char c) => ContainsAny(c);
-
-        public bool ContainsAny(params char[] chars)
-        {
-            if (IsDefault)
-                return false;
-
-            return _source!.IndexOfAny(chars, _sourceSegment.Offset, _sourceSegment.Length) >= 0;
-        }
+        #endregion
     }
 }

@@ -2,9 +2,7 @@
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Rules;
 using Axis.Pulsar.Core.Utils;
-using Axis.Pulsar.Core.Utils.EscapeMatchers;
 using System.Collections.Immutable;
-using System.Globalization;
 
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
@@ -41,6 +39,7 @@ public class CharRangeRuleFactory : IAtomicRuleFactory
     private static readonly IEscapeTransformer Transformer = new RangesEscapeTransformer();
 
     public IAtomicRule NewRule(
+        string ruleId,
         MetaContext context,
         ImmutableDictionary<Argument, string> arguments)
     {
@@ -48,6 +47,7 @@ public class CharRangeRuleFactory : IAtomicRuleFactory
 
         var ranges = ParseRanges(arguments[RangesArgument]);
         return CharacterRanges.Of(
+            ruleId,
             ranges.Includes,
             ranges.Excludes);
     }
@@ -68,6 +68,18 @@ public class CharRangeRuleFactory : IAtomicRuleFactory
         var primedRanges = rangeText
             .Replace("\\,", "\\u002c")
             .Replace("\\-", "\\u002d")
+            .Replace("\\\'", "\\u002d")
+            .Replace("\\\"", "\\u0022")
+            .Replace("\\\\", "\\u005c")
+            .Replace("\\n", "\\u000a")
+            .Replace("\\r", "\\u000d")
+            .Replace("\\f", "\\u000c")
+            .Replace("\\b", "\\u0008")
+            .Replace("\\t", "\\u0009")
+            .Replace("\\v", "\\u000b")
+            .Replace("\\0", "\\u0000")
+            .Replace("\\a", "\\u0007")
+            .Replace("\\s", "\\u0020")
             .Split(',')
             .Select(range => range.Trim())
             .ThrowIfAny(

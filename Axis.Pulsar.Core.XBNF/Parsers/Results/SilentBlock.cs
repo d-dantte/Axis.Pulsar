@@ -3,7 +3,7 @@ using Axis.Luna.Extensions;
 
 namespace Axis.Pulsar.Core.XBNF;
 
-public class SilentBlock
+internal class SilentBlock
 {
     public ImmutableArray<ISilentElement> Elements{get;}
 

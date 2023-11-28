@@ -235,7 +235,7 @@ namespace Axis.Pulsar.Core.CST
 
                 #region type
                 if (!reader.TryGetToken(out var typeChar)
-                    || !FilterTypeCharacters.Contains(char.ToLower(typeChar[0])))
+                    || !FilterTypeCharacters.Contains(char.ToUpper(typeChar[0])))
                 {
                     reader.Reset(position);
                     result = PartialRecognitionError
@@ -247,7 +247,7 @@ namespace Axis.Pulsar.Core.CST
                 }
                 #endregion
 
-                result = Result.Of((NodeType)typeChar[0]);
+                result = Result.Of((NodeType)char.ToUpper(typeChar[0]));
                 return true;
             }
             catch (Exception e)
@@ -260,7 +260,7 @@ namespace Axis.Pulsar.Core.CST
         internal static bool TryRecognizeFilter(
             TokenReader reader,
             ProductionPath parentPath,
-            object  context,
+            object context,
             out IResult<NodeFilter> result)
         {
             var position = reader.Position;
@@ -271,7 +271,7 @@ namespace Axis.Pulsar.Core.CST
                 result = ParserAccumulator
                     .Of(reader,
                         filterPath,
-                        default(object)!,
+                        context,
                         (type: default(NodeType), name: default(Tokens), tokens: default(Tokens)))
 
                     // filter type
@@ -282,12 +282,14 @@ namespace Axis.Pulsar.Core.CST
                     // symbol name
                     .ThenTry<Tokens>(
                         TryRecognizeSymbolName,
-                        (data, name) => (data.type, name, data.tokens))
+                        (data, name) => (data.type, name, data.tokens),
+                        data => data)
 
                     // tokens
                     .ThenTry<Tokens>(
                         TryRecognizeTokens,
-                        (data, tokens) => (data.type, data.name, tokens))
+                        (data, tokens) => (data.type, data.name, tokens),
+                        data => data)
 
                     // errors?
                     .TransformError((data, err, recognitionCount) => (err, recognitionCount) switch
@@ -319,7 +321,7 @@ namespace Axis.Pulsar.Core.CST
             TokenReader reader,
             ProductionPath parentPath,
             object context,
-            out IResult<Segment> result)
+            out IResult<PathSegment> result)
         {
             var position = reader.Position;
             var segmentPath = parentPath.Next("segment");
@@ -329,7 +331,7 @@ namespace Axis.Pulsar.Core.CST
                 var accumulator = ParserAccumulator
                     .Of(reader,
                         segmentPath,
-                        default(object)!,
+                        context,
                         new List<NodeFilter>())
 
                     // filter
@@ -358,13 +360,13 @@ namespace Axis.Pulsar.Core.CST
                     })
 
                     // map to result
-                    .ToResult(data => Segment.Of(data.ToArray()));
+                    .ToResult(data => PathSegment.Of(data.ToArray()));
 
                 return result.IsDataResult();
             }
             catch (Exception e)
             {
-                result = Result.Of<Segment>(e);
+                result = Result.Of<PathSegment>(e);
                 return false;
             }
         }
@@ -381,17 +383,17 @@ namespace Axis.Pulsar.Core.CST
                 var accumulator = ParserAccumulator
                     .Of(reader,
                         nodePath,
-                        default(object)!,
-                        new List<Segment>())
+                        new object(),
+                        new List<PathSegment>())
 
                     // segment
-                    .ThenTry<Segment>(
+                    .ThenTry<PathSegment>(
                         TryRecognizeSegment,
                         (segments, segment) => segments.AddItem(segment));
 
                 while (reader.TryGetTokens("/", out var segmentSeparator))
                 {
-                    _ = accumulator.ThenTry<Segment>(
+                    _ = accumulator.ThenTry<PathSegment>(
                         TryRecognizeSegment,
                         (segments, segment) => segments.AddItem(segment));
                 }

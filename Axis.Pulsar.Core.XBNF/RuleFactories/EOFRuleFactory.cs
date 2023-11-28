@@ -7,10 +7,11 @@ namespace Axis.Pulsar.Core.XBNF.RuleFactories
     public class EOFRuleFactory : IAtomicRuleFactory
     {
         public IAtomicRule NewRule(
+            string ruleId,
             MetaContext context,
             ImmutableDictionary<IAtomicRuleFactory.Argument, string> arguments)
         {
-            return EOF.Instance;
+            return new EOF(ruleId);
         }
     }
 }

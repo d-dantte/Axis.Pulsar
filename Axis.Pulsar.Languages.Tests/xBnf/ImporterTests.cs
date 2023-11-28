@@ -161,7 +161,7 @@ namespace Axis.Pulsar.Languages.Tests.xBnf
                     .Select(cstnode => cstnode.TokenValue())
                     .ToArray();
             }
-            catch (Exception e)
+            catch
             {
                 throw;
             }
@@ -215,7 +215,7 @@ namespace Axis.Pulsar.Languages.Tests.xBnf
 
                 Assert.IsNotNull(x);
             }
-            catch (Exception e)
+            catch
             {
                 throw;
             }

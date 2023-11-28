@@ -55,9 +55,9 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                         out IResult<NodeSequence> result) =>
                     {
                         result = Result.Of<NodeSequence>(
-                            new GroupError(
-                                nodes: NodeSequence.Empty,
-                                error: UnrecognizedTokens.Of(
+                            new GroupRecognitionError(
+                                elementCount: 0,
+                                cause: FailedRecognitionError.Of(
                                     ProductionPath.Of("bleh"),
                                     10)));
                         return false;
@@ -81,17 +81,17 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                         out IResult<NodeSequence> result) =>
                     {
                         result = Result.Of<NodeSequence>(
-                            new GroupError(
-                                nodes: NodeSequence.Empty,
-                                error: PartiallyRecognizedTokens.Of(
+                            new GroupRecognitionError(
+                                elementCount: 0,
+                                cause: PartialRecognitionError.Of(
                                     ProductionPath.Of("bleh"),
                                     10,
-                                    "partial tokens")));
+                                    5)));
                         return false;
                     })));
 
-            var runtimeErrorElementMock = new Mock<IGroupElement>();
-            runtimeErrorElementMock
+            var nonRecognitionErrorElementMock = new Mock<IGroupElement>();
+            nonRecognitionErrorElementMock
                 .With(mock => mock
                     .Setup(m => m.Cardinality)
                     .Returns(Cardinality.OccursOnly(1)))
@@ -107,9 +107,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                         ILanguageContext languageContext,
                         out IResult<NodeSequence> result) =>
                     {
-                        result = RecognitionRuntimeError
-                            .Of(new Exception())
-                            .ApplyTo(Result.Of<NodeSequence>);
+                        result = Result.Of<NodeSequence>(new Exception("non-IRecognitionError"));
                         return false;
                     })));
 
@@ -139,20 +137,16 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 passingElementMock.Object);
             success = ch.TryRecognize("dummy", "dummy", null!, out result);
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult());
-            Assert.IsInstanceOfType<GroupError>(result.AsError().ActualCause());
-            var ge = result.AsError().ActualCause() as GroupError;
-            Assert.IsInstanceOfType<PartiallyRecognizedTokens>(ge.NodeError);
-            Assert.AreEqual(0, ge.Nodes.Count);
+            Assert.IsTrue(result.IsErrorResult(out GroupRecognitionError ge));
+            Assert.AreEqual(0, ge.ElementCount);
 
             ch = Choice.Of(
                 Cardinality.OccursOnly(1),
-                runtimeErrorElementMock.Object,
+                nonRecognitionErrorElementMock.Object,
                 passingElementMock.Object);
             success = ch.TryRecognize("dummy", "dummy", null!, out result);
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult());
-            Assert.IsInstanceOfType<RecognitionRuntimeError>(result.AsError().ActualCause());
+            Assert.IsTrue(result.IsErrorResult(out Exception _));
         }
     }
 }

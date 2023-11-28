@@ -13,6 +13,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
         public void TryRecognizeStartDelimiter_Tests()
         {
             var dstring = DelimitedString.Of(
+                "d",
                 true, "\"", "\"",
                 Enumerable.Empty<Tokens>(),
                 ArrayUtil.Of(Tokens.Of("xyz")),
@@ -32,6 +33,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
         public void TryRecognizeEndDelimiter_Tests()
         {
             var dstring = DelimitedString.Of(
+                "d",
                 true, "\"", "\"",
                 Enumerable.Empty<Tokens>(),
                 ArrayUtil.Of(Tokens.Of("xyz")),
@@ -51,15 +53,14 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
         public void TryRecognizeString_Tests()
         {
             var dstring = DelimitedString.Of(
+                "d",
                 true, "\"", "\"",
                 Enumerable.Empty<Tokens>(),
                 ArrayUtil.Of(Tokens.Of("xyz")),
                 Enumerable.Empty<CharRange>(),
                 Enumerable.Empty<CharRange>(),
                 "\\\"");
-
             var inputString = "\"the \\\"quick\\\" brown fox, etc...\"";
-
             var success = dstring.TryRecognizeString(
                 inputString[1..],
                 out var delim);
@@ -67,21 +68,21 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             Assert.IsTrue(delim.Equals("the \\\"quick\\\" brown fox, etc..."));
 
             inputString = "\"the quick brown fox, xyz etc...\"";
-
             success = dstring.TryRecognizeString(
                 inputString[1..],
                 out delim);
-            Assert.IsFalse(success);
+            Assert.IsTrue(success);
             Assert.IsTrue(delim.Equals("the quick brown fox, "));
 
+
             dstring = DelimitedString.Of(
+                "d",
                 true, "/*", "*/",
                 Enumerable.Empty<Tokens>(),
                 Enumerable.Empty<Tokens>(),
                 Enumerable.Empty<CharRange>(),
                 Enumerable.Empty<CharRange>(),
                 "\\*/");
-
             inputString = "stuff comment * bleh / finall \\*/ */";
             success = dstring.TryRecognizeString(
                 inputString,
@@ -89,33 +90,63 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             Assert.IsTrue(success);
             Assert.IsTrue(delim.Equals("stuff comment * bleh / finall \\*/ "));
 
+
             dstring = DelimitedString.Of(
+                "d",
                 true, "/*", "*/",
                 Enumerable.Empty<Tokens>(),
                 Enumerable.Empty<Tokens>(),
                 Enumerable.Empty<CharRange>(),
                 ArrayUtil.Of(CharRange.Of('0', '9')));
-
             inputString = "stuff 6 comment * bleh / finall */";
             success = dstring.TryRecognizeString(
                 inputString,
                 out delim);
-            Assert.IsFalse(success);
+            Assert.IsTrue(success);
             Assert.IsTrue(delim.Equals("stuff "));
 
+
             dstring = DelimitedString.Of(
+                "d",
                 true, "/*", "*/",
                 new Tokens[] { "abc", "ab" },
                 Enumerable.Empty<Tokens>(),
                 Enumerable.Empty<CharRange>(),
                 ArrayUtil.Of(CharRange.Of('0', '9')));
-
             inputString = "abcabcabcababababc*/";
             success = dstring.TryRecognizeString(
                 inputString,
                 out delim);
             Assert.IsTrue(success);
             Assert.IsTrue(delim.Equals("abcabcabcababababc"));
+            inputString = "abcabcabcabababab9c*/";
+            success = dstring.TryRecognizeString(
+                inputString,
+                out delim);
+            Assert.IsTrue(success);
+            Assert.IsTrue(delim.Equals("abcabcabcabababab"));
+
+
+            dstring = DelimitedString.Of(
+                "d",
+                true, "//", null,
+                Enumerable.Empty<Tokens>(),
+                Enumerable.Empty<Tokens>(),
+                Enumerable.Empty<CharRange>(),
+                ArrayUtil.Of('\n', (CharRange)'\r'));
+            inputString = "the quick brown fox...";
+            success = dstring.TryRecognizeString(
+                inputString,
+                out delim);
+            Assert.IsTrue(success);
+            Assert.IsTrue(delim.Equals("the quick brown fox..."));
+
+            inputString = "the quick brown\n fox...";
+            success = dstring.TryRecognizeString(
+                inputString,
+                out delim);
+            Assert.IsTrue(success);
+            Assert.IsTrue(delim.Equals("the quick brown"));
         }
 
         [TestMethod]
@@ -123,6 +154,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
         {
             var path = ProductionPath.Of("a");
             var dstring = DelimitedString.Of(
+                "d",
                 true, "'", "'",
                 Enumerable.Empty<Tokens>(),
                 ArrayUtil.Of(Tokens.Of("xyz")),
@@ -147,6 +179,46 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 out nodeResult);
             Assert.IsTrue(success);
             nodeResult.Consume(n => n.Tokens.Equals("'something wonderful this way avoids'"));
+        }
+
+        [TestMethod]
+        public void TryRecognize_WithNoEndDelimiter_Tests()
+        {
+            Assert.ThrowsException<InvalidOperationException>(() => DelimitedString.Of(
+                "d",
+                true, "//", null,
+                Enumerable.Empty<Tokens>(),
+                Enumerable.Empty<Tokens>(),
+                Enumerable.Empty<CharRange>(),
+                Enumerable.Empty<CharRange>()));
+
+            var path = ProductionPath.Of("a");
+            var dstring = DelimitedString.Of(
+                "d",
+                true, "//", null,
+                Enumerable.Empty<Tokens>(),
+                ArrayUtil.Of<Tokens>("\r", "\n"),
+                Enumerable.Empty<CharRange>(),
+                Enumerable.Empty<CharRange>());
+
+            var success = dstring.TryRecognize(
+                "//stuff that is commented out",
+                path,
+                null!,
+                out var result);
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult(out var node));
+            Assert.IsTrue(node.Tokens.Equals("//stuff that is commented out"));
+
+            TokenReader r = "//stuff that is commented out\nstuff not commented out";
+            success = dstring.TryRecognize(
+                r,
+                path,
+                null!,
+                out result);
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult(out node));
+            Assert.IsTrue(node.Tokens.Equals("//stuff that is commented out"));
         }
     }
 }

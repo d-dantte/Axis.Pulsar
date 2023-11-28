@@ -7,12 +7,12 @@ namespace Axis.Pulsar.Core.CST
 {
     public class NodePath
     {
-        private readonly ImmutableArray<Segment> _segments;
+        private readonly ImmutableArray<PathSegment> _segments;
         private readonly Lazy<string> _text;
 
-        public ImmutableArray<Segment> Segments => _segments;
+        public ImmutableArray<PathSegment> Segments => _segments;
 
-        public NodePath(params Segment[] segments)
+        public NodePath(params PathSegment[] segments)
         {
             ArgumentNullException.ThrowIfNull(segments);
 
@@ -29,9 +29,9 @@ namespace Axis.Pulsar.Core.CST
             });
         }
 
-        public static NodePath Of(params Segment[] segments) => new NodePath(segments);
+        public static NodePath Of(params PathSegment[] segments) => new NodePath(segments);
 
-        public static NodePath Of(IEnumerable<Segment> segments) => new NodePath(segments.ToArray());
+        public static NodePath Of(IEnumerable<PathSegment> segments) => new NodePath(segments.ToArray());
 
         public override bool Equals(object? obj)
         {
@@ -53,14 +53,14 @@ namespace Axis.Pulsar.Core.CST
         public static implicit operator NodePath(string path) => PathParser.Parse(path).Resolve();
     }
 
-    public class Segment
+    public class PathSegment
     {
         private readonly ImmutableArray<NodeFilter> _filters;
         private readonly Lazy<string> _text;
 
         public ImmutableArray<NodeFilter> NodeFilters => _filters;
 
-        public Segment(params NodeFilter[] filters)
+        public PathSegment(params NodeFilter[] filters)
         {
             ArgumentNullException.ThrowIfNull(filters);
 
@@ -77,13 +77,13 @@ namespace Axis.Pulsar.Core.CST
             });
         }
 
-        public static Segment Of(params NodeFilter[] filters) => new(filters);
+        public static PathSegment Of(params NodeFilter[] filters) => new(filters);
 
-        public static Segment Of(IEnumerable<NodeFilter> filters) => new(filters.ToArray());
+        public static PathSegment Of(IEnumerable<NodeFilter> filters) => new(filters.ToArray());
 
         public override bool Equals(object? obj)
         {
-            return obj is Segment other
+            return obj is PathSegment other
                 && Enumerable.SequenceEqual(_filters, other._filters);
         }
 
@@ -94,9 +94,9 @@ namespace Axis.Pulsar.Core.CST
 
         public override string ToString() => _text.Value;
 
-        public static bool operator ==(Segment left, Segment right) => left.Equals(right);
+        public static bool operator ==(PathSegment left, PathSegment right) => left.Equals(right);
 
-        public static bool operator !=(Segment left, Segment right) => !(left == right);
+        public static bool operator !=(PathSegment left, PathSegment right) => !(left == right);
 
         public bool Matches(ICSTNode node)
         {
@@ -107,9 +107,9 @@ namespace Axis.Pulsar.Core.CST
 
     public enum NodeType
     {
-        Unspecified = 'u',
-        NonTerminal = 'n',
-        Terminal = 't'
+        Unspecified = 'U',
+        NonTerminal = 'N',
+        Terminal = 'T'
     }
 
     public record NodeFilter

@@ -67,6 +67,7 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
     private static readonly IEscapeTransformer Transformer = new SequencesEscapeTransformer();
 
     public IAtomicRule NewRule(
+        string ruleId,
         MetaContext context,
         ImmutableDictionary<Argument, string> arguments)
     {
@@ -87,6 +88,7 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
             : Tokens.Default;
 
         return DelimitedString.Of(
+            ruleId,
             acceptsEmpty,
             delimiters.Start,
             delimiters.End,
@@ -109,8 +111,8 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
     {
         var start = arguments[StartDelimArgument] ?? throw new FormatException("Invalid start delimiter: null");
         var end = arguments.TryGetValue(EndDelimArgument, out var delim)
-            ? delim ?? throw new FormatException("Invalid end delimiter: null")
-            : start;
+            ? delim
+            : null!;
 
         return (start, end);
     }

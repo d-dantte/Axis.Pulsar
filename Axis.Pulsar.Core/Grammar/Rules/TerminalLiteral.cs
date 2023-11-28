@@ -1,29 +1,37 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
-using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar.Rules
 {
     public class TerminalLiteral : IAtomicRule
     {
+        public string Id { get; }
+
         public string Tokens { get; }
 
         public bool IsCaseInsensitive { get; }
 
-        public TerminalLiteral(string tokens, bool isCaseInsensitive)
+        public TerminalLiteral(string id, string tokens, bool isCaseInsensitive)
         {
             Tokens = tokens ?? throw new ArgumentNullException(nameof(tokens));
             IsCaseInsensitive = isCaseInsensitive;
+            Id = id.ThrowIfNot(
+                IProduction.SymbolPattern.IsMatch,
+                new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
         }
 
-        public TerminalLiteral(string tokens)
-        : this(tokens, true)
+        public TerminalLiteral(string id, string tokens)
+        : this(id, tokens, true)
         {
         }
 
-        public static TerminalLiteral Of(string tokens, bool isCaseInensitive) => new(tokens, isCaseInensitive);
+        public static TerminalLiteral Of(
+            string id,
+            string tokens,
+            bool isCaseInensitive)
+            => new(id, tokens, isCaseInensitive);
 
         public bool TryRecognize(
             TokenReader reader,
@@ -34,12 +42,13 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             ArgumentNullException.ThrowIfNull(reader);
 
             var position = reader.Position;
+            var literalPath = productionPath.Next(Id);
 
             if (reader.TryGetTokens(Tokens.Length, true, out var tokens)
                 && tokens.Equals(Tokens, !IsCaseInsensitive))
             {
                 result = ICSTNode
-                    .Of(productionPath.Name, tokens)
+                    .Of(literalPath.Name, tokens)
                     .ApplyTo(Result.Of);
                 return true;
             }
@@ -47,7 +56,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             {
                 reader.Reset(position);
                 result = FailedRecognitionError
-                    .Of(productionPath, position)
+                    .Of(literalPath, position)
                     .ApplyTo(Result.Of<ICSTNode>);
                 return false;
             }

@@ -3,7 +3,7 @@ using Axis.Pulsar.Core.XBNF.Definitions;
 
 namespace Axis.Pulsar.Core.XBNF;
 
-public record AtomicContentArgumentInfo
+internal class AtomicContentArgumentInfo
 {
     public AtomicContentDelimiterType ContentType { get; set; }
 

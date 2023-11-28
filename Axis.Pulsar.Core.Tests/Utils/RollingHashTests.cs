@@ -12,13 +12,13 @@ namespace Axis.Pulsar.Core.Tests.Utils
         {
             var rollingHash = RollingHash.Of(Text, 0, 3);
             Assert.IsInstanceOfType<RollingHash.RollingWindowHash>(rollingHash);
-            Assert.AreEqual(Text, rollingHash.Source);
+            Assert.IsTrue(rollingHash.Source.Equals(Text));
             Assert.AreEqual(-1, rollingHash.Offset);
             Assert.AreEqual(3, rollingHash.WindowLength);
 
             rollingHash = RollingHash.Of(Text, 0, 1);
             Assert.IsInstanceOfType<RollingHash.RollingValueHash>(rollingHash);
-            Assert.AreEqual(Text, rollingHash.Source);
+            Assert.IsTrue(rollingHash.Source.Equals(Text));
             Assert.AreEqual(-1, rollingHash.Offset);
             Assert.AreEqual(1, rollingHash.WindowLength);
 

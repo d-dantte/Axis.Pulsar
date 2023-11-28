@@ -29,6 +29,8 @@ namespace Axis.Pulsar.Core.Utils
 
         public static implicit operator TokenReader(string source) => new(source);
 
+        #region GetTokens
+
         public Tokens GetTokens(int tokenCount, bool failOnInsufficientTokens = false)
         {
             if (!TryGetTokens(tokenCount, failOnInsufficientTokens, out var tokens))
@@ -37,7 +39,8 @@ namespace Axis.Pulsar.Core.Utils
             return tokens;
         }
 
-        #region GetTokens
+        public Tokens GetToken() => GetTokens(1);
+
         public bool TryGetTokens(string expectedTokens, out Tokens tokens)
         {
             if (TryPeekTokens(expectedTokens, out tokens))
@@ -117,6 +120,17 @@ namespace Axis.Pulsar.Core.Utils
         #endregion
 
         #region PeekTokens
+
+        public Tokens PeekTokens(int tokenCount, bool failOnInsufficientTokens = false)
+        {
+            if (!TryPeekTokens(tokenCount, failOnInsufficientTokens, out var tokens))
+                throw new EndOfStreamException("Could not read requested tokens");
+
+            return tokens;
+        }
+
+        public Tokens PeekToken() => PeekTokens(1);
+
         public bool TryPeekTokens(string expectedTokens, out Tokens tokens)
         {
             if (string.IsNullOrEmpty(expectedTokens))
@@ -146,16 +160,16 @@ namespace Axis.Pulsar.Core.Utils
             if (tokenCount < 0)
                 throw new ArgumentOutOfRangeException(nameof(tokenCount));
 
-            if (failOnInsufficientTokens && (_position + tokenCount) > _source.Length)
-            {
-                tokens = default;
-                return false;
-            }
-
             tokens = Tokens.Of(
                 _source,
                 _position,
                 Math.Min(tokenCount, _source.Length - _position));
+
+            if (failOnInsufficientTokens && (_position + tokenCount) > _source.Length)
+            {
+                //tokens = default;
+                return false;
+            }
 
             return true;
         }

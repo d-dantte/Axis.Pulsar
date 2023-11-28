@@ -18,7 +18,9 @@ namespace Axis.Pulsar.Core.Grammar
             RegexOptions.Compiled);
 
         /// <summary>
-        /// 
+        /// Processes the production by applying the encapsulated recognition rule, then calling the symbols validator,
+        /// if available, to validate the successfully recognized symbols. Exceptions from the validator MUST be captured
+        /// in the return result, rather than allowed to propagate upwards
         /// </summary>
         /// <param name="reader"></param>
         /// <param name="parentPath"></param>

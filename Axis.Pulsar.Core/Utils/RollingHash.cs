@@ -42,8 +42,26 @@ namespace Axis.Pulsar.Core.Utils
             else return new RollingWindowHash(@string, offset, windowLength);
         }
 
+        /// <summary>
+        /// Moves the offset by 1, and calculates the new hash.
+        /// <para/>
+        /// If the new offset is beyond the end of the source string, then don't move the offset, and return false,
+        /// and a default hash object.
+        /// </summary>
+        /// <param name="result">The has at the new offset</param>
+        /// <returns>True if we were able to calculate the hash of the new offset, false otherwise</returns>
         abstract public bool TryNext(out Hash result);
 
+        /// <summary>
+        /// Slides the window by <paramref name="count"/> characters, calculating the hash along the way, and only
+        /// returning the hash at the last offset calculated.
+        /// <para/>
+        /// If the final offset is beyond the end of the source string, stop at the end of the string, return false,
+        /// and a default hash object.
+        /// </summary>
+        /// <param name="count">The number of characters to slide the window along</param>
+        /// <param name="result">The hash at the final offset</param>
+        /// <returns>True if we were able to calculate the hash of the final offset, false otherwise</returns>
         abstract public bool TryNext(int count, out Hash result);
 
         abstract public Hash ComputeHash(Tokens @string, int offset, int length);

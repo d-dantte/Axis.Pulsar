@@ -2,12 +2,9 @@
 
 namespace Axis.Pulsar.Core.XBNF.Lang
 {
-    public class XBNFExporter : ILanguageImporter
+    public class XBNFExporter : ILanguageExporter
     {
-        public MetaContext MetaContext { get; }
-
-
-        public ILanguageContext ImportLanguage(string inputTokens)
+        public string ExportLanguage(ILanguageContext context)
         {
             throw new NotImplementedException();
         }

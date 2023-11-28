@@ -10,11 +10,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="SampleGrammar\sample-1.xbnf" />
+    <None Remove="SampleGrammar\Int1.xbnf" />
+    <None Remove="SampleGrammar\json.xbnf" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="SampleGrammar\sample-1.xbnf" />
+    <EmbeddedResource Include="SampleGrammar\Int1.xbnf" />
+    <EmbeddedResource Include="SampleGrammar\json.xbnf" />
   </ItemGroup>
 
   <ItemGroup>

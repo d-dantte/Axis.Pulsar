@@ -14,7 +14,7 @@ namespace Axis.Pulsar.Core.Grammar
                 grammar,
                 context.HealthyRefs,
                 context.OrphanedRefs,
-                context.UndelimitedProductions);
+                context.UnresolvableProductions);
         }
 
         private static void Traverse(string symbol, TraversalContext context, out bool isLeftTerminated)
@@ -24,7 +24,7 @@ namespace Axis.Pulsar.Core.Grammar
             // Has the production been traversed already?
             if (isLeftTerminated
                 || context.OrphanedRefs.Contains(symbol)
-                || context.UndelimitedProductions.Contains(symbol))
+                || context.UnresolvableProductions.Contains(symbol))
                 return;
 
             // Does the ref point to any production?
@@ -39,7 +39,7 @@ namespace Axis.Pulsar.Core.Grammar
             TraverseRule(production.Rule, context, out isLeftTerminated);
 
             if (!isLeftTerminated)
-                context.UndelimitedProductions.Add(symbol);
+                context.UnresolvableProductions.Add(symbol);
         }
 
         private static void TraverseRule(
@@ -89,11 +89,13 @@ namespace Axis.Pulsar.Core.Grammar
                 throw new InvalidOperationException($"Invalid choice: empty");
 
             // All elements must be left-terminated for a choice to be left-terminated
-            isLeftTerminated = choice.Elements.All(elt =>
-            {
-                TraverseElement(elt, context, out var terminated);
-                return terminated;
-            });
+            isLeftTerminated = choice.Elements
+                .Aggregate(true, (terminated, elt) =>
+                {
+                    TraverseElement(elt, context, out var lternimated);
+                    terminated &= lternimated;
+                    return terminated;
+                });
         }
 
         private static void TraverseSequence(Sequence sequence, TraversalContext context, out bool isLeftTerminated)
@@ -103,7 +105,7 @@ namespace Axis.Pulsar.Core.Grammar
             if (sequence.Elements.IsEmpty)
                 throw new InvalidOperationException($"Invalid sequence: empty");
 
-            // Only the first element of the  sequene must be left-terminated for a sequence to 
+            // Only the first element of the sequene must be left-terminated for a sequence to 
             // be considered left-terminated
             isLeftTerminated = sequence.Elements
                 .Aggregate(default(bool?), (terminated, elt) =>
@@ -135,7 +137,7 @@ namespace Axis.Pulsar.Core.Grammar
         internal class TraversalContext
         {
             /// <summary>
-            /// Refs that point to no production in the grammar
+            /// Refs that do not point ot any production in the grammar
             /// </summary>
             internal HashSet<string> OrphanedRefs { get; } = new HashSet<string>();
 
@@ -147,7 +149,7 @@ namespace Axis.Pulsar.Core.Grammar
             /// <summary>
             /// Productions that do no resolve to an atomic rule in their left-most component
             /// </summary>
-            internal HashSet<string> UndelimitedProductions { get; } = new HashSet<string>();
+            internal HashSet<string> UnresolvableProductions { get; } = new HashSet<string>();
 
             /// <summary>
             /// 
@@ -163,7 +165,7 @@ namespace Axis.Pulsar.Core.Grammar
         public class ValidationResult
         {
             /// <summary>
-            /// Refs that point to no production in the grammar
+            /// Refs that do not point ot any production in the grammar
             /// </summary>
             public ImmutableHashSet<string> OrphanedRefs { get; }
 
@@ -175,7 +177,13 @@ namespace Axis.Pulsar.Core.Grammar
             /// <summary>
             /// Productions that do no resolve to an atomic rule in their left-most component
             /// </summary>
-            public ImmutableHashSet<string> UndelimitedProductions { get; }
+            public ImmutableHashSet<string> UnresolvableProductions { get; }
+
+            /// <summary>
+            /// Productions that do not have any references, or whose references cannot be traced back
+            /// to the root.
+            /// </summary>
+            public ImmutableHashSet<string> UnreferencedProductions { get; }
 
             /// <summary>
             /// 
@@ -199,11 +207,20 @@ namespace Axis.Pulsar.Core.Grammar
                     .ThrowIfNull(new ArgumentNullException(nameof(orphanedRefs)))
                     .ToImmutableHashSet();
 
-                UndelimitedProductions = undelimitedProductions
+                UnresolvableProductions = undelimitedProductions
                     .ThrowIfNull(new ArgumentNullException(nameof(undelimitedProductions)))
+                    .ToImmutableHashSet();
+
+                UnreferencedProductions = Grammar.ProductionSymbols
+                    .Except(HealthyRefs)
                     .ToImmutableHashSet();
             }
 
+            public bool IsValidGrammar =>
+                HealthyRefs.Count == Grammar.ProductionCount
+                && OrphanedRefs.IsEmpty
+                && UnresolvableProductions.IsEmpty
+                && UnreferencedProductions.IsEmpty;
         }
 
         #endregion

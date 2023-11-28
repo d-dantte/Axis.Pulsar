@@ -3,7 +3,7 @@ using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.XBNF.Parsers.Models
 {
-    public class LineComment : ISilentElement
+    internal class LineComment : ISilentElement
     {
         public Tokens Content { get; }
 

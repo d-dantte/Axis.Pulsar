@@ -8,12 +8,13 @@ using Axis.Pulsar.Core.Grammar.Rules;
 using Axis.Pulsar.Core.Utils;
 using Axis.Pulsar.Core.XBNF.Definitions;
 using Axis.Pulsar.Core.XBNF.Parsers.Models;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
-namespace Axis.Pulsar.Core.XBNF;
+namespace Axis.Pulsar.Core.XBNF.Parsers;
 
 internal static class GrammarParser
 {
@@ -40,10 +41,10 @@ internal static class GrammarParser
         out IResult<IGrammar> result)
     {
         var position = reader.Position;
-        //var productions = new List<XBNFProduction>();
 
         try
         {
+            var isEOF = false;
             var accumulator = ParserAccumulator
                 .Of(reader, ProductionPath.Of("grammar"), context, new List<XBNFProduction>())
 
@@ -60,19 +61,42 @@ internal static class GrammarParser
 
             do
             {
-                accumulator
+                accumulator = accumulator
 
                     // required silent block
                     .ThenTry<SilentBlock>(
                         TryParseSilentBlock,
                         (prods, _) => prods)
 
-                    // required production
-                    .ThenTry<XBNFProduction>(
-                        TryParseProduction,
-                        (prods, prod) => prods.AddItem(prod));
+                    // or required end of file
+                    .OrTry<Results.EOF>(
+                        TryParseEOF,
+                        (prods, prod) =>
+                        {
+                            isEOF = true;
+                            return prods;
+                        });
+
+                if (!isEOF && !accumulator.IsErrored)
+                { 
+                    accumulator = accumulator
+
+                        // required production
+                        .ThenTry<XBNFProduction>(
+                            TryParseProduction,
+                            (prods, prod) => prods.AddItem(prod))
+
+                        // or required end of file
+                        .OrTry<Results.EOF>(
+                            TryParseEOF,
+                            (prods, prod) =>
+                            {
+                                isEOF = true;
+                                return prods;
+                            });
+                }
             }
-            while (!accumulator.IsErrored);
+            while (!accumulator.IsErrored && !isEOF);
 
             result = accumulator.ToResult(prods => XBNFGrammar.Of(
                 prods[0].Symbol,
@@ -257,6 +281,36 @@ internal static class GrammarParser
             return false;
         }
     }
+
+    internal static bool TryParseEOF(
+        TokenReader reader,
+        ProductionPath path,
+        MetaContext context,
+        out IResult<Results.EOF> result)
+    {
+        var position = reader.Position;
+        var eofPath = path.Next("EOF");
+
+        try
+        {
+            if (reader.TryPeekToken(out _))
+            {
+                result = FailedRecognitionError
+                    .Of(eofPath, position)
+                    .ApplyTo(Result.Of<Results.EOF>);
+                return false;
+            }
+
+            result = Result.Of(Results.EOF.Instance);
+            return true;
+        }
+        catch (Exception e)
+        {
+            reader.Reset(position);
+            result = Result.Of<Results.EOF>(e);
+            return false;
+        }
+    }
     
     #endregion
 
@@ -339,7 +393,7 @@ internal static class GrammarParser
             if (!TryParseSilentBlock(reader, thresholdPath, context, out _))
             {
                 result = Result.Of<uint>(PartialRecognitionError.Of(
-                    "recognition-threshold",
+                    thresholdPath,
                     position,
                     reader.Position - position));
                 reader.Reset(position);
@@ -916,12 +970,12 @@ internal static class GrammarParser
                     TryParseAtomicSymbolName, 
                     (r, name) => (Name: name, r.Args))
 
-                // or parse atomic content, and derive symbol name
+                // or parse atomic content, and derive rule name/Id
                 .OrTry<AtomicContentArgumentInfo>(TryParseAtomicContent, (r, contentInfo) =>
                 {
                     if (!context.AtomicContentTypeMap.TryGetValue(contentInfo.ContentType, out var symbol))
                         throw PartialRecognitionError.Of(
-                            "atomic-rule",
+                            atomicRulePath,
                             position,
                             reader.Position - position);
 
@@ -948,11 +1002,12 @@ internal static class GrammarParser
                 {
                     if (!context.AtomicFactoryMap.TryGetValue(r.Name, out var factoryDef))
                         throw PartialRecognitionError.Of(
-                            "atomic-rule",
+                            atomicRulePath,
                             position,
                             reader.Position - position);
 
                     return factoryDef.Factory.NewRule(
+                        r.Name,
                         context,
                         r.Args.ToImmutableDictionary(arg => arg.Argument, arg => arg.Value!));
                 });
@@ -997,7 +1052,10 @@ internal static class GrammarParser
                         accumulator = initialAlternative switch
                         {
                             true => accumulator.ThenTry(
-                                (TokenReader tr, ProductionPath p, MetaContext mc, out IResult<Tokens> r) => TryParseDelimitedContent(tr, mc, delimChar, delimChar, out r),
+                                (TokenReader tr, ProductionPath p, MetaContext mc, out IResult<Tokens> r) => TryParseDelimitedContent(
+                                    tr,
+                                    atomicContentPath,
+                                    mc, delimChar, delimChar, out r),
                                 (info, content) => new AtomicContentArgumentInfo
                                 {
                                     Content = content,
@@ -1005,7 +1063,10 @@ internal static class GrammarParser
                                 }),
 
                             false => accumulator.OrTry(
-                                (TokenReader tr, ProductionPath p, MetaContext mc, out IResult<Tokens> r) => TryParseDelimitedContent(tr, mc, delimChar, delimChar, out r),
+                                (TokenReader tr, ProductionPath p, MetaContext mc, out IResult<Tokens> r) => TryParseDelimitedContent(
+                                    tr,
+                                    atomicContentPath,
+                                    mc, delimChar, delimChar, out r),
                                 (info, content) => new AtomicContentArgumentInfo
                                 {
                                     Content = content,
@@ -1026,7 +1087,7 @@ internal static class GrammarParser
 
             if (result.IsDataResult(out var data) && data is null)
                 result = Result.Of<AtomicContentArgumentInfo>(FailedRecognitionError.Of(
-                    "atomic-content",
+                    atomicContentPath,
                     position));
 
             return result.IsDataResult();
@@ -1041,12 +1102,14 @@ internal static class GrammarParser
 
     internal static bool TryParseDelimitedContent(
         TokenReader reader,
+        ProductionPath path,
         MetaContext context,
         char startDelimiter,
         char endDelimiter,
         out IResult<Tokens> result)
     {
         var position = reader.Position;
+        var delimContentPath = path.Next("delimited-content");
 
         try
         {
@@ -1054,7 +1117,7 @@ internal static class GrammarParser
             if (!reader.TryGetTokens(startDelimiter.ToString(), out var startDelimToken))
             {
                 result = Result.Of<Tokens>(FailedRecognitionError.Of(
-                    "atomic-rule",
+                    delimContentPath,
                     position));
                 reader.Reset(position);
                 return false;
@@ -1084,7 +1147,7 @@ internal static class GrammarParser
             if (!reader.TryGetTokens(endDelimiter.ToString(), out var endDelimToken))
             {
                 result = Result.Of<Tokens>(PartialRecognitionError.Of(
-                    "atomic-rule",
+                    delimContentPath,
                     position,
                     reader.Position - position));
                 reader.Reset(position);
@@ -1232,7 +1295,10 @@ internal static class GrammarParser
 
                     // delimited content value?
                     .OrTry(
-                        (TokenReader tr, ProductionPath p, MetaContext mc, out IResult<Tokens> r) => TryParseDelimitedContent(tr, mc, '\'', '\'', out r),
+                        (TokenReader tr, ProductionPath p, MetaContext mc, out IResult<Tokens> r) => TryParseDelimitedContent(
+                            tr,
+                            argumentPath,
+                            mc, '\'', '\'', out r),
                         (value, tokens) => tokens.ToString()!);
 
                 if (accumulator.IsErrored)
@@ -1268,6 +1334,7 @@ internal static class GrammarParser
         out IResult<bool> result)
     {
         var position = reader.Position;
+        var boolArgPath = path.Next("bool-arg-value");
 
         try
         {
@@ -1284,7 +1351,7 @@ internal static class GrammarParser
                 reader.Advance(4);
                 result = Result.Of(true);
             }
-            else result = Result.Of<bool>(FailedRecognitionError.Of("bool-arg-value", position));
+            else result = Result.Of<bool>(FailedRecognitionError.Of(boolArgPath, position));
 
             return result.IsDataResult();
         }
@@ -1302,6 +1369,8 @@ internal static class GrammarParser
         out IResult<decimal> result)
     {
         var position = reader.Position;
+        var numberArgPath = path.Next("number-arg-value");
+
         try
         {
             var tokens = Tokens.Empty;
@@ -1319,7 +1388,7 @@ internal static class GrammarParser
             if (tokens.IsEmpty)
             {
                 reader.Reset(position);
-                result = Result.Of<decimal>(FailedRecognitionError.Of("number-arg-value", position));
+                result = Result.Of<decimal>(FailedRecognitionError.Of(numberArgPath, position));
                 return false;
             }
 
@@ -1450,7 +1519,7 @@ internal static class GrammarParser
             }
 
             result = Result.Of<BlockComment>(PartialRecognitionError.Of(
-                "block-comment",
+                blockCommentPath,
                 position,
                 reader.Position - position));
             reader.Reset(position);
@@ -1470,13 +1539,14 @@ internal static class GrammarParser
         out IResult<LineComment> result)
     {
         var position = reader.Position;
+        var lineCommentPath = path.Next("line-comment");
 
         try
         {
             if (!reader.TryGetTokens("#", out var delimiter))
             {
                 result = Result.Of<LineComment>(FailedRecognitionError.Of(
-                    "line-comment",
+                    lineCommentPath,
                     position));
                 reader.Reset(position);
                 return false;
@@ -1515,6 +1585,7 @@ internal static class GrammarParser
         out IResult<Whitespace> result)
     {
         var position = reader.Position;
+        var whitespacePath = path.Next("whitespace");
 
         try
         {
@@ -1525,7 +1596,7 @@ internal static class GrammarParser
                 && '\r' != whitespaceToken[0]))
             {
                 result = Result.Of<Whitespace>(FailedRecognitionError.Of(
-                    "whitespace",
+                    whitespacePath,
                     position));
                 reader.Reset(position);
                 return false;

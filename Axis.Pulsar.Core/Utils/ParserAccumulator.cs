@@ -7,6 +7,7 @@ public class ParserAccumulator<TData, TSymbolID, TContext>
     private TData _data;
     private Exception? _error = null;
     private int _recognitionCount = 0;
+    private bool _isRecentlyFailed = false;
 
     private readonly TokenReader _reader;
     private readonly TContext _context;
@@ -81,8 +82,16 @@ public class ParserAccumulator<TData, TSymbolID, TContext>
             else
             {
                 _reader.Reset(position);
-                tresult.ConsumeError(e => _error = e);
+                tresult.ConsumeError(e =>
+                {
+                    _error = e;
+                    _isRecentlyFailed = true;
+                });
             }
+        }
+        else
+        {
+            _isRecentlyFailed = false;
         }
 
         return this;
@@ -105,7 +114,7 @@ public class ParserAccumulator<TData, TSymbolID, TContext>
         ArgumentNullException.ThrowIfNull(tryParse);
         ArgumentNullException.ThrowIfNull(mapper);
 
-        if (IsFailedRecognitionError)
+        if (IsFailedRecognitionError && _isRecentlyFailed)
         {
             var position = _reader.Position;
 
@@ -126,6 +135,7 @@ public class ParserAccumulator<TData, TSymbolID, TContext>
                 {
                     _data = defaultMapper!.Invoke(_data);
                     _recognitionCount++; // ????
+                    _error = null;
                 }
                 catch (Exception e)
                 {

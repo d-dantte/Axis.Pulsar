@@ -55,9 +55,9 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                         out IResult<NodeSequence> result) =>
                     {
                         result = Result.Of<NodeSequence>(
-                            new GroupError(
-                                nodes: NodeSequence.Empty,
-                                error: UnrecognizedTokens.Of(
+                            new GroupRecognitionError(
+                                elementCount: 0,
+                                cause: FailedRecognitionError.Of(
                                     ProductionPath.Of("bleh"),
                                     10)));
                         return false;
@@ -81,12 +81,12 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                         out IResult<NodeSequence> result) =>
                     {
                         result = Result.Of<NodeSequence>(
-                            new GroupError(
-                                nodes: NodeSequence.Empty,
-                                error: PartiallyRecognizedTokens.Of(
+                            new GroupRecognitionError(
+                                elementCount: 0,
+                                cause: PartialRecognitionError.Of(
                                     ProductionPath.Of("bleh"),
                                     10,
-                                    "partial tokens")));
+                                    3)));
                         return false;
                     })));
 
@@ -106,11 +106,9 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 unrecognizedElementMock.Object);
             success = seq.TryRecognize("dummy", "dummy", null!, out result);
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult());
-            Assert.IsInstanceOfType<GroupError>(result.AsError().ActualCause());
-            var ge = result.AsError().ActualCause() as GroupError;
-            Assert.IsInstanceOfType<UnrecognizedTokens>(ge.NodeError);
-            Assert.AreEqual(1, ge.Nodes.Count);
+            Assert.IsTrue(result.IsErrorResult(out GroupRecognitionError ge));
+            Assert.IsInstanceOfType<FailedRecognitionError>(ge.Cause);
+            Assert.AreEqual(1, ge.ElementCount);
 
             seq = Sequence.Of(
                 Cardinality.OccursOnly(1),
@@ -118,11 +116,8 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 partiallyRecognizedElementMock.Object);
             success = seq.TryRecognize("dummy", "dummy", null!, out result);
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult());
-            Assert.IsInstanceOfType<GroupError>(result.AsError().ActualCause());
-            ge = result.AsError().ActualCause() as GroupError;
-            Assert.IsInstanceOfType<PartiallyRecognizedTokens>(ge.NodeError);
-            Assert.AreEqual(1, ge.Nodes.Count);
+            Assert.IsTrue(result.IsErrorResult(out ge));
+            Assert.AreEqual(1, ge.ElementCount);
         }
     }
 }

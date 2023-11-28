@@ -15,18 +15,18 @@ namespace Axis.Pulsar.Core.Tests.Utils
 
             var ss = new Tokens(@string);
             Assert.AreEqual(@string, ss.Source);
-            Assert.AreEqual(@string.Length, ss.Count);
-            Assert.AreEqual(0, ss.Offset);
+            Assert.AreEqual(@string.Length, ss.SourceSegment.Length);
+            Assert.AreEqual(0, ss.SourceSegment.Offset);
             Assert.AreEqual(@string, ss.ToString());
 
             ss = new Tokens(@string, 5);
-            Assert.AreEqual(5, ss.Offset);
-            Assert.AreEqual(@string.Length - 5, ss.Count);
+            Assert.AreEqual(5, ss.SourceSegment.Offset);
+            Assert.AreEqual(@string.Length - 5, ss.SourceSegment.Length);
             Assert.AreEqual(@string[5..], ss.ToString());
 
             ss = new Tokens(@string, 8, 2);
-            Assert.AreEqual(8, ss.Offset);
-            Assert.AreEqual(2, ss.Count);
+            Assert.AreEqual(8, ss.SourceSegment.Offset);
+            Assert.AreEqual(2, ss.SourceSegment.Length);
 
             Assert.ThrowsException<ArgumentNullException>(() => new Tokens(null!, 0, 0));
             Assert.ThrowsException<ArgumentException>(() => new Tokens(@string, -1, 0));
@@ -41,16 +41,16 @@ namespace Axis.Pulsar.Core.Tests.Utils
             var @string = "the quick brown fox jumps over the lazy dog";
             var ss = Tokens.Of(@string);
 
-            Assert.AreEqual(@string.Length, ss.Count);
+            Assert.AreEqual(@string.Length, ss.SourceSegment.Length);
 
             ss = Tokens.Of(@string, 5);
-            Assert.AreEqual(@string.Length - 5, ss.Count);
+            Assert.AreEqual(@string.Length - 5, ss.SourceSegment.Length);
 
             ss = Tokens.Of(@string, 5, 2);
-            Assert.AreEqual(2, ss.Count);
+            Assert.AreEqual(2, ss.SourceSegment.Length);
 
             ss = Tokens.Of("");
-            Assert.AreEqual(0, ss.Count);
+            Assert.AreEqual(0, ss.SourceSegment.Length);
         }
 
         #endregion
@@ -59,8 +59,8 @@ namespace Axis.Pulsar.Core.Tests.Utils
         public void Default_Tests()
         {
             var tokens = default(Tokens);
-            Assert.AreEqual(0, tokens.Offset);
-            Assert.AreEqual(0, tokens.Count);
+            Assert.AreEqual(0, tokens.SourceSegment.Offset);
+            Assert.AreEqual(0, tokens.SourceSegment.Length);
             Assert.IsNull(tokens.Source);
             Assert.IsNotNull(tokens.GetHashCode());
             Assert.IsNull(tokens.ToString());
@@ -74,8 +74,8 @@ namespace Axis.Pulsar.Core.Tests.Utils
         public void Empty_Tests()
         {
             var tokens = Tokens.Empty;
-            Assert.AreEqual(0, tokens.Offset);
-            Assert.AreEqual(0, tokens.Count);
+            Assert.AreEqual(0, tokens.SourceSegment.Offset);
+            Assert.AreEqual(0, tokens.SourceSegment.Length);
             Assert.AreEqual(string.Empty, tokens.Source);
             Assert.IsNotNull(tokens.GetHashCode());
             Assert.AreEqual(string.Empty, tokens.ToString());
@@ -90,7 +90,7 @@ namespace Axis.Pulsar.Core.Tests.Utils
             var @string = "some string";
             Tokens t = @string;
             Assert.AreEqual(@string, t.ToString());
-            Assert.AreEqual(@string, t[..]);
+            Assert.AreEqual(@string, t[..].ToString());
         }
 
         [TestMethod]
@@ -100,17 +100,17 @@ namespace Axis.Pulsar.Core.Tests.Utils
             var ss = Tokens.Of(@string);
 
             var ss2 = ss.Slice(3, 2);
-            Assert.AreEqual(2, ss2.Count);
+            Assert.AreEqual(2, ss2.SourceSegment.Length);
             Assert.AreEqual(' ', ss2[0]);
             Assert.AreEqual('q', ss2[1]);
 
             ss2 = ss.Slice(17);
-            Assert.AreEqual(@string.Length - 17, ss2.Count);
+            Assert.AreEqual(@string.Length - 17, ss2.SourceSegment.Length);
             Assert.AreEqual('o', ss2[0]);
             Assert.AreEqual('g', ss2[^1]);
 
             ss2 = ss[5..12];
-            Assert.AreEqual(7, ss2.Count);
+            Assert.AreEqual(7, ss2.SourceSegment.Length);
             Assert.AreEqual('u', ss2[0]);
             Assert.AreEqual('r', ss2[^1]);
 
@@ -130,7 +130,7 @@ namespace Axis.Pulsar.Core.Tests.Utils
         {
             var tokens = Tokens.Of("some string", 2, 3);
             var span = tokens.AsSpan();
-            Assert.AreEqual(tokens.Count, span.Length);
+            Assert.AreEqual(tokens.SourceSegment.Length, span.Length);
             Assert.IsTrue(Enumerable.SequenceEqual(
                 span.ToArray(),
                 tokens.ToArray()!));
@@ -271,7 +271,7 @@ namespace Axis.Pulsar.Core.Tests.Utils
             var ss = Tokens.Of(@string, 0, 2);
             var ss2 = Tokens.Of(@string, 2, 1);
             var ss3 = ss.ConJoin(ss2);
-            Assert.AreEqual(3, ss3.Count);
+            Assert.AreEqual(3, ss3.SourceSegment.Length);
             Assert.IsTrue(ss3.Equals("123"));
         }
 
@@ -327,8 +327,8 @@ namespace Axis.Pulsar.Core.Tests.Utils
                 ss.ConJoin(ss));
             
             var result = ss.ConJoin(ss2);
-            Assert.AreEqual(ss.Count + ss2.Count, result.Count);
-            Assert.AreEqual(ss.Offset, result.Offset);
+            Assert.AreEqual(ss.SourceSegment.Length + ss2.SourceSegment.Length, result.SourceSegment.Length);
+            Assert.AreEqual(ss.SourceSegment.Offset, result.SourceSegment.Offset);
         }
 
         [TestMethod]
@@ -362,12 +362,25 @@ namespace Axis.Pulsar.Core.Tests.Utils
             Assert.AreEqual(ss, result);
 
             result = ss.Merge(ss2);
-            Assert.AreEqual(ss.Offset, result.Offset);
-            Assert.AreEqual(3, result.Count);
+            Assert.AreEqual(ss.SourceSegment.Offset, result.SourceSegment.Offset);
+            Assert.AreEqual(3, result.SourceSegment.Length);
 
             result = ss.Merge(ss4);
-            Assert.AreEqual(ss.Offset, result.Offset);
-            Assert.AreEqual(ss.Count, result.Count);
+            Assert.AreEqual(ss.SourceSegment.Offset, result.SourceSegment.Offset);
+            Assert.AreEqual(ss.SourceSegment.Length, result.SourceSegment.Length);
+        }
+
+        [TestMethod]
+        public void Split_Tests()
+        {
+            var source = Tokens.Of("the qick brown fox jumps over the lazy fat duck");
+            var parts = source.Split(
+                " ",
+                "jumps",
+                "ju");
+
+            Assert.AreEqual(11, parts.Length);
+            Assert.IsTrue(parts[5].Delimiter.Equals("jumps"));
         }
     }
 }

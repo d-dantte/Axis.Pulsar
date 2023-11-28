@@ -20,24 +20,30 @@ namespace Axis.Pulsar.Core.Grammar.Groups
         /// Minimum number of recognized items that can exist for this group to be deemed recognized.
         /// Default value is <see cref="Set.Rules.Length"/>.
         /// </summary>
-        public int? MinRecognitionCount { get; }
+        public int MinRecognitionCount { get; }
 
 
-        public Set(Cardinality cardinality, int? minRecognitionCount, params IGroupElement[] elements)
+        public Set(Cardinality cardinality, int minRecognitionCount, params IGroupElement[] elements)
         {
             Cardinality = cardinality;
             MinRecognitionCount = minRecognitionCount;
             Elements = elements
                 .ThrowIfNull(new ArgumentNullException(nameof(elements)))
+                .ThrowIf(items => items.IsEmpty(), new ArgumentException("Invalid elements: empty"))
                 .ThrowIfAny(e => e is null, new ArgumentException($"Invalid element: null"))
                 .ApplyTo(ImmutableArray.CreateRange);
         }
 
         public static Set Of(
             Cardinality cardinality,
-            int? minRecognitionCount,
+            int minRecognitionCount,
             params IGroupElement[] elements)
             => new(cardinality, minRecognitionCount, elements);
+
+        public static Set Of(
+            Cardinality cardinality,
+            params IGroupElement[] elements)
+            => new(cardinality, elements.Length, elements);
 
         public bool TryRecognize(
             TokenReader reader,
@@ -49,19 +55,20 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             ArgumentNullException.ThrowIfNull(parentPath);
 
             var position = reader.Position;
-            var elementList = new List<IGroupElement>(Elements);
+            var elementList = Elements.Reverse().ToList();
             var results = new List<IResult<NodeSequence>>();
             bool isElementConsumed = false;
             do
             {
                 isElementConsumed = false;
                 var stepPosition = reader.Position;
-                foreach (var elt in elementList)
+                for (int index = elementList.Count - 1; index >= 0; index--)
                 {
+                    var elt = elementList[index];
                     if (elt.Cardinality.TryRepeat(reader, parentPath, context, elt, out var groupResult))
                     {
                         results.Add(groupResult);
-                        elementList.Remove(elt);
+                        elementList.RemoveAt(index);
                         isElementConsumed = true;
                         break;
                     }
@@ -86,11 +93,19 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                 result = results.FoldInto(_results => _results.Fold());
                 return true;
             }
-            else
+            else if (results.Count == 0)
             {
                 result = FailedRecognitionError
                     .Of(parentPath, position)
                     .ApplyTo(GroupRecognitionError.Of)
+                    .ApplyTo(Result.Of<NodeSequence>);
+                return false;
+            }
+            else
+            {
+                result = PartialRecognitionError
+                    .Of(parentPath, position, reader.Position - position)
+                    .ApplyTo(fre => GroupRecognitionError.Of(fre, results.Count))
                     .ApplyTo(Result.Of<NodeSequence>);
                 return false;
             }

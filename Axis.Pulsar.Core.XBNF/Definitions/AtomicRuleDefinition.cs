@@ -12,14 +12,14 @@ namespace Axis.Pulsar.Core.XBNF.Definitions
             .GetValues<AtomicContentDelimiterType>()
             .ApplyTo(v => new HashSet<AtomicContentDelimiterType>(v));
 
-        public string Symbol { get; }
+        public string Id { get; }
 
         public IAtomicRuleFactory Factory { get; }
 
         public AtomicContentDelimiterType ContentDelimiterType { get; }
 
         public AtomicRuleDefinition(
-            string symbol,
+            string id,
             AtomicContentDelimiterType contentDelimiterType,
             IAtomicRuleFactory factory)
         {
@@ -27,9 +27,9 @@ namespace Axis.Pulsar.Core.XBNF.Definitions
             ContentDelimiterType = contentDelimiterType.ThrowIfNot(
                 _contentTypes.Contains,
                 new ArgumentException($"Invalid content delimiter type: {contentDelimiterType}"));
-            Symbol = symbol.ThrowIfNot(
+            Id = id.ThrowIfNot(
                 IProduction.SymbolPattern.IsMatch,
-                new FormatException($"Invalid symbol format: '{symbol}'"));
+                new FormatException($"Invalid {nameof(id)} format: '{id}'"));
         }
 
         public static AtomicRuleDefinition Of(
@@ -42,5 +42,16 @@ namespace Axis.Pulsar.Core.XBNF.Definitions
             string symbol,
             IAtomicRuleFactory factory)
             => new(symbol, AtomicContentDelimiterType.None, factory);
+
+        public static AtomicRuleDefinition Of<TFactory>(
+            string symbol,
+            AtomicContentDelimiterType contentDelimiterType)
+            where TFactory : IAtomicRuleFactory, new()
+            => new(symbol, contentDelimiterType, new TFactory());
+
+        public static AtomicRuleDefinition Of<TFactory>(
+            string symbol)
+            where TFactory : IAtomicRuleFactory, new()
+            => new(symbol, AtomicContentDelimiterType.None, new TFactory());
     }
 }

@@ -39,5 +39,13 @@ namespace Axis.Pulsar.Core.XBNF.RuleFactories
             AtomicContentDelimiterType.None,
             new EOFRuleFactory());
 
+        /// <summary>
+        /// 
+        /// </summary>
+        public static readonly AtomicRuleDefinition DelimitedString = AtomicRuleDefinition.Of(
+            "DelimitedString",
+            AtomicContentDelimiterType.None,
+            new DelimitedStringRuleFactory());
+
     }
 }

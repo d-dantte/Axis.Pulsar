@@ -11,6 +11,8 @@ namespace Axis.Pulsar.Core.Grammar.Rules
     /// </summary>
     public class CharacterRanges : IAtomicRule
     {
+        public string Id { get; }
+
         /// <summary>
         /// List of char ranges to include
         /// </summary>
@@ -26,7 +28,10 @@ namespace Axis.Pulsar.Core.Grammar.Rules
         /// </summary>
         /// <param name="includes"></param>
         /// <param name="excludes"></param>
-        public CharacterRanges(IEnumerable<CharRange> includes, IEnumerable<CharRange> excludes)
+        public CharacterRanges(
+            string id,
+            IEnumerable<CharRange> includes,
+            IEnumerable<CharRange> excludes)
         {
             ArgumentNullException.ThrowIfNull(includes);
             ArgumentNullException.ThrowIfNull(excludes);
@@ -38,13 +43,21 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             ExcludeList = excludes
                 .ApplyTo(CharRange.NormalizeRanges)
                 .ToImmutableArray();
+
+            Id = id.ThrowIfNot(
+                IProduction.SymbolPattern.IsMatch,
+                new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
         }
 
         public static CharacterRanges Of(
+            string id,
             IEnumerable<CharRange> includes,
             IEnumerable<CharRange> excludes)
-            => new(includes, excludes);
-        public static CharacterRanges Of(params CharRange[] includes) => new(includes, Array.Empty<CharRange>());
+            => new(id, includes, excludes);
+        public static CharacterRanges Of(
+            string id,
+            params CharRange[] includes)
+            => new(id, includes, Array.Empty<CharRange>());
 
         public bool TryRecognize(
             TokenReader reader,
@@ -56,6 +69,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             ArgumentNullException.ThrowIfNull(productionPath);
 
             var position = reader.Position;
+            var charRangePath = productionPath.Next(Id);
 
             if (!reader.TryGetToken(out var token)
                 || ExcludeList.Any(range => range.Contains(token[0]))
@@ -63,13 +77,13 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             {
                 reader.Reset(position);
                 result = FailedRecognitionError
-                    .Of(productionPath, position)
+                    .Of(charRangePath, position)
                     .ApplyTo(Result.Of<ICSTNode>);
                 return false;
             }
 
             result = ICSTNode
-                .Of(productionPath.Name, token)
+                .Of(charRangePath.Name, token)
                 .ApplyTo(Result.Of);
             return true;
         }

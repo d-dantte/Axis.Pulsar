@@ -60,38 +60,37 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             element = MockElement(
                 Cardinality.OccursOnlyOnce(),
                 false,
-                UnrecognizedTokens
+                FailedRecognitionError
                     .Of(path, 0)
-                    .ApplyTo(GroupError.Of)
+                    .ApplyTo(GroupRecognitionError.Of)
                     .ApplyTo(Result.Of<NodeSequence>));
             nt = NonTerminal.Of(element);
             success = nt.TryRecognize("stuff", path, null!, out result);
             Assert.IsFalse(success);
             Assert.IsNotNull(result);
-            Assert.IsTrue(result.IsErrorResult(out UnrecognizedTokens ge));
+            Assert.IsTrue(result.IsErrorResult(out FailedRecognitionError ge));
 
             // partially recognized element
             element = MockElement(
                 Cardinality.OccursOnlyOnce(),
                 false,
-                PartiallyRecognizedTokens
-                    .Of(path, 0, "partial tokens")
-                    .ApplyTo(g => GroupError.Of(g, NodeSequence.Of(ICSTNode.Of("partial", "partial tokens"))))
+                PartialRecognitionError
+                    .Of(path, 0, 11)
+                    .ApplyTo(p => GroupRecognitionError.Of(p, 2))
                     .ApplyTo(Result.Of<NodeSequence>));
             nt = NonTerminal.Of(element);
             success = nt.TryRecognize("stuff", path, null!, out result);
             Assert.IsFalse(success);
             Assert.IsNotNull(result);
-            Assert.IsTrue(result.IsErrorResult(out PartiallyRecognizedTokens pe));
+            Assert.IsTrue(result.IsErrorResult(out PartialRecognitionError pe));
 
             // recognition threshold element
             element = MockElement(
                 Cardinality.OccursOnlyOnce(),
                 false,
-                UnrecognizedTokens
-                    .Of(path, 0)
-                    .ApplyTo(e => GroupError.Of(e,
-                        NodeSequence.Of(NodeSequence.Of(ICSTNode.Of("partial", "partial tokens")))))
+                FailedRecognitionError
+                    .Of(path, 3)
+                    .ApplyTo(e => GroupRecognitionError.Of(e, 2))
                     .ApplyTo(Result.Of<NodeSequence>));
             nt = NonTerminal.Of(element);
             success = nt.TryRecognize("stuff", path, null!, out result);
@@ -103,14 +102,12 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             element = MockElement(
                 Cardinality.OccursOnlyOnce(),
                 false,
-                RecognitionRuntimeError
-                    .Of(new Exception())
-                    .ApplyTo(Result.Of<NodeSequence>));
+                Result.Of<NodeSequence>(new Exception()));
             nt = NonTerminal.Of(element);
             success = nt.TryRecognize("stuff", path, null!, out result);
             Assert.IsFalse(success);
             Assert.IsNotNull(result);
-            Assert.IsTrue(result.IsErrorResult(out RecognitionRuntimeError rre));
+            Assert.IsTrue(result.IsErrorResult(out Exception _));
 
         }
     }

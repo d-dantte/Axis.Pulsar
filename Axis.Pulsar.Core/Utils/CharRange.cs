@@ -18,7 +18,7 @@ public readonly struct CharRange:
 
     public bool IsRange => LowerBound != UpperBound;
 
-    public bool IsDefault => LowerBound == UpperBound && LowerBound == '\0';
+    public bool IsDefault => LowerBound == '\0' && UpperBound == '\0';
 
     public static CharRange Default => default;
 
@@ -37,6 +37,7 @@ public readonly struct CharRange:
     public static CharRange Of(char @char) => new(@char, @char);
 
     public static implicit operator CharRange(string input) => Parse(input);
+    public static implicit operator CharRange(char @char) => CharRange.Of(@char);
 
     /// <summary>
     /// 
@@ -88,10 +89,10 @@ public readonly struct CharRange:
         => TryMergeWith(range, false, out merged);
 
     /// <summary>
-    /// 
+    /// Checks if the given character falls within the range of characters represented by this instance.
     /// </summary>
-    /// <param name="char"></param>
-    /// <returns></returns>
+    /// <param name="char">The character to test</param>
+    /// <returns>True if the character is contained in this range, false otherwise.</returns>
     public bool Contains(char @char)
     {
         return LowerBound <= @char && UpperBound >= @char;

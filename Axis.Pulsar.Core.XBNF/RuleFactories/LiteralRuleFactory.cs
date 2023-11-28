@@ -1,5 +1,7 @@
 ﻿using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Rules;
+using Axis.Pulsar.Core.Utils;
+using Axis.Pulsar.Core.Utils.EscapeMatchers;
 using System.Collections.Immutable;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
@@ -26,14 +28,18 @@ public class LiteralRuleFactory : IAtomicRuleFactory
 
     #endregion
 
+    private static readonly IEscapeTransformer _BasicEscapeTransformer = new BSolBasicEscapeMatcher(); 
+
     public IAtomicRule NewRule(
+        string ruleId,
         MetaContext context,
         ImmutableDictionary<Argument, string> arguments)
     {
         ValidateArgs(arguments);
 
         return TerminalLiteral.Of(
-            arguments[LiteralArgument],
+            ruleId,
+            ParseLiteral(arguments[LiteralArgument]),
             arguments.TryGetValue(CaseInsensitiveArgument, out _));
     }
 
@@ -47,5 +53,15 @@ public class LiteralRuleFactory : IAtomicRuleFactory
 
         if (!arguments.ContainsKey(LiteralArgument))
             throw new ArgumentException($"Invalid arguments: '{LiteralArgument}' is missing");
+    }
+
+    /// <summary>
+    /// Decodes basic escape sequences. See <see cref="BSolBasicEscapeMatcher"/>.
+    /// </summary>
+    /// <param name="literal"></param>
+    /// <returns></returns>
+    private static string ParseLiteral(string literal)
+    {
+        return _BasicEscapeTransformer.Decode(literal);
     }
 }

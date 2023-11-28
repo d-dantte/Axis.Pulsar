@@ -2,7 +2,7 @@
 
 namespace Axis.Pulsar.Core.XBNF;
 
-public interface ISilentElement
+internal interface ISilentElement
 {
     Tokens Content { get; }
 }

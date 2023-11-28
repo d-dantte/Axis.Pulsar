@@ -23,14 +23,14 @@ public class MetaContext
                 item => item is null,
                 new ArgumentException($"Invalid factory definition: null"))
             .ToImmutableDictionary(
-                item => item.Symbol,
+                item => item.Id,
                 item => item);
 
         AtomicContentTypeMap = atomicRules
             .Where(def => def.ContentDelimiterType != AtomicContentDelimiterType.None)
             .ToImmutableDictionary(
                 item => item.ContentDelimiterType,
-                item => item.Symbol);
+                item => item.Id);
 
         ProductionValidatorMap = validators
             .ThrowIfNull(new ArgumentNullException(nameof(validators)))
