@@ -14,6 +14,14 @@ namespace Axis.Pulsar.Core.Tests.Utils.EscapeMatchers
             var encoded = "\\n\\p\\a";
             var raw = matcher.Decode(encoded);
             Assert.AreEqual("\n\\p\a", raw);
+
+            encoded = "\\n";
+            raw = matcher.Decode(encoded);
+            Assert.AreEqual("\n", raw);
+
+            encoded = "\\p";
+            raw = matcher.Decode(encoded);
+            Assert.AreEqual("\\p", raw);
         }
 
         [TestMethod]
