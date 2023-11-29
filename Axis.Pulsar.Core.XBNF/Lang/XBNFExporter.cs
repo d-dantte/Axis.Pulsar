@@ -1,4 +1,5 @@
 ﻿using Axis.Pulsar.Core.IO;
+using System.Text;
 
 namespace Axis.Pulsar.Core.XBNF.Lang
 {
@@ -6,7 +7,8 @@ namespace Axis.Pulsar.Core.XBNF.Lang
     {
         public string ExportLanguage(ILanguageContext context)
         {
-            throw new NotImplementedException();
+            var sb = new StringBuilder();
         }
+
     }
 }

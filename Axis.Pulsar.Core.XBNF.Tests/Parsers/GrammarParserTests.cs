@@ -352,7 +352,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             // args / value
             success = GrammarParser.TryParseAtomicRuleArguments(
-                "{arg-name :'value', arg-2-flag, arg-3:'bleh' arg-4:'bleh' + ' bleh' \n#abcd\n/*bleh */}",
+                "{arg-name :'value', arg-2-flag, arg-3:'bleh', arg-4:'bleh' + \r\n ' bleh' \n#abcd\n/*bleh */}",
                 "parent",
                 metaContext,
                 out result);
@@ -360,7 +360,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             args = result.Resolve();
-            Assert.AreEqual(3, args.Length);
+            Assert.AreEqual(4, args.Length);
         }
 
         [TestMethod]
