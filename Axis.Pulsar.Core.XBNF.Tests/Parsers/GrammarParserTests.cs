@@ -349,6 +349,18 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(result.IsDataResult());
             args = result.Resolve();
             Assert.AreEqual(3, args.Length);
+
+            // args / value
+            success = GrammarParser.TryParseAtomicRuleArguments(
+                "{arg-name :'value', arg-2-flag, arg-3:'bleh' arg-4:'bleh' + ' bleh' \n#abcd\n/*bleh */}",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            args = result.Resolve();
+            Assert.AreEqual(3, args.Length);
         }
 
         [TestMethod]
@@ -356,19 +368,46 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         {
             var metaContext = MetaContextBuilder.NewBuilder().Build();
 
-            // quote
-            var success = GrammarParser.TryParseDelimitedContent(
-                "'the content\\''",
+            // double quote
+            var tryParse = GrammarParser.DelimitedContentParserDelegate('"', '"');
+            var success = tryParse(
+                "\"the content\\\"\"",
                 "parent",
                 metaContext,
-                '\'',
-                '\'',
                 out var result);
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             var info = result.Resolve();
-            Assert.IsTrue(info.Equals("the content\\'"));
+            Assert.IsTrue(info.Equals("the content\\\""));
+
+
+            // quote
+            tryParse = GrammarParser.DelimitedContentParserDelegate('\'', '\'');
+            success = tryParse(
+                "'the content,' + ' and its concatenation'",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            info = result.Resolve();
+            Assert.IsTrue(info.Equals("the content, and its concatenation"));
+
+
+            // quote
+            tryParse = GrammarParser.DelimitedContentParserDelegate('\'', '\'');
+            success = tryParse(
+                "'the content,' + ' and its concatenation' and stuff behind that should't parse",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.IsDataResult());
+            info = result.Resolve();
+            Assert.IsTrue(info.Equals("the content, and its concatenation"));
         }
 
         [TestMethod]

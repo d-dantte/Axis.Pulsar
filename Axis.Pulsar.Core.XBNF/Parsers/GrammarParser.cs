@@ -8,9 +8,11 @@ using Axis.Pulsar.Core.Grammar.Rules;
 using Axis.Pulsar.Core.Utils;
 using Axis.Pulsar.Core.XBNF.Definitions;
 using Axis.Pulsar.Core.XBNF.Parsers.Models;
+using Axis.Pulsar.Core.XBNF.Parsers.Results;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
@@ -948,6 +950,7 @@ internal static class GrammarParser
     #endregion
 
     #region Atomic
+
     internal static bool TryParseAtomicRule(
         TokenReader reader,
         ProductionPath path,
@@ -1052,10 +1055,7 @@ internal static class GrammarParser
                         accumulator = initialAlternative switch
                         {
                             true => accumulator.ThenTry(
-                                (TokenReader tr, ProductionPath p, MetaContext mc, out IResult<Tokens> r) => TryParseDelimitedContent(
-                                    tr,
-                                    atomicContentPath,
-                                    mc, delimChar, delimChar, out r),
+                                DelimitedContentParserDelegate(delimChar, delimChar),
                                 (info, content) => new AtomicContentArgumentInfo
                                 {
                                     Content = content,
@@ -1063,10 +1063,7 @@ internal static class GrammarParser
                                 }),
 
                             false => accumulator.OrTry(
-                                (TokenReader tr, ProductionPath p, MetaContext mc, out IResult<Tokens> r) => TryParseDelimitedContent(
-                                    tr,
-                                    atomicContentPath,
-                                    mc, delimChar, delimChar, out r),
+                                DelimitedContentParserDelegate(delimChar, delimChar),
                                 (info, content) => new AtomicContentArgumentInfo
                                 {
                                     Content = content,
@@ -1100,69 +1097,144 @@ internal static class GrammarParser
         }
     }
 
-    internal static bool TryParseDelimitedContent(
-        TokenReader reader,
-        ProductionPath path,
-        MetaContext context,
+    internal static ParserAccumulator.TryParse<string, ProductionPath, MetaContext> DelimitedContentParserDelegate(
         char startDelimiter,
-        char endDelimiter,
-        out IResult<Tokens> result)
+        char endDelimiter)
     {
-        var position = reader.Position;
-        var delimContentPath = path.Next("delimited-content");
-
-        try
+        return (TokenReader reader, ProductionPath path, MetaContext context, out IResult<string> result) =>
         {
-            // start delim
-            if (!reader.TryGetTokens(startDelimiter.ToString(), out var startDelimToken))
-            {
-                result = Result.Of<Tokens>(FailedRecognitionError.Of(
-                    delimContentPath,
-                    position));
-                reader.Reset(position);
-                return false;
-            }
+            var position = reader.Position;
+            var delimContentPath = path.Next("delimited-content");
 
-            // content chars
-            var contentTokens = Tokens.Empty;
-            while (reader.TryGetToken(out var stringChar))
+            try
             {
-                if (stringChar[0] == '\\'
-                    && reader.TryPeekToken(out var nextToken)
-                    && nextToken[0] == endDelimiter)
+                var tryParseDelimitedContentSegment = DelimitedContentSegmentParserDelegate(startDelimiter, endDelimiter);
+                int tempPosition;
+                var accumulator = ParserAccumulator
+                    .Of(reader,
+                        delimContentPath,
+                        context,
+                        new List<Tokens>())
+
+                    // first content segment
+                    .ThenTry(
+                        tryParseDelimitedContentSegment,
+                        (segmentList, segment) => segmentList.AddItem(segment));
+
+                do
                 {
-                    stringChar += nextToken;
-                    reader.Advance();
+                    tempPosition = reader.Position;
+                    accumulator = accumulator
+
+                        // optional silent block
+                        .ThenTry<SilentBlock>(
+                            TryParseSilentBlock,
+                            (contentSegments, block) => contentSegments,
+                            contentSegments => contentSegments)
+
+                        // mandatory concatenation operator
+                        .ThenTry<ContentConcatenationOperator>(
+                            TryParseContentConcatenationOperator,
+                            (contentSegments, op) => contentSegments)
+
+                        // optional silent block
+                        .ThenTry<SilentBlock>(
+                            TryParseSilentBlock,
+                            (contentSegments, block) => contentSegments,
+                            contentSegments => contentSegments)
+
+                        .ThenTry(
+                            tryParseDelimitedContentSegment,
+                            (segmentList, segment) => segmentList.AddItem(segment));
                 }
-                else if (stringChar[0] == endDelimiter)
-                {
-                    reader.Back();
-                    break;
-                }                
-                
-                contentTokens += stringChar; // contentTokens = contentTokens.Join(stringChar);
-            }
+                while (!accumulator.IsErrored);
 
-            // end delim
-            if (!reader.TryGetTokens(endDelimiter.ToString(), out var endDelimToken))
+                result = accumulator
+                    .ConsumeError<FailedRecognitionError>((list, error, matchCount) =>
+                    {
+                        if (list.Count > 0)
+                            reader.Reset(tempPosition);
+                    })
+                    .MapError<FailedRecognitionError>(
+                        (list, error, matchCount) => list.Count > 0,
+                        (list, error, matchCount) => list)
+                    .ToResult(list => list
+                        .Aggregate(new StringBuilder(), (builder, item) => builder.Append(item))
+                        .ToString());
+
+                return result.IsDataResult();
+            }
+            catch (Exception e)
             {
-                result = Result.Of<Tokens>(PartialRecognitionError.Of(
-                    delimContentPath,
-                    position,
-                    reader.Position - position));
                 reader.Reset(position);
+                result = Result.Of<string>(e);
                 return false;
             }
+        };
+    }
 
-            result = Result.Of(contentTokens);
-            return true;
-        }
-        catch (Exception e)
+    internal static ParserAccumulator.TryParse<Tokens, ProductionPath, MetaContext> DelimitedContentSegmentParserDelegate(
+        char startDelimiter,
+        char endDelimiter)
+    {
+        return (TokenReader reader, ProductionPath path, MetaContext context, out IResult<Tokens> result) =>
         {
-            reader.Reset(position);
-            result = Result.Of<Tokens>(e);
-            return false;
-        }
+            var position = reader.Position;
+            var delimContentPath = path.Next("delimited-content-segment");
+
+            try
+            {
+                // start delim
+                if (!reader.TryGetTokens(startDelimiter.ToString(), out var startDelimToken))
+                {
+                    result = Result.Of<Tokens>(FailedRecognitionError.Of(
+                        delimContentPath,
+                        position));
+                    reader.Reset(position);
+                    return false;
+                }
+
+                // content chars
+                var contentTokens = Tokens.Empty;
+                while (reader.TryGetToken(out var stringChar))
+                {
+                    if (stringChar[0] == '\\'
+                        && reader.TryPeekToken(out var nextToken)
+                        && nextToken[0] == endDelimiter)
+                    {
+                        stringChar += nextToken;
+                        reader.Advance();
+                    }
+                    else if (stringChar[0] == endDelimiter)
+                    {
+                        reader.Back();
+                        break;
+                    }
+
+                    contentTokens += stringChar; // contentTokens = contentTokens.Join(stringChar);
+                }
+
+                // end delim
+                if (!reader.TryGetTokens(endDelimiter.ToString(), out var endDelimToken))
+                {
+                    result = Result.Of<Tokens>(PartialRecognitionError.Of(
+                        delimContentPath,
+                        position,
+                        reader.Position - position));
+                    reader.Reset(position);
+                    return false;
+                }
+
+                result = Result.Of(contentTokens);
+                return true;
+            }
+            catch (Exception e)
+            {
+                reader.Reset(position);
+                result = Result.Of<Tokens>(e);
+                return false;
+            }
+        };
     }
 
     internal static bool TryParseAtomicRuleArguments(
@@ -1295,10 +1367,7 @@ internal static class GrammarParser
 
                     // delimited content value?
                     .OrTry(
-                        (TokenReader tr, ProductionPath p, MetaContext mc, out IResult<Tokens> r) => TryParseDelimitedContent(
-                            tr,
-                            argumentPath,
-                            mc, '\'', '\'', out r),
+                        DelimitedContentParserDelegate('\'', '\''),
                         (value, tokens) => tokens.ToString()!);
 
                 if (accumulator.IsErrored)
@@ -1325,6 +1394,24 @@ internal static class GrammarParser
             result = Result.Of<ArgumentPair>(e);
             return false;
         }
+    }
+
+    internal static bool TryParseContentConcatenationOperator(
+        TokenReader reader,
+        ProductionPath path,
+        MetaContext context,
+        out IResult<ContentConcatenationOperator> result)
+    {
+        var position = reader.Position;
+        var concatPath = path.Next("content-concatenation-operator");
+
+        result = reader.TryGetTokens("+", out _)
+            ? Result.Of(ContentConcatenationOperator.Instance)
+            : FailedRecognitionError
+                .Of(concatPath, position)
+                .ApplyTo(Result.Of<ContentConcatenationOperator>);
+
+        return result.IsDataResult();
     }
 
     internal static bool TryParseBooleanArgValue(

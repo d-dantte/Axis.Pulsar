@@ -181,18 +181,25 @@ public class ParserAccumulator<TData, TSymbolID, TContext>
         return this;
     }
 
-    public ParserAccumulator<TData, TSymbolID, TContext> MapError(Func<TData, Exception, int, TData> mapper)
+    public ParserAccumulator<TData, TSymbolID, TContext> MapError(
+        Func<TData, Exception, int, TData> mapper)
+        => MapError((a, b, c) => true, mapper);
+
+    public ParserAccumulator<TData, TSymbolID, TContext> MapError(
+        Func<TData, Exception, int, bool> predicate,
+        Func<TData, Exception, int, TData> mapper)
     {
         ArgumentNullException.ThrowIfNull(mapper);
+        ArgumentNullException.ThrowIfNull(predicate);
 
-        if (IsErrored)
+        if (IsErrored && predicate.Invoke(_data, _error!, _recognitionCount))
         {
             try
             {
                 _data = mapper.Invoke(_data, _error!, _recognitionCount);
                 _error = null;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 _error = e;
             }
@@ -201,12 +208,20 @@ public class ParserAccumulator<TData, TSymbolID, TContext>
         return this;
     }
 
-    public ParserAccumulator<TData, TSymbolID, TContext> MapError<TError>(Func<TData, TError, int, TData> mapper)
-    where TError : Exception
+    public ParserAccumulator<TData, TSymbolID, TContext> MapError<TError>(
+        Func<TData, TError, int, TData> mapper)
+        where TError : Exception
+        => MapError((a, b, c) => true, mapper);
+
+    public ParserAccumulator<TData, TSymbolID, TContext> MapError<TError>(
+        Func<TData, TError, int, bool> predicate,
+        Func<TData, TError, int, TData> mapper)
+        where TError : Exception
     {
         ArgumentNullException.ThrowIfNull(mapper);
+        ArgumentNullException.ThrowIfNull(predicate);
 
-        if (_error is TError terror)
+        if (_error is TError terror && predicate.Invoke(_data, terror!, _recognitionCount))
         {
             try
             {
@@ -222,43 +237,74 @@ public class ParserAccumulator<TData, TSymbolID, TContext>
         return this;
     }
 
-    public ParserAccumulator<TData, TSymbolID, TContext> ConsumeError(Action<TData, Exception, int> consumer)
+    public ParserAccumulator<TData, TSymbolID, TContext> ConsumeError(
+        Action<TData, Exception, int> consumer)
+        => ConsumeError((a,b,c) => true, consumer);
+
+    public ParserAccumulator<TData, TSymbolID, TContext> ConsumeError(
+        Func<TData, Exception, int, bool> predicate,
+        Action<TData, Exception, int> consumer)
     {
         ArgumentNullException.ThrowIfNull(consumer);
+        ArgumentNullException.ThrowIfNull(predicate);
 
-        if(IsErrored)
+        if (IsErrored && predicate.Invoke(_data, _error!, _recognitionCount))
             consumer.Invoke(_data, _error!, _recognitionCount);
 
         return this;
     }
 
-    public ParserAccumulator<TData, TSymbolID, TContext> ConsumeError<TError>(Action<TData, TError, int> consumer)
-    where TError: Exception
+    public ParserAccumulator<TData, TSymbolID, TContext> ConsumeError<TError>(
+        Action<TData, TError, int> consumer)
+        where TError : Exception
+        => ConsumeError((a, b, c) => true, consumer);
+
+    public ParserAccumulator<TData, TSymbolID, TContext> ConsumeError<TError>(
+        Func<TData, TError, int, bool> predicate,
+        Action<TData, TError, int> consumer)
+        where TError : Exception
     {
         ArgumentNullException.ThrowIfNull(consumer);
+        ArgumentNullException.ThrowIfNull(predicate);
 
-        if(_error is TError terror)
+        if (_error is TError terror && predicate.Invoke(_data, terror, _recognitionCount))
             consumer.Invoke(_data, terror, _recognitionCount);
 
         return this;
     }
 
-    public ParserAccumulator<TData, TSymbolID, TContext> TransformError(Func<TData, Exception, int, Exception> mapper)
+    public ParserAccumulator<TData, TSymbolID, TContext> TransformError(
+        Func<TData, Exception, int, Exception> mapper)
+        => TransformError((a, b, c) => true, mapper);
+
+
+    public ParserAccumulator<TData, TSymbolID, TContext> TransformError(
+        Func<TData, Exception, int, bool> predicate,
+        Func<TData, Exception, int, Exception> mapper)
     {
         ArgumentNullException.ThrowIfNull(mapper);
+        ArgumentNullException.ThrowIfNull(predicate);
 
-        if(IsErrored)
+        if (IsErrored && predicate.Invoke(_data, _error!, _recognitionCount))
             _error = mapper.Invoke(_data, _error!, _recognitionCount);
 
         return this;
     }
 
-    public ParserAccumulator<TData, TSymbolID, TContext> TransformError<TError>(Func<TData, TError, int, Exception> mapper)
-    where TError: Exception
+    public ParserAccumulator<TData, TSymbolID, TContext> TransformError<TError>(
+        Func<TData, TError, int, Exception> mapper)
+        where TError : Exception
+        => TransformError((a, b, c) => true, mapper);
+
+    public ParserAccumulator<TData, TSymbolID, TContext> TransformError<TError>(
+        Func<TData, TError, int, bool> predicate,
+        Func<TData, TError, int, Exception> mapper)
+        where TError : Exception
     {
         ArgumentNullException.ThrowIfNull(mapper);
+        ArgumentNullException.ThrowIfNull(predicate);
 
-        if(_error is TError terror)
+        if (_error is TError terror && predicate.Invoke(_data, terror, _recognitionCount))
             _error = mapper.Invoke(_data, terror, _recognitionCount);
 
         return this;
