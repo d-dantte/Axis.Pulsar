@@ -8,10 +8,6 @@ namespace Axis.Pulsar.Core.XBNF.Definitions
     /// </summary>
     public class AtomicRuleDefinition
     {
-        private static readonly HashSet<AtomicContentDelimiterType> _contentTypes = Enum
-            .GetValues<AtomicContentDelimiterType>()
-            .ApplyTo(v => new HashSet<AtomicContentDelimiterType>(v));
-
         public string Id { get; }
 
         public IAtomicRuleFactory Factory { get; }
@@ -25,8 +21,8 @@ namespace Axis.Pulsar.Core.XBNF.Definitions
         {
             Factory = factory.ThrowIfNull(new ArgumentNullException(nameof(factory)));
             ContentDelimiterType = contentDelimiterType.ThrowIfNot(
-                _contentTypes.Contains,
-                new ArgumentException($"Invalid content delimiter type: {contentDelimiterType}"));
+                Enum.IsDefined,
+                new ArgumentException($"Invalid content delimiter type: '{contentDelimiterType}' is undefined"));
             Id = id.ThrowIfNot(
                 IProduction.SymbolPattern.IsMatch,
                 new FormatException($"Invalid {nameof(id)} format: '{id}'"));

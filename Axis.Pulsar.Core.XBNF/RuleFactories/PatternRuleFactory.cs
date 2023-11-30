@@ -1,5 +1,6 @@
 ﻿using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Rules;
+using Axis.Pulsar.Core.XBNF.Lang;
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
@@ -49,7 +50,7 @@ public class PatternRuleFactory : IAtomicRuleFactory
 
     public IAtomicRule NewRule(
         string ruleId,
-        MetaContext context,
+        LanguageMetadata context,
         ImmutableDictionary<Argument, string> arguments)
     {
         ValidateArgs(arguments);

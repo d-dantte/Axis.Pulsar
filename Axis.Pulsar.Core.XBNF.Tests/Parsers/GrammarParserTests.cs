@@ -7,6 +7,7 @@ using Axis.Pulsar.Core.Grammar.Groups;
 using Axis.Pulsar.Core.Grammar.Rules;
 using Axis.Pulsar.Core.Utils;
 using Axis.Pulsar.Core.XBNF.Definitions;
+using Axis.Pulsar.Core.XBNF.Lang;
 using Axis.Pulsar.Core.XBNF.Parsers;
 using Axis.Pulsar.Core.XBNF.Parsers.Models;
 using System.Collections.Immutable;
@@ -1342,7 +1343,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         {
             public IAtomicRule NewRule(
                 string id,
-                MetaContext context,
+                LanguageMetadata context,
                 ImmutableDictionary<IAtomicRuleFactory.Argument, string> arguments)
             {
                 return new WindowsNewLine { Id = id };

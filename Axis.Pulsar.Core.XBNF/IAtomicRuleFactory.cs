@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Axis.Luna.Common;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar;
+using Axis.Pulsar.Core.XBNF.Lang;
 
 namespace Axis.Pulsar.Core.XBNF;
 
@@ -35,12 +36,12 @@ public interface IAtomicRuleFactory
     /// Creates a new <see cref="IAtomicRule"/> instance given a list of arguments.
     /// </summary>
     /// <param name="ruleId"></param>
-    /// <param name="context"></param>
+    /// <param name="metadata"></param>
     /// <param name="arguments"></param>
     /// <returns></returns>
     IAtomicRule NewRule(
         string ruleId,
-        MetaContext context,
+        LanguageMetadata metadata,
         ImmutableDictionary<Argument, string> arguments);
 
     #region Nested Types

@@ -3,7 +3,9 @@ using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Validation;
+using Axis.Pulsar.Core.XBNF.Parsers;
 using System.Collections.Immutable;
+using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
 namespace Axis.Pulsar.Core.XBNF.Lang
 {
@@ -11,16 +13,31 @@ namespace Axis.Pulsar.Core.XBNF.Lang
     {
         public IGrammar Grammar { get; }
 
+        public LanguageMetadata Metadata { get; }
+
+        public ImmutableDictionary<string, ArgumentPair[]> AtomicRuleArguments { get; }
+
         public ImmutableDictionary<string, IProductionValidator> ProductionValidators { get; }
 
-        public XBNFLanguageContext(
+        internal XBNFLanguageContext(
             IGrammar grammar,
-            MetaContext metaContext)
+            ParserContext context)
         {
+            ArgumentNullException.ThrowIfNull(context);
+
             Grammar = grammar ?? throw new ArgumentNullException(nameof(grammar));
-            ProductionValidators = metaContext
-                .ThrowIfNull(new ArgumentNullException(nameof(metaContext)))
-                .ProductionValidatorMap
+            Metadata = context.Metadata;
+
+            AtomicRuleArguments = context.AtomicRuleArguments
+                .ThrowIfAny(
+                    kvp => string.IsNullOrEmpty(kvp.Key),
+                    new ArgumentException("Invalid atomicRuleArgument key: null/empty"))
+                .ToImmutableDictionary();
+
+            ProductionValidators = context.Metadata.ProductionValidatorDefinitionMap
+                .ThrowIfAny(
+                    kvp => string.IsNullOrEmpty(kvp.Key),
+                    new ArgumentException("Invalid production symbol: null/empty"))
                 .ToImmutableDictionary(
                     def => def.Key,
                     def => def.Value.Validator);

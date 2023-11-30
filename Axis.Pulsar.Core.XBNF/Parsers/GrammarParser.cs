@@ -7,6 +7,7 @@ using Axis.Pulsar.Core.Grammar.Groups;
 using Axis.Pulsar.Core.Grammar.Rules;
 using Axis.Pulsar.Core.Utils;
 using Axis.Pulsar.Core.XBNF.Definitions;
+using Axis.Pulsar.Core.XBNF.Lang;
 using Axis.Pulsar.Core.XBNF.Parsers.Models;
 using Axis.Pulsar.Core.XBNF.Parsers.Results;
 using System.Collections.Generic;
@@ -39,7 +40,7 @@ internal static class GrammarParser
 
     internal static bool TryParseGrammar(
         TokenReader reader,
-        MetaContext context,
+        ParserContext context,
         out IResult<IGrammar> result)
     {
         var position = reader.Position;
@@ -117,7 +118,7 @@ internal static class GrammarParser
     internal static bool TryParseProduction(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<XBNFProduction> result)
     {
         var position = reader.Position;
@@ -173,7 +174,7 @@ internal static class GrammarParser
     internal static bool TryParseCompositeSymbolName(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<string> result)
     {
         var position = reader.Position;
@@ -215,7 +216,7 @@ internal static class GrammarParser
     internal static bool TryParseAtomicSymbolName(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<string> result)
     {
         var position = reader.Position;
@@ -257,7 +258,7 @@ internal static class GrammarParser
     internal static bool TryParseMapOperator(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<Tokens> result)
     {
         var position = reader.Position;
@@ -287,7 +288,7 @@ internal static class GrammarParser
     internal static bool TryParseEOF(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<Results.EOF> result)
     {
         var position = reader.Position;
@@ -321,7 +322,7 @@ internal static class GrammarParser
     internal static bool TryParseCompositeRule(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<ICompositeRule> result)
     {
         var position = reader.Position;
@@ -365,7 +366,7 @@ internal static class GrammarParser
     internal static bool TryParseRecognitionThreshold(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<uint> result)
     {
         var position = reader.Position;
@@ -418,7 +419,7 @@ internal static class GrammarParser
     internal static bool TryParseGroupElement(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<IGroupElement> result)
     {
         var position = reader.Position;
@@ -461,7 +462,7 @@ internal static class GrammarParser
     internal static bool TryParseAtomicRuleRef(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<AtomicRuleRef> result)
     {
         var position = reader.Position;
@@ -503,7 +504,7 @@ internal static class GrammarParser
     internal static bool TryParseProductionRef(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<ProductionRef> result)
     {
         var position = reader.Position;
@@ -545,7 +546,7 @@ internal static class GrammarParser
     internal static bool TryParseGroup(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<IGroup> result)
     {
         var position = reader.Position;
@@ -585,7 +586,7 @@ internal static class GrammarParser
     internal static bool TryParseSet(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<Set> result)
     {
         var position = reader.Position;
@@ -656,7 +657,7 @@ internal static class GrammarParser
     internal static bool TryParseChoice(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<Choice> result)
     {
         var position = reader.Position;
@@ -716,7 +717,7 @@ internal static class GrammarParser
     internal static bool TryParseSequence(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<Sequence> result)
     {
         var position = reader.Position;
@@ -776,7 +777,7 @@ internal static class GrammarParser
     internal static bool TryParseCardinality(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<Cardinality> result)
     {
         var position = reader.Position;
@@ -860,7 +861,7 @@ internal static class GrammarParser
     internal static bool TryParseElementList(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<IGroupElement[]> result)
     {
         var position = reader.Position;
@@ -954,7 +955,7 @@ internal static class GrammarParser
     internal static bool TryParseAtomicRule(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<IAtomicRule> result)
     {
         var position = reader.Position;
@@ -976,7 +977,7 @@ internal static class GrammarParser
                 // or parse atomic content, and derive rule name/Id
                 .OrTry<AtomicContentArgumentInfo>(TryParseAtomicContent, (r, contentInfo) =>
                 {
-                    if (!context.AtomicContentTypeMap.TryGetValue(contentInfo.ContentType, out var symbol))
+                    if (!context.Metadata.AtomicContentTypeMap.TryGetValue(contentInfo.ContentType, out var symbol))
                         throw PartialRecognitionError.Of(
                             atomicRulePath,
                             position,
@@ -1003,16 +1004,24 @@ internal static class GrammarParser
                 // map to atomic rule
                 .ToResult(r =>
                 {
-                    if (!context.AtomicFactoryMap.TryGetValue(r.Name, out var factoryDef))
+                    if (!context.Metadata.AtomicRuleDefinitionMap.TryGetValue(r.Name, out var factoryDef))
                         throw PartialRecognitionError.Of(
                             atomicRulePath,
                             position,
                             reader.Position - position);
 
-                    return factoryDef.Factory.NewRule(
-                        r.Name,
-                        context,
+                    var ruleId = $"{r.Name}-{context.AtomicRuleArguments.Count}";
+
+                    // create the rule
+                    var _result = factoryDef.Factory.NewRule(
+                        ruleId,
+                        context.Metadata,
                         r.Args.ToImmutableDictionary(arg => arg.Argument, arg => arg.Value!));
+
+                    // append the args to the context
+                    context.AppendAtomicRuleArguments(ruleId, r.Args.ToArray());
+
+                    return _result;
                 });
 
             if (result.IsErrorResult())
@@ -1031,7 +1040,7 @@ internal static class GrammarParser
     internal static bool TryParseAtomicContent(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<AtomicContentArgumentInfo> result)
     {
         var position = reader.Position;
@@ -1097,11 +1106,11 @@ internal static class GrammarParser
         }
     }
 
-    internal static ParserAccumulator.TryParse<string, ProductionPath, MetaContext> DelimitedContentParserDelegate(
+    internal static ParserAccumulator.TryParse<string, ProductionPath, ParserContext> DelimitedContentParserDelegate(
         char startDelimiter,
         char endDelimiter)
     {
-        return (TokenReader reader, ProductionPath path, MetaContext context, out IResult<string> result) =>
+        return (TokenReader reader, ProductionPath path, ParserContext context, out IResult<string> result) =>
         {
             var position = reader.Position;
             var delimContentPath = path.Next("delimited-content");
@@ -1173,11 +1182,11 @@ internal static class GrammarParser
         };
     }
 
-    internal static ParserAccumulator.TryParse<Tokens, ProductionPath, MetaContext> DelimitedContentSegmentParserDelegate(
+    internal static ParserAccumulator.TryParse<Tokens, ProductionPath, ParserContext> DelimitedContentSegmentParserDelegate(
         char startDelimiter,
         char endDelimiter)
     {
-        return (TokenReader reader, ProductionPath path, MetaContext context, out IResult<Tokens> result) =>
+        return (TokenReader reader, ProductionPath path, ParserContext context, out IResult<Tokens> result) =>
         {
             var position = reader.Position;
             var delimContentPath = path.Next("delimited-content-segment");
@@ -1240,7 +1249,7 @@ internal static class GrammarParser
     internal static bool TryParseAtomicRuleArguments(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<ArgumentPair[]> result)
     {
         var position = reader.Position;
@@ -1325,7 +1334,7 @@ internal static class GrammarParser
     internal static bool TryParseArgument(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<ArgumentPair> result)
     {
         var position = reader.Position;
@@ -1399,7 +1408,7 @@ internal static class GrammarParser
     internal static bool TryParseContentConcatenationOperator(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<ContentConcatenationOperator> result)
     {
         var position = reader.Position;
@@ -1417,7 +1426,7 @@ internal static class GrammarParser
     internal static bool TryParseBooleanArgValue(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<bool> result)
     {
         var position = reader.Position;
@@ -1452,7 +1461,7 @@ internal static class GrammarParser
     internal static bool TryParseNumberArgValue(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<decimal> result)
     {
         var position = reader.Position;
@@ -1512,7 +1521,7 @@ internal static class GrammarParser
     internal static bool TryParseSilentBlock(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<SilentBlock> result)
     {
         var position = reader.Position;
@@ -1571,7 +1580,7 @@ internal static class GrammarParser
     internal static bool TryParseBlockComment(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<BlockComment> result)
     {
         var position = reader.Position;
@@ -1622,7 +1631,7 @@ internal static class GrammarParser
     internal static bool TryParseLineComment(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<LineComment> result)
     {
         var position = reader.Position;
@@ -1668,7 +1677,7 @@ internal static class GrammarParser
     internal static bool TryParseWhitespace(
         TokenReader reader,
         ProductionPath path,
-        MetaContext context,
+        ParserContext context,
         out IResult<Whitespace> result)
     {
         var position = reader.Position;

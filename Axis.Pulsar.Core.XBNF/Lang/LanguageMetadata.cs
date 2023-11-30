@@ -1,23 +1,24 @@
 ﻿using System.Collections.Immutable;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.XBNF.Definitions;
-using Axis.Pulsar.Core.XBNF.RuleFactories;
 
-namespace Axis.Pulsar.Core.XBNF;
+namespace Axis.Pulsar.Core.XBNF.Lang;
 
-public class MetaContext
+public class LanguageMetadata
 {
-    public ImmutableDictionary<string, AtomicRuleDefinition> AtomicFactoryMap { get; }
+
+    public ImmutableDictionary<string, AtomicRuleDefinition> AtomicRuleDefinitionMap { get; }
 
     public ImmutableDictionary<AtomicContentDelimiterType, string> AtomicContentTypeMap { get; }
 
-    public ImmutableDictionary<string, ProductionValidatorDefinition> ProductionValidatorMap { get; }
+    public ImmutableDictionary<string, ProductionValidatorDefinition> ProductionValidatorDefinitionMap { get; }
 
-    internal MetaContext(
+
+    internal LanguageMetadata(
         IEnumerable<AtomicRuleDefinition> atomicRules,
         IEnumerable<ProductionValidatorDefinition> validators)
     {
-        AtomicFactoryMap = atomicRules
+        AtomicRuleDefinitionMap = atomicRules
             .ThrowIfNull(new ArgumentNullException(nameof(atomicRules)))
             .ThrowIfAny(
                 item => item is null,
@@ -32,7 +33,7 @@ public class MetaContext
                 item => item.ContentDelimiterType,
                 item => item.Id);
 
-        ProductionValidatorMap = validators
+        ProductionValidatorDefinitionMap = validators
             .ThrowIfNull(new ArgumentNullException(nameof(validators)))
             .ThrowIfAny(
                 item => item is null,

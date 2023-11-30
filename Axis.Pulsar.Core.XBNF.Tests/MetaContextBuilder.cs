@@ -1,4 +1,5 @@
 ﻿using Axis.Pulsar.Core.XBNF.Definitions;
+using Axis.Pulsar.Core.XBNF.Lang;
 using Axis.Pulsar.Core.XBNF.RuleFactories;
 
 namespace Axis.Pulsar.Core.XBNF.Tests
@@ -55,9 +56,9 @@ namespace Axis.Pulsar.Core.XBNF.Tests
         }
         #endregion
 
-        public MetaContext Build()
+        public LanguageMetadata Build()
         {
-            return new MetaContext(
+            return new LanguageMetadata(
                 _atomicFactoryMap.Values,
                 _productionValidatorMap.Values);
         }

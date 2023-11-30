@@ -2,6 +2,7 @@
 using Axis.Pulsar.Core.Grammar.Rules;
 using Axis.Pulsar.Core.Utils;
 using Axis.Pulsar.Core.Utils.EscapeMatchers;
+using Axis.Pulsar.Core.XBNF.Lang;
 using System.Collections.Immutable;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
@@ -32,7 +33,7 @@ public class LiteralRuleFactory : IAtomicRuleFactory
 
     public IAtomicRule NewRule(
         string ruleId,
-        MetaContext context,
+        LanguageMetadata context,
         ImmutableDictionary<Argument, string> arguments)
     {
         ValidateArgs(arguments);

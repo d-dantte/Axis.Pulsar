@@ -11,16 +11,17 @@ namespace Axis.Pulsar.Core.XBNF.Lang
 {
     public class XBNFImporter : ILanguageImporter
     {
-        private readonly MetaContext _metaContext;
+        private readonly LanguageMetadata _metadata;
 
-        private XBNFImporter(MetaContext metaContext)
+        private XBNFImporter(LanguageMetadata metaContext)
         {
-            _metaContext = metaContext ?? throw new ArgumentNullException(nameof(metaContext));
+            _metadata = metaContext ?? throw new ArgumentNullException(nameof(metaContext));
         }
 
         public ILanguageContext ImportLanguage(string inputTokens)
         {
-            _ = GrammarParser.TryParseGrammar(inputTokens, _metaContext, out var grammarResult);
+            var context = new ParserContext(_metadata);
+            _ = GrammarParser.TryParseGrammar(inputTokens, context, out var grammarResult);
 
             return grammarResult
 
@@ -32,9 +33,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
                         r => new GrammarValidationException(r)))
 
                 // create the language context from the grammar
-                .Map(grammar => new XBNFLanguageContext(
-                    grammar,
-                    _metaContext))
+                .Map(grammar => new XBNFLanguageContext(grammar, context))
 
                 // convert IRecognitionErrors to FormatException
                 .TransformError(err => err switch { 
