@@ -1,0 +1,92 @@
+﻿#
+# JSON grammar with line comment support
+#
+
+$json -> +[$block-space.? ?[$json-object $json-list] $block-space.?]
+
+# Whitespaces
+$block-space -> ?[$line-comment $space $tab $line-feed $carriage-return].+
+$line-comment -> @LineComment
+$space -> ' '
+$tab -> '\t'
+$line-feed -> "\n"
+$carriage-return -> '\r'
+
+
+# Json value
+$json-value -> ?[
+	$json-object
+	$json-list
+	$json-string
+	$json-number
+	$json-boolean
+	$json-null
+]
+
+
+# Object
+$json-object -> +[
+	'{'
+	$block-space.?
+	$property.?
+	+[
+		$block-space.?
+		","
+		$block-space.?
+		$property
+	].*
+	$block-space.?
+	'}'
+]
+$property -> +[
+	$json-string
+	$block-space.?
+	':'
+	$block-space.?
+	$json-value
+]
+
+
+# List
+$json-list -> +[
+	'['
+	$block-space.?
+	$json-value.?
+	+[
+		$block-space.?
+		","
+		$block-space.?
+		$json-value
+	].*
+	$block-space.?
+	']'
+]
+
+# Number
+$json-number -> ?[$decimal $int]
+
+$int -> ?[$binary-int $hex-int $regular-int]
+$binary-int -> /^0[bB][01](_?[01])*$/.3,+
+$hex-int -> /^0[xX][0-9A-Fa-f](_?[0-9A-Fa-f])*$/.3,+
+$regular-int -> /^-?\d(_?\d)*$/.2,+
+
+$decimal -> ?[$scientific-decimal $regular-decimal]
+$regular-decimal -> +[$regular-int '.' $digits]>2
+$scientific-decimal -> +[
+	$regular-int
+	+['.' $digits.?].?
+	'E' $number-sign.? $digits]>4
+$digits -> /^\d+\z/
+$number-sign -> ?['+' '-']
+
+
+# String
+$json-string -> @DQSString
+
+
+# Boolean
+$json-boolean -> ?["true" "false"]
+
+
+# Null
+$json-null -> "null"

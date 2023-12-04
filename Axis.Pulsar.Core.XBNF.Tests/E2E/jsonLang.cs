@@ -93,7 +93,10 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
         [TestMethod]
         public void Object_Tests()
         {
-            TokenReader input = "{\"abc\": 123, \"bleh\": true}";
+            //TokenReader input = "{\"abc\": 123,\n \"bleh\": true}";
+            // this gives a partial recognition error when $scientific-decimal has a threshold of 2. The correct threshold is 4, however, the the partial recognition error
+            // should report that it originates from the $scientific-decimal, not the $json-object. Investigate why this is happening - someone is possibly consuming the partial errors
+            TokenReader input = "{\r\n    \"this\": \"is\",\r\n    \"json\": [\r\n        \"at\",\r\n        {\r\n            \"its\": true,\r\n            \"finest\": 10.5,\r\n            \"times\": []\r\n        }\r\n    ]\r\n}";
             var success = _lang.Grammar["json-object"].TryProcessRule(
                 input,
                 "parent",

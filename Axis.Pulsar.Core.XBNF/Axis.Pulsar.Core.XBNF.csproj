@@ -7,11 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Axis.Pulsar.Core\Axis.Pulsar.Core.csproj" />
+    <Compile Remove="Writers\**" />
+    <EmbeddedResource Remove="Writers\**" />
+    <None Remove="Writers\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Writers\" />
+    <ProjectReference Include="..\Axis.Pulsar.Core\Axis.Pulsar.Core.csproj" />
   </ItemGroup>
 
 </Project>

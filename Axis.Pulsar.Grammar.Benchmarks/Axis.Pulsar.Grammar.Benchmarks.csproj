@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="json.xbnf" />
+    <None Remove="Json\sample.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Json\sample.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Json\json.xbnf" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Antlr4.Runtime" Version="4.6.6" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.13.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Axis.Pulsar.Grammar\Axis.Pulsar.Grammar.csproj" />
+    <ProjectReference Include="..\Axis.Pulsar.Languages\Axis.Pulsar.Languages.csproj" />
+  </ItemGroup>
+
+</Project>
