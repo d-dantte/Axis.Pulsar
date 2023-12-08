@@ -7,6 +7,6 @@ using BenchmarkDotNet.Running;
 var soloBenchmarker = new SoloPulsarBenchmark();
 soloBenchmarker.ParseJson();
 
-BenchmarkRunner.Run<SoloPulsarBenchmark>();
+//BenchmarkRunner.Run<SoloPulsarBenchmark>();
 
 Console.ReadKey();

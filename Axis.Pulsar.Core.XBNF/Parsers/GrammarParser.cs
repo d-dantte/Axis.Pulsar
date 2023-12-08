@@ -967,7 +967,7 @@ internal static class GrammarParser
                 .Of(reader,
                     atomicRulePath,
                     context,
-                    (Name: string.Empty, Args: new List<ArgumentPair>()))
+                    (Name: string.Empty, Args: new List<Parameter>()))
 
                 // parse atomic symbol name
                 .ThenTry<string>(
@@ -975,24 +975,22 @@ internal static class GrammarParser
                     (r, name) => (Name: name, r.Args))
 
                 // or parse atomic content, and derive rule name/Id
-                .OrTry<AtomicContentArgumentInfo>(TryParseAtomicContent, (r, contentInfo) =>
+                .OrTry<Parameter>(TryParseAtomicContent, (r, param) =>
                 {
-                    if (!context.Metadata.AtomicContentTypeMap.TryGetValue(contentInfo.ContentType, out var symbol))
+                    var contentArg = (ContentArgument)param.Argument;
+                    if (!context.Metadata.AtomicContentTypeMap.TryGetValue(contentArg.Delimiter, out var symbol))
                         throw PartialRecognitionError.Of(
                             atomicRulePath,
                             position,
                             reader.Position - position);
 
                     r.Name = symbol;
-                    r.Args.Add(ArgumentPair.Of(
-                        IAtomicRuleFactory.ContentArgument,
-                        contentInfo.Content.ToString()!));
-
+                    r.Args.Add(param);
                     return r;
                 })
 
                 // parse optional arguments
-                .ThenTry<ArgumentPair[]>(
+                .ThenTry<Parameter[]>(
                     tryParse: TryParseAtomicRuleArguments,
                     defaultMapper: r => r,
                     mapper: (r, args) =>
@@ -1016,7 +1014,10 @@ internal static class GrammarParser
                     var _result = factoryDef.Factory.NewRule(
                         ruleId,
                         context.Metadata,
-                        r.Args.ToImmutableDictionary(arg => arg.Argument, arg => arg.Value!));
+                        r.Args.ToImmutableDictionary(
+                            arg => arg.Argument,
+                            arg => arg.Value!,
+                            new ArgumentKeyComparer())); // <-- the key comparer that makes comparing regular and content arguments possible.
 
                     // append the args to the context
                     context.AppendAtomicRuleArguments(ruleId, r.Args.ToArray());
@@ -1041,7 +1042,7 @@ internal static class GrammarParser
         TokenReader reader,
         ProductionPath path,
         ParserContext context,
-        out IResult<AtomicContentArgumentInfo> result)
+        out IResult<Parameter> result)
     {
         var position = reader.Position;
         var atomicContentPath = path.Next("atomic-content");
@@ -1052,12 +1053,12 @@ internal static class GrammarParser
                 reader, 
                 atomicContentPath,
                 context,
-                default(AtomicContentArgumentInfo)!);
+                default(Parameter));
 
             if (reader.TryPeekToken(out var delimToken))
             {
                 var initialAlternative = true;
-                foreach (var delimChar in AtomicContentDelimiterTypeExtensions.DelimiterCharacterSet)
+                foreach (var delimChar in ContentArgumentDelimiterExtensions.DelimiterCharacterSet)
                 {
                     if (delimChar == delimToken[0])
                     {
@@ -1065,19 +1066,15 @@ internal static class GrammarParser
                         {
                             true => accumulator.ThenTry(
                                 DelimitedContentParserDelegate(delimChar, delimChar),
-                                (info, content) => new AtomicContentArgumentInfo
-                                {
-                                    Content = content,
-                                    ContentType = delimChar.DelimiterType()
-                                }),
+                                (info, content) => Parameter.Of(
+                                    IArgument.Of(delimChar.DelimiterType()),
+                                    content)),
 
                             false => accumulator.OrTry(
                                 DelimitedContentParserDelegate(delimChar, delimChar),
-                                (info, content) => new AtomicContentArgumentInfo
-                                {
-                                    Content = content,
-                                    ContentType = delimChar.DelimiterType()
-                                })
+                                (info, content) => Parameter.Of(
+                                    IArgument.Of(delimChar.DelimiterType()),
+                                    content)),
                         };
 
                         // break if we already have a match
@@ -1091,8 +1088,8 @@ internal static class GrammarParser
 
             result = accumulator.ToResult();
 
-            if (result.IsDataResult(out var data) && data is null)
-                result = Result.Of<AtomicContentArgumentInfo>(FailedRecognitionError.Of(
+            if (result.IsDataResult(out var data) && data.Equals(default))
+                result = Result.Of<Parameter>(FailedRecognitionError.Of(
                     atomicContentPath,
                     position));
 
@@ -1101,7 +1098,7 @@ internal static class GrammarParser
         catch (Exception e)
         {
             reader.Reset(position);
-            result = Result.Of<AtomicContentArgumentInfo>(e);
+            result = Result.Of<Parameter>(e);
             return false;
         }
     }
@@ -1250,7 +1247,7 @@ internal static class GrammarParser
         TokenReader reader,
         ProductionPath path,
         ParserContext context,
-        out IResult<ArgumentPair[]> result)
+        out IResult<Parameter[]> result)
     {
         var position = reader.Position;
         var atomicRuleArgumentsPath = path.Next("atomic-rule-arguments");
@@ -1259,7 +1256,7 @@ internal static class GrammarParser
         {
             if (!reader.TryGetTokens("{", out var startDelimToken))
             {
-                result = Result.Of<ArgumentPair[]>(FailedRecognitionError.Of(
+                result = Result.Of<Parameter[]>(FailedRecognitionError.Of(
                     atomicRuleArgumentsPath,
                     position));
                 reader.Reset(position);
@@ -1270,7 +1267,7 @@ internal static class GrammarParser
                 .Of(reader,
                     atomicRuleArgumentsPath,
                     context,
-                    new List<ArgumentPair>());
+                    new List<Parameter>());
 
             do
             {
@@ -1283,7 +1280,7 @@ internal static class GrammarParser
                         args => args)
 
                     // required argument-pair
-                    .ThenTry<ArgumentPair>(
+                    .ThenTry<Parameter>(
                         TryParseArgument,
                         (args, arg) => args.AddItem(arg))
 
@@ -1311,7 +1308,7 @@ internal static class GrammarParser
 
             if (!reader.TryGetTokens("}", out _))
             {
-                result = Result.Of<ArgumentPair[]>(
+                result = Result.Of<Parameter[]>(
                     PartialRecognitionError.Of(
                         atomicRuleArgumentsPath,
                         position,
@@ -1326,7 +1323,7 @@ internal static class GrammarParser
         catch (Exception e)
         {
             reader.Reset(position);
-            result = Result.Of<ArgumentPair[]>(e);
+            result = Result.Of<Parameter[]>(e);
             return false;
         }
     }
@@ -1335,16 +1332,16 @@ internal static class GrammarParser
         TokenReader reader,
         ProductionPath path,
         ParserContext context,
-        out IResult<ArgumentPair> result)
+        out IResult<Parameter> result)
     {
         var position = reader.Position;
         var argumentPath = path.Next("atomic-rule-argument");
 
         try
         {
-            if (!reader.TryGetPattern(Argument.ArgumentPattern, out var argKey))
+            if (!reader.TryGetPattern(IArgument.ArgumentPattern, out var argKey))
             {
-                result = Result.Of<ArgumentPair>(FailedRecognitionError.Of(
+                result = Result.Of<Parameter>(FailedRecognitionError.Of(
                     argumentPath,
                     position));
                 reader.Reset(position);
@@ -1381,7 +1378,7 @@ internal static class GrammarParser
 
                 if (accumulator.IsErrored)
                 {
-                    result = Result.Of<ArgumentPair>(PartialRecognitionError.Of(
+                    result = Result.Of<Parameter>(PartialRecognitionError.Of(
                         argumentPath,
                         position,
                         reader.Position - position));
@@ -1392,15 +1389,15 @@ internal static class GrammarParser
             }
 
             result = Result.Of(
-                ArgumentPair.Of(
-                    Argument.Of(argKey.ToString()!),
+                Parameter.Of(
+                    IArgument.Of(argKey.ToString()!),
                     argValue));
             return true;
         }
         catch (Exception e)
         {
             reader.Reset(position);
-            result = Result.Of<ArgumentPair>(e);
+            result = Result.Of<Parameter>(e);
             return false;
         }
     }

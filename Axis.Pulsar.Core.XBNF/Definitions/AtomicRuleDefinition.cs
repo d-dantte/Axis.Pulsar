@@ -1,5 +1,6 @@
 ﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar;
+using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
 namespace Axis.Pulsar.Core.XBNF.Definitions
 {
@@ -12,11 +13,11 @@ namespace Axis.Pulsar.Core.XBNF.Definitions
 
         public IAtomicRuleFactory Factory { get; }
 
-        public AtomicContentDelimiterType ContentDelimiterType { get; }
+        public ContentArgumentDelimiter ContentDelimiterType { get; }
 
         public AtomicRuleDefinition(
             string id,
-            AtomicContentDelimiterType contentDelimiterType,
+            ContentArgumentDelimiter contentDelimiterType,
             IAtomicRuleFactory factory)
         {
             Factory = factory.ThrowIfNull(new ArgumentNullException(nameof(factory)));
@@ -30,24 +31,24 @@ namespace Axis.Pulsar.Core.XBNF.Definitions
 
         public static AtomicRuleDefinition Of(
             string symbol,
-            AtomicContentDelimiterType contentDelimiterType,
+            ContentArgumentDelimiter contentDelimiterType,
             IAtomicRuleFactory factory)
             => new(symbol, contentDelimiterType, factory);
 
         public static AtomicRuleDefinition Of(
             string symbol,
             IAtomicRuleFactory factory)
-            => new(symbol, AtomicContentDelimiterType.None, factory);
+            => new(symbol, ContentArgumentDelimiter.None, factory);
 
         public static AtomicRuleDefinition Of<TFactory>(
             string symbol,
-            AtomicContentDelimiterType contentDelimiterType)
+            ContentArgumentDelimiter contentDelimiterType)
             where TFactory : IAtomicRuleFactory, new()
             => new(symbol, contentDelimiterType, new TFactory());
 
         public static AtomicRuleDefinition Of<TFactory>(
             string symbol)
             where TFactory : IAtomicRuleFactory, new()
-            => new(symbol, AtomicContentDelimiterType.None, new TFactory());
+            => new(symbol, ContentArgumentDelimiter.None, new TFactory());
     }
 }

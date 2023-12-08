@@ -104,9 +104,10 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
                 out var result);
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual(1, result.Resolve().FindNodes("property/json-value/json-number/int/regular-int/<123>").ToArray().Length);
-            Assert.AreEqual(4, result.Resolve().FindNodes("property/json-value|json-string").ToArray().Length);
-
+            var node = result.Resolve();
+            Assert.AreEqual(1, node.FindNodes("property/json-value/json-list/json-value/json-object/property/json-value/json-number/decimal/regular-decimal<10.5>").ToArray().Length);
+            Assert.AreEqual(2, result.Resolve().FindNodes("property").ToArray().Length);
+            Assert.AreEqual(2, result.Resolve().FindNodes("property/json-value/json-string|json-list").ToArray().Length);
         }
 
         [TestMethod]

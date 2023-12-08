@@ -6,9 +6,9 @@ namespace Axis.Pulsar.Core.XBNF.Parsers
 {
     internal class ParserContext
     {
-        private readonly Dictionary<string, ArgumentPair[]> _atomicRuleArgs = new();
+        private readonly Dictionary<string, Parameter[]> _atomicRuleArgs = new();
 
-        internal IReadOnlyDictionary<string, ArgumentPair[]> AtomicRuleArguments => _atomicRuleArgs.AsReadOnly();
+        internal IReadOnlyDictionary<string, Parameter[]> AtomicRuleArguments => _atomicRuleArgs.AsReadOnly();
 
         internal LanguageMetadata Metadata { get; }
 
@@ -17,7 +17,7 @@ namespace Axis.Pulsar.Core.XBNF.Parsers
             Metadata = metadata.ThrowIfNull(new ArgumentNullException(nameof(metadata)));
         }
 
-        internal void AppendAtomicRuleArguments(string id, ArgumentPair[] arguments)
+        internal void AppendAtomicRuleArguments(string id, Parameter[] arguments)
         {
             if (!_atomicRuleArgs.TryAdd(id, arguments))
                 throw new InvalidOperationException(

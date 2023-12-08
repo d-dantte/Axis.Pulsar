@@ -20,12 +20,12 @@ public class LiteralRuleFactory : IAtomicRuleFactory
     /// <summary>
     /// The content argument holds the literal string to be matched. The 
     /// </summary>
-    public static Argument LiteralArgument => IAtomicRuleFactory.ContentArgument;
+    public static IArgument LiteralArgument => IAtomicRuleFactory.Content;
 
     /// <summary>
     /// case insensitive flag
     /// </summary>
-    public static Argument CaseInsensitiveArgument => Argument.Of("case-insensitive");
+    public static IArgument CaseInsensitiveArgument => IArgument.Of("case-insensitive");
 
     #endregion
 
@@ -34,7 +34,7 @@ public class LiteralRuleFactory : IAtomicRuleFactory
     public IAtomicRule NewRule(
         string ruleId,
         LanguageMetadata context,
-        ImmutableDictionary<Argument, string> arguments)
+        ImmutableDictionary<IArgument, string> arguments)
     {
         ValidateArgs(arguments);
 
@@ -47,7 +47,7 @@ public class LiteralRuleFactory : IAtomicRuleFactory
     /// <summary>
     /// Ensure that the "content" flag exists
     /// </summary>
-    private static void ValidateArgs(ImmutableDictionary<Argument, string> arguments)
+    private static void ValidateArgs(ImmutableDictionary<IArgument, string> arguments)
     {
         if (arguments is null)
             throw new ArgumentNullException(nameof(arguments));

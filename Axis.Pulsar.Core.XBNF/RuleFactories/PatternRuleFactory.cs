@@ -23,7 +23,7 @@ public class PatternRuleFactory : IAtomicRuleFactory
     /// <summary>
     /// The content argument holds the literal string to be matched. The 
     /// </summary>
-    public static Argument PatternArgument => IAtomicRuleFactory.ContentArgument;
+    public static IArgument PatternArgument => IAtomicRuleFactory.Content;
 
     /// <summary>
     /// Flags recognizes the flags:
@@ -39,19 +39,19 @@ public class PatternRuleFactory : IAtomicRuleFactory
     /// <item><see cref="RegexOptions.NonBacktracking"/> -> n</item>
     /// </list>
     /// </summary>
-    public static Argument FlagsArgument => Argument.Of("flags");
+    public static IArgument FlagsArgument => IArgument.Of("flags");
 
     /// <summary>
     /// Match type of the pattern.
     /// </summary>
-    public static Argument MatchTypeArgument => Argument.Of("match-type");
+    public static IArgument MatchTypeArgument => IArgument.Of("match-type");
 
     #endregion
 
     public IAtomicRule NewRule(
         string ruleId,
         LanguageMetadata context,
-        ImmutableDictionary<Argument, string> arguments)
+        ImmutableDictionary<IArgument, string> arguments)
     {
         ValidateArgs(arguments);
 
@@ -61,7 +61,7 @@ public class PatternRuleFactory : IAtomicRuleFactory
             ParseMatchType(arguments));
     }
 
-    private static void ValidateArgs(ImmutableDictionary<Argument, string> arguments)
+    private static void ValidateArgs(ImmutableDictionary<IArgument, string> arguments)
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
@@ -69,7 +69,7 @@ public class PatternRuleFactory : IAtomicRuleFactory
             throw new ArgumentException("Invalid arguments: 'content' is missing");
     }
 
-    private static IMatchType ParseMatchType(ImmutableDictionary<Argument, string> arguments)
+    private static IMatchType ParseMatchType(ImmutableDictionary<IArgument, string> arguments)
     {
         if (!arguments.TryGetValue(MatchTypeArgument, out var value))
             return IMatchType.Of(1);
@@ -100,7 +100,7 @@ public class PatternRuleFactory : IAtomicRuleFactory
         throw new FormatException($"Invalid match-type format: '{value}'");
     }
 
-    private static Regex ParseRegex(ImmutableDictionary<Argument, string> arguments)
+    private static Regex ParseRegex(ImmutableDictionary<IArgument, string> arguments)
     {
         var pattern = arguments[PatternArgument];
         var options = arguments.TryGetValue(FlagsArgument, out var flags)

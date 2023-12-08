@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.XBNF.Definitions;
+using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
 namespace Axis.Pulsar.Core.XBNF.Lang;
 
@@ -9,7 +10,7 @@ public class LanguageMetadata
 
     public ImmutableDictionary<string, AtomicRuleDefinition> AtomicRuleDefinitionMap { get; }
 
-    public ImmutableDictionary<AtomicContentDelimiterType, string> AtomicContentTypeMap { get; }
+    public ImmutableDictionary<ContentArgumentDelimiter, string> AtomicContentTypeMap { get; }
 
     public ImmutableDictionary<string, ProductionValidatorDefinition> ProductionValidatorDefinitionMap { get; }
 
@@ -28,7 +29,7 @@ public class LanguageMetadata
                 item => item);
 
         AtomicContentTypeMap = atomicRules
-            .Where(def => def.ContentDelimiterType != AtomicContentDelimiterType.None)
+            .Where(def => def.ContentDelimiterType != ContentArgumentDelimiter.None)
             .ToImmutableDictionary(
                 item => item.ContentDelimiterType,
                 item => item.Id);

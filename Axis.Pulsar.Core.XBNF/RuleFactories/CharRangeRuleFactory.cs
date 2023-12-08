@@ -33,7 +33,7 @@ public class CharRangeRuleFactory : IAtomicRuleFactory
     /// <summary>
     /// Character ranges
     /// </summary>
-    public static Argument RangesArgument => IAtomicRuleFactory.ContentArgument;
+    public static IArgument RangesArgument => IAtomicRuleFactory.Content;
 
     #endregion
 
@@ -42,7 +42,7 @@ public class CharRangeRuleFactory : IAtomicRuleFactory
     public IAtomicRule NewRule(
         string ruleId,
         LanguageMetadata context,
-        ImmutableDictionary<Argument, string> arguments)
+        ImmutableDictionary<IArgument, string> arguments)
     {
         ValidateArgs(arguments);
 
@@ -53,7 +53,7 @@ public class CharRangeRuleFactory : IAtomicRuleFactory
             ranges.Excludes);
     }
 
-    private static void ValidateArgs(ImmutableDictionary<Argument, string> arguments)
+    private static void ValidateArgs(ImmutableDictionary<IArgument, string> arguments)
     {
         ArgumentNullException.ThrowIfNull(arguments);
 

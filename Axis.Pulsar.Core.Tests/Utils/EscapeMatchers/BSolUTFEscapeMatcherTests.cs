@@ -3,18 +3,18 @@
 namespace Axis.Pulsar.Core.Tests.Utils.EscapeMatchers;
 
 [TestClass]
-public class BSolAsciiEscapeMatcherTests
+public class BSolUTFEscapeMatcherTests
 {
     [TestMethod]
     public void Decode_Tests()
     {
-        var matcher = new BSolAsciiEscapeMatcher();
+        var matcher = new BSolUTFEscapeMatcher();
 
-        var encoded = "\\x0a\\x0ip\\x07";
+        var encoded = "\\u000a\\u000ip\\u0007";
         var raw = matcher.Decode(encoded);
-        Assert.AreEqual("\n\\x0ip\a", raw);
+        Assert.AreEqual("\n\\u000ip\a", raw);
 
-        encoded = "\\x0a";
+        encoded = "\\u000a";
         raw = matcher.Decode(encoded);
         Assert.AreEqual("\n", raw);
 
@@ -26,15 +26,15 @@ public class BSolAsciiEscapeMatcherTests
     [TestMethod]
     public void Encode_Tests()
     {
-        var matcher = new BSolAsciiEscapeMatcher();
+        var matcher = new BSolUTFEscapeMatcher();
 
-        var encoded = "\n\\x0ip\a" ;
+        var encoded = "\n\\u000ip\a" ;
         var raw = matcher.Encode(encoded);
-        Assert.AreEqual("\\x0a\\x0ip\\x07", raw);
+        Assert.AreEqual("\\u000a\\u000ip\\u0007", raw);
 
         encoded = "\n";
         raw = matcher.Encode(encoded);
-        Assert.AreEqual("\\x0a", raw);
+        Assert.AreEqual("\\u000a", raw);
 
         encoded = "the quck brown fox jumps over the lazy duckling";
         raw = matcher.Encode(encoded);
@@ -43,7 +43,7 @@ public class BSolAsciiEscapeMatcherTests
         encoded = "the quck brown fox\n jumps over the lazy duckling";
         raw = matcher.Encode(encoded);
         Assert.AreEqual(
-            "the quck brown fox\\x0a jumps over the lazy duckling",
+            "the quck brown fox\\u000a jumps over the lazy duckling",
             raw);
     }
 }

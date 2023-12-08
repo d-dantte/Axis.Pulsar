@@ -1,6 +1,7 @@
-﻿using Axis.Pulsar.Core.XBNF.Definitions;
+﻿using Axis.Pulsar.Core.XBNF.RuleFactories;
+using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
-namespace Axis.Pulsar.Core.XBNF.RuleFactories
+namespace Axis.Pulsar.Core.XBNF.Definitions
 {
     /// <summary>
     /// Default out-of-the-box rule definitions
@@ -12,7 +13,7 @@ namespace Axis.Pulsar.Core.XBNF.RuleFactories
         /// </summary>
         public static readonly AtomicRuleDefinition Literal = AtomicRuleDefinition.Of(
             "Literal",
-            AtomicContentDelimiterType.DoubleQuote,
+            ContentArgumentDelimiter.DoubleQuote,
             new LiteralRuleFactory());
 
         /// <summary>
@@ -20,7 +21,7 @@ namespace Axis.Pulsar.Core.XBNF.RuleFactories
         /// </summary>
         public static readonly AtomicRuleDefinition Pattern = AtomicRuleDefinition.Of(
             "Pattern",
-            AtomicContentDelimiterType.Sol,
+            ContentArgumentDelimiter.Sol,
             new PatternRuleFactory());
 
         /// <summary>
@@ -28,7 +29,7 @@ namespace Axis.Pulsar.Core.XBNF.RuleFactories
         /// </summary>
         public static readonly AtomicRuleDefinition CharacterRanges = AtomicRuleDefinition.Of(
             "Ranges",
-            AtomicContentDelimiterType.Quote,
+            ContentArgumentDelimiter.Quote,
             new CharRangeRuleFactory());
 
         /// <summary>
@@ -36,7 +37,7 @@ namespace Axis.Pulsar.Core.XBNF.RuleFactories
         /// </summary>
         public static readonly AtomicRuleDefinition EOF = AtomicRuleDefinition.Of(
             "EOF",
-            AtomicContentDelimiterType.None,
+            ContentArgumentDelimiter.None,
             new EOFRuleFactory());
 
         /// <summary>
@@ -44,7 +45,7 @@ namespace Axis.Pulsar.Core.XBNF.RuleFactories
         /// </summary>
         public static readonly AtomicRuleDefinition DelimitedString = AtomicRuleDefinition.Of(
             "DelimitedString",
-            AtomicContentDelimiterType.None,
+            ContentArgumentDelimiter.None,
             new DelimitedStringRuleFactory());
 
     }

@@ -36,32 +36,32 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
     /// <summary>
     /// Character ranges - includes and excludes
     /// </summary>
-    public static Argument RangesArgument => Argument.Of("ranges");
+    public static IArgument RangesArgument => IArgument.Of("ranges");
 
     /// <summary>
     /// Character sequences - includes and excludes
     /// </summary>
-    public static Argument SequencesArgument => Argument.Of("sequences");
+    public static IArgument SequencesArgument => IArgument.Of("sequences");
 
     /// <summary>
     /// Start delimiter argument
     /// </summary>
-    public static Argument StartDelimArgument => Argument.Of("start");
+    public static IArgument StartDelimArgument => IArgument.Of("start");
 
     /// <summary>
     /// End delimiter argument
     /// </summary>
-    public static Argument EndDelimArgument => Argument.Of("end");
+    public static IArgument EndDelimArgument => IArgument.Of("end");
 
     /// <summary>
     /// Accepts empty argument
     /// </summary>
-    public static Argument AcceptsEmptyArgument => Argument.Of("accepts-empty");
+    public static IArgument AcceptsEmptyArgument => IArgument.Of("accepts-empty");
 
     /// <summary>
     /// The optoinal escaped version of the end delimiter
     /// </summary>
-    public static Argument EscapedEndDelimiterArgument => Argument.Of("escaped-delimiter");
+    public static IArgument EscapedEndDelimiterArgument => IArgument.Of("escaped-delimiter");
 
     #endregion
 
@@ -70,7 +70,7 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
     public IAtomicRule NewRule(
         string ruleId,
         LanguageMetadata context,
-        ImmutableDictionary<Argument, string> arguments)
+        ImmutableDictionary<IArgument, string> arguments)
     {
         ValidateArgs(arguments);
 
@@ -100,7 +100,7 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
             escapedDelimiter);
     }
 
-    private static void ValidateArgs(ImmutableDictionary<Argument, string> arguments)
+    private static void ValidateArgs(ImmutableDictionary<IArgument, string> arguments)
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
@@ -108,7 +108,7 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
             throw new ArgumentException($"Invalid arguments: '{StartDelimArgument}' is missing");
     }
 
-    internal static (string Start, string End) ParseDelimiters(ImmutableDictionary<Argument, string> arguments)
+    internal static (string Start, string End) ParseDelimiters(ImmutableDictionary<IArgument, string> arguments)
     {
         var start = arguments[StartDelimArgument] ?? throw new FormatException("Invalid start delimiter: null");
         var end = arguments.TryGetValue(EndDelimArgument, out var delim)
@@ -118,7 +118,7 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
         return (start, end);
     }
 
-    internal static bool ParseAcceptsEmpty(ImmutableDictionary<Argument, string> arguments)
+    internal static bool ParseAcceptsEmpty(ImmutableDictionary<IArgument, string> arguments)
     {
         return arguments.TryGetValue(AcceptsEmptyArgument, out var value)
             ? bool.Parse(value)

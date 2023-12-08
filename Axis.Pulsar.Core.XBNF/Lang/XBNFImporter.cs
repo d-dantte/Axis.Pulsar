@@ -5,7 +5,6 @@ using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.IO;
 using Axis.Pulsar.Core.XBNF.Definitions;
 using Axis.Pulsar.Core.XBNF.Parsers;
-using Axis.Pulsar.Core.XBNF.RuleFactories;
 
 namespace Axis.Pulsar.Core.XBNF.Lang
 {

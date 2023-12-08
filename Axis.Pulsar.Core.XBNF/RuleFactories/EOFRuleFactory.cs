@@ -10,7 +10,7 @@ namespace Axis.Pulsar.Core.XBNF.RuleFactories
         public IAtomicRule NewRule(
             string ruleId,
             LanguageMetadata context,
-            ImmutableDictionary<IAtomicRuleFactory.Argument, string> arguments)
+            ImmutableDictionary<IAtomicRuleFactory.IArgument, string> arguments)
         {
             return new EOF(ruleId);
         }

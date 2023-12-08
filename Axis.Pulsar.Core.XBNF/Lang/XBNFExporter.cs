@@ -1,4 +1,5 @@
-﻿using Axis.Pulsar.Core.Grammar;
+﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Groups;
 using Axis.Pulsar.Core.Grammar.Rules;
 using Axis.Pulsar.Core.IO;
@@ -56,19 +57,19 @@ namespace Axis.Pulsar.Core.XBNF.Lang
                 ? value : throw new InvalidOperationException(
                     $"Invalid atomic rule: rule id '{rule.Id}' not found in argument map");
 
-            var ruleMap = context.Metadata.AtomicRuleDefinitionMap;
-            var contentType = ruleMap.TryGetValue(rule.Id, out var ruleDef)
-                ? ruleDef.ContentDelimiterType : throw new InvalidOperationException(
-                    $"Invalid atomic rule: rule id '{rule.Id}' not found in argument map");
+            var contentArg = args
+                .Where(arg => arg.Argument is ContentArgument)
+                .Select(arg => (ContentArgument) arg.Argument)
+                .FirstOrDefault();
 
-            return contentType switch
+            return contentArg.Delimiter switch
             {
-                AtomicContentDelimiterType.None => WriteRegularAtomicRule(rule.Id, args),
-                _ => WriteContentAwareAtomicRule(contentType, args)
+                ContentArgumentDelimiter.None => WriteRegularAtomicRule(rule.Id, args),
+                ContentArgumentDelimiter delimiter => WriteContentAwareAtomicRule(delimiter, args)
             };
         }
 
-        internal static string WriteRegularAtomicRule(string ruleId, ArgumentPair[] args)
+        internal static string WriteRegularAtomicRule(string ruleId, Parameter[] args)
         {
             if (string.IsNullOrEmpty(ruleId))
                 throw new ArgumentException($"Invalid {nameof(ruleId)}: null/empty");
@@ -80,26 +81,30 @@ namespace Axis.Pulsar.Core.XBNF.Lang
         }
 
         internal static string WriteContentAwareAtomicRule(
-            AtomicContentDelimiterType contentType,
-            ArgumentPair[] args)
+            ContentArgumentDelimiter contentType,
+            Parameter[] args)
         {
             if (!Enum.IsDefined(contentType))
                 throw new ArgumentOutOfRangeException(nameof(contentType));
 
             var @char = contentType.DelimiterCharacter();
-            var content = args
-                .Where(arg => arg.Argument.Equals(IAtomicRuleFactory.ContentArgument))
+
+            var contentText = args
+                .Where(arg => arg.Argument is ContentArgument)
                 .Select(arg => $"{@char}{arg.Value}{@char}")
                 .FirstOrDefault();
 
+            var argsText = args
+                .Where(arg => arg.Argument is not ContentArgument)
+                .ApplyTo(WriteAtomicRuleArgs);
+
             return new StringBuilder()
-                .Append(content)
-                .Append(WriteAtomicRuleArgs(
-                    args.Where(arg => !arg.Argument.Equals(IAtomicRuleFactory.ContentArgument))))
+                .Append(contentText)
+                .Append(argsText)
                 .ToString();
         }
 
-        internal static string WriteAtomicRuleArgs(IEnumerable<ArgumentPair> args)
+        internal static string WriteAtomicRuleArgs(IEnumerable<Parameter> args)
         {
             ArgumentNullException.ThrowIfNull(args);
 

@@ -10,13 +10,32 @@ namespace Axis.Pulsar.Core.CST
     /// </summary>
     public interface ICSTNode
     {
+        /// <summary>
+        /// The tokens this node is comprised of
+        /// </summary>
         Tokens Tokens { get; }
 
+        /// <summary>
+        /// The symbol name of this node
+        /// </summary>
         string Name { get; }
 
         #region Of
+
+        /// <summary>
+        /// Creates an instance of a <see cref="NonTerminal"/> node
+        /// </summary>
+        /// <param name="name">The node name</param>
+        /// <param name="nodes">The list of comprising nodes</param>
+        /// <returns></returns>
         public static ICSTNode Of(string name, params ICSTNode[] nodes) => new NonTerminal(name, nodes);
 
+        /// <summary>
+        /// Creates an instance of a <see cref="NonTerminal"/> node
+        /// </summary>
+        /// <param name="name">The node name</param>
+        /// <param name="nodes">The list of comprising nodes</param>
+        /// <returns></returns>
         public static ICSTNode Of(string name, NodeSequence nodes) => new NonTerminal(name, nodes);
 
         /// <summary>
@@ -26,6 +45,7 @@ namespace Axis.Pulsar.Core.CST
         /// <param name="tokens">The tokens</param>
         /// <returns></returns>
         public static ICSTNode Of(string name, Tokens tokens) => new Terminal(name, tokens);
+
         #endregion
 
         /// <summary>
@@ -47,6 +67,9 @@ namespace Axis.Pulsar.Core.CST
 
             public string Name => _name;
 
+            /// <summary>
+            /// The list of composing nodes
+            /// </summary>
             public NodeSequence Nodes => _nodes;
 
             public Tokens Tokens => _nodes?.Tokens ?? Tokens.Default;

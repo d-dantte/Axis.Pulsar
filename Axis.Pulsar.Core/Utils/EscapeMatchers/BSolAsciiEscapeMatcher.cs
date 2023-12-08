@@ -6,11 +6,10 @@ using Axis.Luna.Extensions;
 namespace Axis.Pulsar.Core.Utils.EscapeMatchers
 {
     public class BSolAsciiEscapeMatcher :
-        IEscapeSequenceMatcher,
         IEscapeTransformer
     {
         internal static Regex EscapeSequencePattern = new(
-            "^\\\\x[a-fA-F0-9]{2}\\z",
+            "\\\\x[a-fA-F0-9]{2}",
             RegexOptions.Compiled);
 
         public readonly static ImmutableHashSet<int> UnprintableAsciiCharCodes = ImmutableHashSet.Create(
@@ -21,23 +20,11 @@ namespace Axis.Pulsar.Core.Utils.EscapeMatchers
 
         public string EscapeDelimiter => "\\x";
 
-        public bool TryMatchEscapeArgument(TokenReader reader, out Tokens tokens)
-        {
-            if (!reader.TryGetTokens(2, out tokens))
-                return false;
-
-            if (!byte.TryParse(tokens.AsSpan(), NumberStyles.HexNumber, null, out _))
-                reader.Back();
-
-            return true;
-        }
-
         #region Escape Transformer
         public string Encode(string rawString)
         {
             if (rawString is null)
                 return rawString!;
-
 
             var substrings = new List<Tokens>();
             var offset = 0;
@@ -55,6 +42,7 @@ namespace Axis.Pulsar.Core.Utils.EscapeMatchers
             }
 
             return substrings
+                .Append(Tokens.Of(rawString, offset))
                 .Select(s => s.ToString())
                 .JoinUsing("");
         }

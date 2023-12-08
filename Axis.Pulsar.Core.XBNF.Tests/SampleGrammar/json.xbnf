@@ -72,7 +72,7 @@ $regular-int -> /^-?\d(_?\d)*$/{match-type: '2,+'}
 
 $decimal -> ?[$scientific-decimal $regular-decimal]
 $regular-decimal -> :2 +[$regular-int '.' $digits]
-$scientific-decimal -> :2 +[
+$scientific-decimal -> :4 +[
 	$regular-int
 	+['.' $digits.?].?
 	'E' $number-sign.? $digits]

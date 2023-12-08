@@ -13,8 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Json\json.xbnf" />
     <EmbeddedResource Include="Json\sample.json" />
+    <EmbeddedResource Include="Json\json.xbnf" />
   </ItemGroup>
 
   <ItemGroup>

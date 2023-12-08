@@ -15,7 +15,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
 
         public LanguageMetadata Metadata { get; }
 
-        public ImmutableDictionary<string, ArgumentPair[]> AtomicRuleArguments { get; }
+        public ImmutableDictionary<string, Parameter[]> AtomicRuleArguments { get; }
 
         public ImmutableDictionary<string, IProductionValidator> ProductionValidators { get; }
 

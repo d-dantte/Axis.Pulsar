@@ -4,7 +4,6 @@ using static Axis.Pulsar.Core.Grammar.Rules.DelimitedString;
 namespace Axis.Pulsar.Core.Utils.EscapeMatchers
 {
     public class BSolBasicEscapeMatcher :
-        IEscapeSequenceMatcher,
         IEscapeTransformer
     {
         internal static Regex EscapeSequencePattern = new Regex(
@@ -16,33 +15,6 @@ namespace Axis.Pulsar.Core.Utils.EscapeMatchers
             RegexOptions.Compiled);
 
         public string EscapeDelimiter => "\\";
-
-        public bool TryMatchEscapeArgument(TokenReader reader, out Tokens tokens)
-        {
-            if (!reader.TryGetTokens(1, out tokens))
-                return false;
-
-            var matches = tokens[0] switch
-            {
-                '\'' => true,
-                '\"' => true,
-                '\\' => true,
-                'n' => true,
-                'r' => true,
-                'f' => true,
-                'b' => true,
-                't' => true,
-                'v' => true,
-                '0' => true,
-                'a' => true,
-                _ => false
-            };
-
-            if (!matches)
-                reader.Back();
-
-            return matches;
-        }
 
         #region Escape Transformer
 

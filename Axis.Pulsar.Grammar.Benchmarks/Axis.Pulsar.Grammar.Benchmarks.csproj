@@ -14,9 +14,6 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Json\sample.json" />
-  </ItemGroup>
-
-  <ItemGroup>
     <EmbeddedResource Include="Json\json.xbnf" />
   </ItemGroup>
 

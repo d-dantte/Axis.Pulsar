@@ -5,7 +5,7 @@ using System.Collections;
 namespace Axis.Pulsar.Core.CST
 {
     /// <summary>
-    /// 
+    /// A sequence of nodes
     /// </summary>
     public class NodeSequence : IEnumerable<ICSTNode>
     {
@@ -68,7 +68,7 @@ namespace Axis.Pulsar.Core.CST
         public static NodeSequence Of(
             NodeSequence parent,
             NodeSequence child)
-            => new NodeSequence(child._nodes, parent);
+            => new NodeSequence(child.ToArray(), parent);
 
         public static implicit operator NodeSequence(List<ICSTNode> nodes) => new(nodes);
         public static implicit operator NodeSequence(ICSTNode[] nodes) => new(nodes);
@@ -80,9 +80,8 @@ namespace Axis.Pulsar.Core.CST
         #endregion
 
         /// <summary>
-        /// 
+        /// Creates an enumerable to enumerate the <see cref="NodeSequence"/>
         /// </summary>
-        /// <returns></returns>
         public IEnumerable<ICSTNode> Enumerate()
         {
             var prev = _parent?.Enumerate() ?? Enumerable.Empty<ICSTNode>();
@@ -90,11 +89,15 @@ namespace Axis.Pulsar.Core.CST
         }
 
         /// <summary>
-        /// 
+        /// Prepends the given sequence to this sequence in a new instance.
         /// </summary>
-        /// <param name="parent"></param>
-        /// <returns></returns>
+        /// <param name="parent">The sequence to prepend</param>
+        /// <returns>The new node sequence</returns>
         public NodeSequence Prepend(NodeSequence parent)
+        {
+            return NodeSequence.Of(parent, this);
+        }
+        public NodeSequence Prepend__(NodeSequence parent)
         {
             return NodeSequence
                 .Flatten(this)
@@ -103,13 +106,13 @@ namespace Axis.Pulsar.Core.CST
         }
 
         /// <summary>
-        /// 
+        /// Appends the given sequence to this sequence in a new instance
         /// </summary>
-        /// <param name="nodes"></param>
-        /// <returns></returns>
+        /// <param name="nodes">The sequence to append</param>
+        /// <returns>The new sequence</returns>
         public NodeSequence Append(NodeSequence nodes)
         {
-            return NodeSequence.Of(this, nodes._nodes);
+            return NodeSequence.Of(this, nodes);
         }
 
         private static IEnumerable<NodeSequence> Flatten(NodeSequence nodeSequence)
@@ -127,7 +130,7 @@ namespace Axis.Pulsar.Core.CST
         }
     }
 
-    public static class NodeSequenceExtensions
+    internal static class NodeSequenceExtensions
     {
         public static NodeSequence Fold(this IEnumerable<NodeSequence> nodes)
         {

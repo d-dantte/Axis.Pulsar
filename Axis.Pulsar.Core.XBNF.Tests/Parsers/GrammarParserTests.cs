@@ -12,6 +12,7 @@ using Axis.Pulsar.Core.XBNF.Parsers;
 using Axis.Pulsar.Core.XBNF.Parsers.Models;
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;
+using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
 namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 {
@@ -450,8 +451,8 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             var info = result.Resolve();
-            Assert.AreEqual(AtomicContentDelimiterType.Quote, info.ContentType);
-            Assert.IsTrue(info.Content.Equals("the content\\'"));
+            Assert.AreEqual(ContentArgumentDelimiter.Quote, info.Argument.As<ContentArgument>().Delimiter);
+            Assert.IsTrue(info.Value!.Equals("the content\\'"));
 
             // double quote
             success = GrammarParser.TryParseAtomicContent(
@@ -463,8 +464,8 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             info = result.Resolve();
-            Assert.AreEqual(AtomicContentDelimiterType.DoubleQuote, info.ContentType);
-            Assert.IsTrue(info.Content.Equals("the content\\\""));
+            Assert.AreEqual(ContentArgumentDelimiter.DoubleQuote, info.Argument.As<ContentArgument>().Delimiter);
+            Assert.IsTrue(info.Value!.Equals("the content\\\""));
 
             // grave
             success = GrammarParser.TryParseAtomicContent(
@@ -476,8 +477,8 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             info = result.Resolve();
-            Assert.AreEqual(AtomicContentDelimiterType.Grave, info.ContentType);
-            Assert.IsTrue(info.Content.Equals("the content\\`"));
+            Assert.AreEqual(ContentArgumentDelimiter.Grave, info.Argument.As<ContentArgument>().Delimiter);
+            Assert.IsTrue(info.Value!.Equals("the content\\`"));
 
             // sol
             success = GrammarParser.TryParseAtomicContent(
@@ -489,8 +490,8 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             info = result.Resolve();
-            Assert.AreEqual(AtomicContentDelimiterType.Sol, info.ContentType);
-            Assert.IsTrue(info.Content.Equals("the content\\/"));
+            Assert.AreEqual(ContentArgumentDelimiter.Sol, info.Argument.As<ContentArgument>().Delimiter);
+            Assert.IsTrue(info.Value!.Equals("the content\\/"));
 
             // back-sol
             success = GrammarParser.TryParseAtomicContent(
@@ -502,8 +503,8 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             info = result.Resolve();
-            Assert.AreEqual(AtomicContentDelimiterType.BackSol, info.ContentType);
-            Assert.IsTrue(info.Content.Equals("the content\\\\"));
+            Assert.AreEqual(ContentArgumentDelimiter.BackSol, info.Argument.As<ContentArgument>().Delimiter);
+            Assert.IsTrue(info.Value!.Equals("the content\\\\"));
 
             // vertical bar
             success = GrammarParser.TryParseAtomicContent(
@@ -515,8 +516,8 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.IsDataResult());
             info = result.Resolve();
-            Assert.AreEqual(AtomicContentDelimiterType.VerticalBar, info.ContentType);
-            Assert.IsTrue(info.Content.Equals("the content\\|"));
+            Assert.AreEqual(ContentArgumentDelimiter.VerticalBar, info.Argument.As<ContentArgument>().Delimiter);
+            Assert.IsTrue(info.Value!.Equals("the content\\|"));
         }
 
         [TestMethod]
@@ -1400,7 +1401,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             public IAtomicRule NewRule(
                 string id,
                 LanguageMetadata context,
-                ImmutableDictionary<IAtomicRuleFactory.Argument, string> arguments)
+                ImmutableDictionary<IAtomicRuleFactory.IArgument, string> arguments)
             {
                 return new WindowsNewLine { Id = id };
             }

@@ -1,6 +1,5 @@
 ﻿using Axis.Pulsar.Core.XBNF.Definitions;
 using Axis.Pulsar.Core.XBNF.Lang;
-using Axis.Pulsar.Core.XBNF.RuleFactories;
 
 namespace Axis.Pulsar.Core.XBNF.Tests
 {

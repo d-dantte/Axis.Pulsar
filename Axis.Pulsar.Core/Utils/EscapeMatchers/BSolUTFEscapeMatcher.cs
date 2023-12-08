@@ -7,25 +7,13 @@ using static Axis.Pulsar.Core.Grammar.Rules.DelimitedString;
 namespace Axis.Pulsar.Core.Utils.EscapeMatchers
 {
     public class BSolUTFEscapeMatcher :
-        IEscapeSequenceMatcher,
         IEscapeTransformer
     {
         internal static Regex EscapeSequencePattern = new(
-            "^\\\\u[a-fA-F0-9]{4}\\z",
+            "\\\\u[a-fA-F0-9]{4}",
             RegexOptions.Compiled);
 
         public string EscapeDelimiter => "\\u";
-
-        public bool TryMatchEscapeArgument(TokenReader reader, out Tokens tokens)
-        {
-            if (!reader.TryGetTokens(4, out tokens))
-                return false;
-
-            if (!short.TryParse(tokens.AsSpan(), NumberStyles.HexNumber, null, out _))
-                reader.Back();
-
-            return true;
-        }
 
         #region Escape Transformer
 
@@ -55,6 +43,7 @@ namespace Axis.Pulsar.Core.Utils.EscapeMatchers
             }
 
             return substrings
+                .Append(Tokens.Of(rawString, offset))
                 .Select(s => s.ToString())
                 .JoinUsing("");
         }

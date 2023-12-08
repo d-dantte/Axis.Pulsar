@@ -2,6 +2,7 @@
 
 namespace Axis.Pulsar.Core.Benchmarks.Json
 {
+    [MemoryDiagnoser(false)]
     public class SoloPulsarBenchmark
     {
         [Benchmark]
