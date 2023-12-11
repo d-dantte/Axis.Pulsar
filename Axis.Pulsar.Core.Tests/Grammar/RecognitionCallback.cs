@@ -15,5 +15,5 @@ namespace Axis.Pulsar.Core.Tests.Grammar
         TokenReader reader,
         ProductionPath? path,
         ILanguageContext context,
-        out IResult<NodeSequence> result);
+        out IResult<INodeSequence> result);
 }

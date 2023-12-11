@@ -56,7 +56,7 @@ namespace Axis.Pulsar.Core.Utils
         {
             if (TryPeekTokens(expectedTokens, out tokens))
             {
-                _position += expectedTokens.SourceSegment.Length;
+                _position += expectedTokens.Segment.Count;
                 return true;
             }
 
@@ -67,7 +67,7 @@ namespace Axis.Pulsar.Core.Utils
         {
             if (TryPeekTokens(tokenCount, failOnInsufficientTokens, out tokens))
             {
-                _position += tokens.SourceSegment.Length;
+                _position += tokens.Segment.Count;
                 return true;
             }
 
@@ -94,15 +94,15 @@ namespace Axis.Pulsar.Core.Utils
             ArgumentNullException.ThrowIfNull(regex);
 
             var count = 1;
-            tokens = Tokens.Empty;
+            tokens = default;
             while (TryPeekTokens(count, true, out var _tokens))
             {
                 var match = regex.Match(
                     _tokens.Source!,
-                    _tokens.SourceSegment.Offset,
-                    _tokens.SourceSegment.Length);
+                    _tokens.Segment.Offset,
+                    _tokens.Segment.Count);
 
-                if (match.Success && match.Length > tokens.SourceSegment.Length)
+                if (match.Success && match.Length > tokens.Segment.Count)
                 {
                     tokens = _tokens;
                     count++;
@@ -114,7 +114,7 @@ namespace Axis.Pulsar.Core.Utils
             if (count == 1)
                 return false;
 
-            Reset(_position + tokens.SourceSegment.Length);
+            Reset(_position + tokens.Segment.Count);
             return true;
         }
         #endregion
@@ -148,7 +148,7 @@ namespace Axis.Pulsar.Core.Utils
             if (expectedTokens.IsDefaultOrEmpty)
                 throw new ArgumentException($"Invalid {nameof(expectedTokens)}: default/empty");
 
-            if (TryPeekTokens(expectedTokens.SourceSegment.Length, true, out tokens)
+            if (TryPeekTokens(expectedTokens.Segment.Count, true, out tokens)
                 && tokens.Equals(expectedTokens))
                 return true;
 
@@ -165,13 +165,11 @@ namespace Axis.Pulsar.Core.Utils
                 _position,
                 Math.Min(tokenCount, _source.Length - _position));
 
-            if (failOnInsufficientTokens && (_position + tokenCount) > _source.Length)
-            {
-                //tokens = default;
-                return false;
-            }
-
-            return true;
+            // False if we are failing on insufficient tokens, and the initial amount of tokens
+            // to read pushes outside of the source's boundary; True otherwise.
+            return !(
+                failOnInsufficientTokens
+                && (_position + tokenCount) > _source.Length);
         }
 
         public bool TryPeekTokens(

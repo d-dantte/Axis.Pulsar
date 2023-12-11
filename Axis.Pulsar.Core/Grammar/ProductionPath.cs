@@ -13,10 +13,8 @@ namespace Axis.Pulsar.Core.Grammar
 
         internal ProductionPath(string name, ProductionPath? parent = null)
         {
+            _name = name;
             _parent = parent;
-            _name = name.ThrowIfNot(
-                IProduction.SymbolPattern.IsMatch,
-                new ArgumentNullException(nameof(name)));
         }
 
         public static ProductionPath Of(string name, ProductionPath? parent = null) => new(name, parent);
@@ -38,7 +36,7 @@ namespace Axis.Pulsar.Core.Grammar
         {
             var parentText = _parent is not null
                 ? $"{_parent}/"
-                : "";
+                : string.Empty;
 
             return $"{parentText}{_name}";
         }
@@ -58,7 +56,7 @@ namespace Axis.Pulsar.Core.Grammar
             productionPath = path
                 .ThrowIf(
                     string.IsNullOrEmpty,
-                    new ArgumentException($"Invalid path: null/empty"))
+                    _ => new ArgumentException($"Invalid path: null/empty"))
                 .Split('/')
                 .Select(s => s.Trim())
                 .Aggregate(default(ProductionPath)!, (path, name) => path switch

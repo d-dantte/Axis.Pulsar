@@ -31,13 +31,13 @@ namespace Axis.Pulsar.Core.XBNF.Lang
             AtomicRuleArguments = context.AtomicRuleArguments
                 .ThrowIfAny(
                     kvp => string.IsNullOrEmpty(kvp.Key),
-                    new ArgumentException("Invalid atomicRuleArgument key: null/empty"))
+                    _ => new ArgumentException("Invalid atomicRuleArgument key: null/empty"))
                 .ToImmutableDictionary();
 
             ProductionValidators = context.Metadata.ProductionValidatorDefinitionMap
                 .ThrowIfAny(
                     kvp => string.IsNullOrEmpty(kvp.Key),
-                    new ArgumentException("Invalid production symbol: null/empty"))
+                    _ => new ArgumentException("Invalid production symbol: null/empty"))
                 .ToImmutableDictionary(
                     def => def.Key,
                     def => def.Value.Validator);

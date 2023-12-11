@@ -72,9 +72,9 @@ public class ParserAccumulator<TData, TSymbolID, TContext>
                 try
                 {
                     _data = defaultMapper!.Invoke(_data);
-                    _recognitionCount++; // ????
+                    _recognitionCount++;
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     _error = e;
                 }
@@ -134,7 +134,7 @@ public class ParserAccumulator<TData, TSymbolID, TContext>
                 try
                 {
                     _data = defaultMapper!.Invoke(_data);
-                    _recognitionCount++; // ????
+                    _recognitionCount++;
                     _error = null;
                 }
                 catch (Exception e)

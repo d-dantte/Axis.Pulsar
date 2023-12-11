@@ -9,7 +9,7 @@ namespace Axis.Pulsar.Core.XBNF.Parsers.Models
 
         public LineComment(Tokens comment)
         {
-            Content = comment.ThrowIfDefault(new ArgumentException("Invalid comment: default"));
+            Content = comment.ThrowIfDefault(_ => new ArgumentException("Invalid comment: default"));
 
             if (comment.ContainsAny('\n', '\r'))
                 throw new ArgumentException($"Comment cannot contain '\\n' or '\\r' characters");

@@ -40,7 +40,7 @@ namespace Axis.Pulsar.Core.Grammar.Errors
                 "\n");
 
             Line = lines.Length;
-            Column = lines[^1].Tokens.SourceSegment.Length;
+            Column = lines[^1].Tokens.Segment.Count;
             ErrorSegment = Tokens.Of(
                 source,
                 position,
@@ -48,8 +48,8 @@ namespace Axis.Pulsar.Core.Grammar.Errors
         }
 
         public static RecognitionFormatException Of(
-            IRecognitionError error,
+            IRecognitionError__ error,
             Tokens source)
-            => new(error.TokenSegment.Offset, error.TokenSegment.Length, source);
+            => new(error.TokenSegment.Offset, error.TokenSegment.Count, source);
     }
 }

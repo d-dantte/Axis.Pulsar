@@ -14,7 +14,7 @@ namespace Axis.Pulsar.Core.XBNF.Parsers
 
         internal ParserContext(LanguageMetadata metadata)
         {
-            Metadata = metadata.ThrowIfNull(new ArgumentNullException(nameof(metadata)));
+            Metadata = metadata.ThrowIfNull(() => new ArgumentNullException(nameof(metadata)));
         }
 
         internal void AppendAtomicRuleArguments(string id, Parameter[] arguments)

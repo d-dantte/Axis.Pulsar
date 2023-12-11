@@ -1,6 +1,7 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar.Rules
@@ -19,7 +20,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             IsCaseInsensitive = isCaseInsensitive;
             Id = id.ThrowIfNot(
                 IProduction.SymbolPattern.IsMatch,
-                new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
+                _ => new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
         }
 
         public TerminalLiteral(string id, string tokens)
@@ -37,7 +38,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             TokenReader reader,
             ProductionPath productionPath,
             ILanguageContext context,
-            out IResult<ICSTNode> result)
+            out IRecognitionResult<ICSTNode> result)
         {
             ArgumentNullException.ThrowIfNull(reader);
 
@@ -49,7 +50,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             {
                 result = ICSTNode
                     .Of(literalPath.Name, tokens)
-                    .ApplyTo(Result.Of);
+                    .ApplyTo(RecognitionResult.Of);
                 return true;
             }
             else
@@ -57,7 +58,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 reader.Reset(position);
                 result = FailedRecognitionError
                     .Of(literalPath, position)
-                    .ApplyTo(Result.Of<ICSTNode>);
+                    .ApplyTo(error => RecognitionResult.Of<ICSTNode>(error));
                 return false;
             }
         }

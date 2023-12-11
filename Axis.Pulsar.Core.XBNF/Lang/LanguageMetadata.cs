@@ -20,10 +20,10 @@ public class LanguageMetadata
         IEnumerable<ProductionValidatorDefinition> validators)
     {
         AtomicRuleDefinitionMap = atomicRules
-            .ThrowIfNull(new ArgumentNullException(nameof(atomicRules)))
+            .ThrowIfNull(() => new ArgumentNullException(nameof(atomicRules)))
             .ThrowIfAny(
                 item => item is null,
-                new ArgumentException($"Invalid factory definition: null"))
+                _ => new ArgumentException($"Invalid factory definition: null"))
             .ToImmutableDictionary(
                 item => item.Id,
                 item => item);
@@ -35,10 +35,10 @@ public class LanguageMetadata
                 item => item.Id);
 
         ProductionValidatorDefinitionMap = validators
-            .ThrowIfNull(new ArgumentNullException(nameof(validators)))
+            .ThrowIfNull(() => new ArgumentNullException(nameof(validators)))
             .ThrowIfAny(
                 item => item is null,
-                new ArgumentException($"Invalid validator definition: null"))
+                _ => new ArgumentException($"Invalid validator definition: null"))
             .ToImmutableDictionary(
                 item => item.Symbol,
                 item => item);

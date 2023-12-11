@@ -6,6 +6,7 @@ using Axis.Pulsar.Core.Utils;
 using Moq;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar.Errors;
+using Axis.Luna.Common.Segments;
 
 namespace Axis.Pulsar.Core.Tests.Grammar.Groups
 {
@@ -27,14 +28,14 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                         It.IsAny<TokenReader>(),
                         It.IsAny<ProductionPath>(),
                         It.IsAny<ILanguageContext>(),
-                        out It.Ref<IResult<NodeSequence>>.IsAny))
+                        out It.Ref<IResult<INodeSequence>>.IsAny))
                     .Returns(new TryRecognizeNodeSequence((
                         TokenReader reader,
                         ProductionPath? path,
                         ILanguageContext languageContext,
-                        out IResult<NodeSequence> result) =>
+                        out IResult<INodeSequence> result) =>
                     {
-                        result = Result.Of(NodeSequence.Of(ICSTNode.Of("dummy", Tokens.Of("source"))));
+                        result = Result.Of(INodeSequence.Of(ICSTNode.Of("dummy", Tokens.Of("source"))));
                         return true;
                     })));
 
@@ -48,14 +49,14 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                         It.IsAny<TokenReader>(),
                         It.IsAny<ProductionPath>(),
                         It.IsAny<ILanguageContext>(),
-                        out It.Ref<IResult<NodeSequence>>.IsAny))
+                        out It.Ref<IResult<INodeSequence>>.IsAny))
                     .Returns(new TryRecognizeNodeSequence((
                         TokenReader reader,
                         ProductionPath? path,
                         ILanguageContext languageContext,
-                        out IResult<NodeSequence> result) =>
+                        out IResult<INodeSequence> result) =>
                     {
-                        result = Result.Of<NodeSequence>(
+                        result = Result.Of<INodeSequence>(
                             new GroupRecognitionError(
                                 elementCount: 0,
                                 cause: FailedRecognitionError.Of(
@@ -74,14 +75,14 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                         It.IsAny<TokenReader>(),
                         It.IsAny<ProductionPath>(),
                         It.IsAny<ILanguageContext>(),
-                        out It.Ref<IResult<NodeSequence>>.IsAny))
+                        out It.Ref<IResult<INodeSequence>>.IsAny))
                     .Returns(new TryRecognizeNodeSequence((
                         TokenReader reader,
                         ProductionPath? path,
                         ILanguageContext languageContext,
-                        out IResult<NodeSequence> result) =>
+                        out IResult<INodeSequence> result) =>
                     {
-                        result = Result.Of<NodeSequence>(
+                        result = Result.Of<INodeSequence>(
                             new GroupRecognitionError(
                                 elementCount: 0,
                                 cause: PartialRecognitionError.Of(
@@ -101,14 +102,14 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                         It.IsAny<TokenReader>(),
                         It.IsAny<ProductionPath>(),
                         It.IsAny<ILanguageContext>(),
-                        out It.Ref<IResult<NodeSequence>>.IsAny))
+                        out It.Ref<IResult<INodeSequence>>.IsAny))
                     .Returns(new TryRecognizeNodeSequence((
                         TokenReader reader,
                         ProductionPath? path,
                         ILanguageContext languageContext,
-                        out IResult<NodeSequence> result) =>
+                        out IResult<INodeSequence> result) =>
                     {
-                        result = Result.Of<NodeSequence>(new CustomNodeError());
+                        result = Result.Of<INodeSequence>(new CustomNodeError());
                         return false;
                     })));
 
@@ -122,14 +123,14 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                         It.IsAny<TokenReader>(),
                         It.IsAny<ProductionPath>(),
                         It.IsAny<ILanguageContext>(),
-                        out It.Ref<IResult<NodeSequence>>.IsAny))
+                        out It.Ref<IResult<INodeSequence>>.IsAny))
                     .Returns(new TryRecognizeNodeSequence((
                         TokenReader reader,
                         ProductionPath? path,
                         ILanguageContext languageContext,
-                        out IResult<NodeSequence> result) =>
+                        out IResult<INodeSequence> result) =>
                     {
-                        result = Result.Of<NodeSequence>(new Exception("non-IRecognitionError Exception"));
+                        result = Result.Of<INodeSequence>(new Exception("non-IRecognitionError Exception"));
                         return false;
                     })));
             #endregion
@@ -196,12 +197,11 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
             Assert.IsTrue(result.IsErrorResult(out Exception _));
         }
 
-        internal class CustomNodeError : Exception, IRecognitionError
+        internal class CustomNodeError : Exception, IRecognitionError__
         {
-
-            public Core.Utils.Segment TokenSegment => default;
-
             public string Symbol => "custom-node-error-symbol";
+
+            Segment IRecognitionError__.TokenSegment => default;
         }
     }
 }

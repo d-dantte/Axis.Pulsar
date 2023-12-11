@@ -1387,7 +1387,10 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                     || '\n' != n[0])
                 {
                     reader.Reset(position);
-                    result = Result.Of<ICSTNode>(PartialRecognitionError.Of(productionPath, position, r.SourceSegment.Length));
+                    result = Result.Of<ICSTNode>(PartialRecognitionError.Of(
+                        productionPath,
+                        position,
+                        r.Segment.Count));
                     return false;
                 }
 

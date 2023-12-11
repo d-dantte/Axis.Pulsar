@@ -9,7 +9,7 @@ namespace Axis.Pulsar.Core.XBNF.Parsers.Models
 
         public BlockComment(Tokens comment)
         {
-            Content = comment.ThrowIfDefault(new ArgumentException("Invalid comment: default"));
+            Content = comment.ThrowIfDefault(_ => new ArgumentException("Invalid comment: default"));
 
             if (comment.Contains("*/"))
                 throw new ArgumentException($"Comment cannot contain the '*/' sequence");

@@ -134,7 +134,7 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
             .Select(range => range.Replace("\\u002c", ","))
             .ThrowIfAny(
                 string.Empty.Equals,
-                new FormatException($"Invalid range: {sequences}"));
+                _ => new FormatException($"Invalid range: {sequences}"));
 
         return (
             primedSequences

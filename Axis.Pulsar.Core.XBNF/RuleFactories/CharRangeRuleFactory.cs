@@ -85,7 +85,7 @@ public class CharRangeRuleFactory : IAtomicRuleFactory
             .Select(range => range.Trim())
             .ThrowIfAny(
                 string.Empty.Equals,
-                new FormatException($"Invalid range: {rangeText}"));
+                _ => new FormatException($"Invalid range: {rangeText}"));
 
         return (
             primedRanges

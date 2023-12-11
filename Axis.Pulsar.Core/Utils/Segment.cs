@@ -1,84 +1,113 @@
 ﻿using Axis.Luna.Common;
 using Axis.Luna.Extensions;
+using System.Diagnostics.CodeAnalysis;
 
-namespace Axis.Pulsar.Core.Utils;
-
-/// <summary>
-/// 
-/// </summary>
-public readonly struct Segment
-    : IDefaultValueProvider<Segment>
+namespace Axis.Pulsar.Core.Utils
 {
-    /// <summary>
-    /// 
-    /// </summary>
-    public int Offset { get; }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    public int Length { get; }
+    //public readonly struct Segment :
+    //    ICountable,
+    //    IOffsetable,
+    //    IEquatable<Segment>,
+    //    IDefaultValueProvider<Segment>
+    //{
+    //    #region Props
+    //    /// <summary>
+    //    /// 
+    //    /// </summary>
+    //    public int Offset { get; }
 
-    public int EndOffset => Length switch
-    {
-        0 => Offset,
-        > 0 => Offset + Length - 1,
-        _ => throw new InvalidOperationException($"Invalid {nameof(Length)}: {Length}")
-    };
+    //    /// <summary>
+    //    /// 
+    //    /// </summary>
+    //    public int Count { get; }
 
-    #region DefaultValueProvider
+    //    public int EndOffset => Count switch
+    //    {
+    //        0 => Offset,
+    //        > 0 => Offset + Count - 1,
+    //        _ => throw new InvalidOperationException($"Invalid {nameof(Count)}: {Count}")
+    //    };
+    //    #endregion
 
-    public bool IsDefault => Offset == 0 && Length == 0;
+    //    #region DefaultValueProvider
 
-    public static Segment Default => default;
+    //    public bool IsDefault => Offset == 0 && Count == 0;
 
-    #endregion
+    //    public static Segment Default => default;
 
-    public Segment(int offset, int length)
-    {
-        Offset = offset;
-        Length = length.ThrowIf(
-            i => i < 0,
-            new ArgumentOutOfRangeException(nameof(length)));
-    }
+    //    #endregion
 
-    public static Segment Of(
-        int offset,
-        int length)
-        => new(offset, length);
+    //    #region Construction
+    //    public Segment(int offset, int length)
+    //    {
+    //        if (length < 0)
+    //            throw new ArgumentOutOfRangeException(nameof(length));
 
-    public static Segment Of(
-        int offset)
-        => new(offset, 1);
+    //        Offset = offset;
+    //        Count = length;
+    //    }
 
-    public static implicit operator Segment((int Offset, int Length) segment) => new(segment.Offset, segment.Length);
+    //    public static Segment Of(
+    //        int offset,
+    //        int length)
+    //        => new(offset, length);
 
-    public override string ToString() => $"{{offset: {Offset}, length: {Length}}}";
+    //    public static Segment Of(
+    //        int offset)
+    //        => new(offset, 1);
 
-    #region Helpers
+    //    public static implicit operator Segment((int Offset, int Count) segment) => new(segment.Offset, segment.Count);
+    //    #endregion
 
-    public bool Contains(Segment other)
-    {
-        return Offset <= other.Offset
-            && EndOffset >= other.EndOffset;
-    }
+    //    #region Helpers
 
-    public bool Intersects(Segment other)
-    {
-        return (Offset <= other.Offset && other.Offset <= EndOffset)
-            || (other.Offset <= Offset && Offset <= other.EndOffset);
-    }
+    //    public bool Contains(Segment other)
+    //    {
+    //        return Offset <= other.Offset
+    //            && EndOffset >= other.EndOffset;
+    //    }
 
-    public Segment Merge(Segment other)
-    {
-        var newOffset = Math.Min(Offset, other.Offset);
-        var newEndOffset = Math.Max(EndOffset, other.EndOffset);
-        return Segment.Of(newOffset, newEndOffset - newOffset + 1);
-    }
+    //    public bool Intersects(Segment other)
+    //    {
+    //        return (Offset <= other.Offset && other.Offset <= EndOffset)
+    //            || (other.Offset <= Offset && Offset <= other.EndOffset);
+    //    }
 
-    public static Segment operator+(Segment first, Segment second) => first.Merge(second);
+    //    public Segment Merge(Segment other)
+    //    {
+    //        var newOffset = Math.Min(Offset, other.Offset);
+    //        var newEndOffset = Math.Max(EndOffset, other.EndOffset);
+    //        return Segment.Of(newOffset, newEndOffset - newOffset + 1);
+    //    }
 
-    public Range ToRange() => new(Offset, EndOffset);
+    //    public static Segment operator +(Segment first, Segment second) => first.Merge(second);
 
-    #endregion
+    //    public Range ToRange() => new(Offset, EndOffset);
+
+    //    #endregion
+
+    //    #region Overrides
+
+    //    public override int GetHashCode() => HashCode.Combine(Offset, Count);
+
+    //    public bool Equals(Segment other)
+    //    {
+    //        return Offset == other.Offset
+    //            && Count == other.Count;
+    //    }
+
+    //    public override bool Equals([NotNullWhen(true)] object? obj)
+    //    {
+    //        return obj is Segment other && Equals(other);
+    //    }
+
+    //    public override string ToString() => $"[offset: {Offset}, length: {Count}]";
+
+    //    public static bool operator ==(Segment first, Segment second) => first.Equals(second);
+
+    //    public static bool operator !=(Segment first, Segment second) => !first.Equals(second);
+
+    //    #endregion
+    //}
 }

@@ -1,7 +1,7 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
-using Axis.Pulsar.Core.Grammar.Errors;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Utils;
 using System.Collections.Immutable;
 
@@ -28,9 +28,9 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             Cardinality = cardinality;
             MinRecognitionCount = minRecognitionCount;
             Elements = elements
-                .ThrowIfNull(new ArgumentNullException(nameof(elements)))
-                .ThrowIf(items => items.IsEmpty(), new ArgumentException("Invalid elements: empty"))
-                .ThrowIfAny(e => e is null, new ArgumentException($"Invalid element: null"))
+                .ThrowIfNull(() => new ArgumentNullException(nameof(elements)))
+                .ThrowIf(items => items.IsEmpty(), _ => new ArgumentException("Invalid elements: empty"))
+                .ThrowIfAny(e => e is null, _ => new ArgumentException($"Invalid element: null"))
                 .ApplyTo(ImmutableArray.CreateRange);
         }
 
@@ -49,14 +49,14 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             TokenReader reader,
             ProductionPath parentPath,
             ILanguageContext context,
-            out IResult<NodeSequence> result)
+            out IRecognitionResult<INodeSequence> result)
         {
             ArgumentNullException.ThrowIfNull(reader);
             ArgumentNullException.ThrowIfNull(parentPath);
 
             var position = reader.Position;
             var elementList = Elements.Reverse().ToList();
-            var results = new List<IResult<NodeSequence>>();
+            var results = new List<IRecognitionResult<INodeSequence>>();
             bool isElementConsumed = false;
             do
             {
@@ -72,7 +72,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                         isElementConsumed = true;
                         break;
                     }
-                    else if (groupResult.IsErrorResult(out GroupRecognitionError gre)
+                    else if (groupResult.IsError(out GroupRecognitionError gre)
                         && gre.Cause is FailedRecognitionError)
                     {
                         reader.Reset(stepPosition);
@@ -90,7 +90,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
 
             if (results.Count == Elements.Length || results.Count >= MinRecognitionCount)
             {
-                result = results.FoldInto(_results => _results.Fold());
+                result = results.Fold((acc, next) => acc.Append(next));
                 return true;
             }
             else if (results.Count == 0)
@@ -98,7 +98,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                 result = FailedRecognitionError
                     .Of(parentPath, position)
                     .ApplyTo(GroupRecognitionError.Of)
-                    .ApplyTo(Result.Of<NodeSequence>);
+                    .ApplyTo(error => RecognitionResult.Of<INodeSequence>(error));
                 return false;
             }
             else
@@ -106,7 +106,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                 result = PartialRecognitionError
                     .Of(parentPath, position, reader.Position - position)
                     .ApplyTo(fre => GroupRecognitionError.Of(fre, results.Count))
-                    .ApplyTo(Result.Of<NodeSequence>);
+                    .ApplyTo(error => RecognitionResult.Of<INodeSequence>(error));
                 return false;
             }
         }

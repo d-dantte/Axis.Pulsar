@@ -10,7 +10,7 @@ public class SubstringMatcherTests
     [TestMethod]
     public void TryNextWindow_LookAhead_Tests()
     {
-        var matcher = SubstringMatcher.OfLookAhead(
+        var matcher = SubstringMatcher.LookAheadMatcher.Of(
             "abc",
             "bc abc c",
             0);
@@ -43,34 +43,30 @@ public class SubstringMatcherTests
         Assert.IsFalse(moved);
         Assert.IsFalse(matched);
     }
+
     [TestMethod]
     public void TrySkip_LookAhead_Tests()
     {
-        var matcher = SubstringMatcher.OfLookAhead(
+        var matcher = SubstringMatcher.LookAheadMatcher.Of(
             "abc",
             "bc abc c",
             0);
 
-        var moved = matcher.TrySkip(3, out var skipped);
-        Assert.IsTrue(moved);
+        var skipped = matcher.Advance(3);
+        Assert.AreEqual(3, matcher.Index);
         Assert.AreEqual(3, skipped);
 
-        moved = matcher.TryNextWindow(out bool ismatch);
+        var moved = matcher.TryNextWindow(out bool ismatch);
         Assert.IsTrue(moved);
         Assert.IsTrue(ismatch);
 
-        moved = matcher.TrySkip(40, out skipped);
-        Assert.IsTrue(moved);
+        skipped = matcher.Advance(40);
         Assert.AreNotEqual(40, skipped);
         Assert.AreEqual(2, skipped);
 
         moved = matcher.TryNextWindow(out ismatch);
         Assert.IsFalse(moved);
         Assert.IsFalse(ismatch);
-
-        moved = matcher.TrySkip(1, out skipped);
-        Assert.IsFalse(moved);
-        Assert.AreEqual(0, skipped);
     }
     #endregion
 
@@ -78,7 +74,7 @@ public class SubstringMatcherTests
     [TestMethod]
     public void TryNextWindow_LookBehind_Tests()
     {
-        var matcher = SubstringMatcher.OfLookBehind(
+        var matcher = SubstringMatcher.LookBehindMatcher.Of(
             "abc",
             "bc abc c",
             0);
@@ -118,6 +114,31 @@ public class SubstringMatcherTests
         moved = matcher.TryNextWindow(out matched);
         Assert.IsFalse(moved);
         Assert.IsFalse(matched);
+    }
+
+    [TestMethod]
+    public void TrySkip_LookBehind_Tests()
+    {
+        var matcher = SubstringMatcher.LookBehindMatcher.Of(
+            "abc",
+            "bc abc c",
+            0);
+
+        var skipped = matcher.Advance(5);
+        Assert.AreEqual(5, matcher.Index);
+        Assert.AreEqual(5, skipped);
+
+        var moved = matcher.TryNextWindow(out bool ismatch);
+        Assert.IsTrue(moved);
+        Assert.IsTrue(ismatch);
+
+        skipped = matcher.Advance(40);
+        Assert.AreNotEqual(40, skipped);
+        Assert.AreEqual(2, skipped);
+
+        moved = matcher.TryNextWindow(out ismatch);
+        Assert.IsFalse(moved);
+        Assert.IsFalse(ismatch);
     }
     #endregion
 }

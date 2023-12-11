@@ -10,10 +10,10 @@ internal class SilentBlock
     public SilentBlock(IEnumerable<ISilentElement> elements)
     {
         Elements = elements
-            .ThrowIfNull(new ArgumentNullException(nameof(elements)))
+            .ThrowIfNull(() => new ArgumentNullException(nameof(elements)))
             .ThrowIfAny(
                 t => t is null,
-                new ArgumentException("Invalid element: null"))
+                _ => new ArgumentException("Invalid element: null"))
             .ToImmutableArray();
     }
 

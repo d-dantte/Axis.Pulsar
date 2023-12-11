@@ -2,281 +2,275 @@
 using Axis.Luna.Common.Utils;
 using Axis.Luna.Extensions;
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Axis.Pulsar.Core.Utils
 {
+    using LunaSegment = Luna.Common.Segments.Segment;
+
     public readonly struct Tokens :
         IEnumerable<char>,
         IEquatable<Tokens>,
         IReadonlyIndexer<int, char>,
         IDefaultValueProvider<Tokens>
     {
-        #region Fields
+        private readonly LunaSegment _segment;
+        private readonly string? _source;
+        private readonly DeferredValue<int>? _sourceHash;
+
+        #region Construction
+        public Tokens(string source)
+            : this(source, LunaSegment.Of(0, source.Length))
+        { }
+
+        public Tokens(string source, LunaSegment segment)
+        {
+            _source = source;
+            _segment = segment;
+            _sourceHash = source is null ? null : new DeferredValue<int>(() =>
+            {
+                var hash = 0;
+                for (int cnt = segment.Offset; cnt < segment.Count; cnt++)
+                    hash = HashCode.Combine(hash, source[cnt]);
+
+                return hash;
+            });
+
+            // validate
+            if (source is null && !segment.IsDefault)
+                throw new InvalidOperationException(
+                    $"Invalid argument combination: "
+                    + $"[{nameof(source)}: null, {nameof(segment)}: non-default] ");
+
+            var soffset = segment.Offset;
+            if (soffset < 0)
+                throw new ArgumentOutOfRangeException(nameof(segment));
+
+            var sourceLength = source?.Length ?? 0;
+            if (sourceLength > 0
+                && soffset + segment.Count > sourceLength)
+                throw new ArgumentOutOfRangeException(nameof(segment));
+        }
+
+        public static implicit operator Tokens(string @string) => new(
+            segment: LunaSegment.Of(0, @string?.Length ?? 0),
+            source: @string!);
+
+        public static implicit operator string(Tokens tokens) => tokens.ToString()!;
+
+        public static Tokens Of(string @string) => @string;
+
+        public static Tokens Of(string @string, int offset) => new(
+            segment: LunaSegment.Of(offset, (@string?.Length ?? 0) - offset),
+            source: @string!);
+
+        public static Tokens Of(string @string, int offset, int count) => new(
+            segment: LunaSegment.Of(offset, count),
+            source: @string);
 
         /// <summary>
-        /// Lazy-loaded hash of the individual characters of this token.
-        /// <para/>
-        /// NOTE: Lazy-loaded becaus the some performance will be shaved off if this is calculated each time an instance is created.
+        /// Creates an empty token from the source, at the given offset.
         /// </summary>
-        private readonly Lazy<int> _valueHash;
+        /// <param name="string">The source string</param>
+        /// <param name="offset">The start offset</param>
+        public static Tokens EmptyAt(string @string, int offset) => new(
+            segment: LunaSegment.Of(offset, 0),
+            source: @string);
 
-        private readonly string? _source;
-        private readonly Segment _sourceSegment;
+        public static Tokens Of(string @string, LunaSegment segment) => new(
+            segment: segment,
+            source: @string);
 
         #endregion
 
         #region Properties
-        public Segment SourceSegment => _sourceSegment;
 
+        /// <summary>
+        /// The source string
+        /// </summary>
         public string? Source => _source;
 
+        /// <summary>
+        /// The segment instance
+        /// </summary>
+        public LunaSegment Segment => _segment;
+
+        /// <summary>
+        /// Indicates if this instance's <see cref="Tokens.Segment"/>.Count has a value of zero, irrespective of the <see cref="Tokens.Source"/>.
+        /// </summary>
+        public bool IsEmpty => _segment.Count == 0;
+
+        /// <summary>
+        /// Indicates if this instance is default, or empty, according to the definitions of both states.
+        /// </summary>
         public bool IsDefaultOrEmpty => IsDefault || IsEmpty;
+
         #endregion
 
-        #region Indexers
+        #region DefaultValueProvider
+
+        /// <summary>
+        /// Indicates if this instance is the default value
+        /// </summary>
+        public bool IsDefault => _source is null && _segment.IsDefault;
+
+        /// <summary>
+        /// Returns the default <see cref="Tokens"/> value.
+        /// </summary>
+        public static Tokens Default => default;
+
+        #endregion
+
+        #region IReadonlyIndexer
 
         public char this[int index]
         {
             get
             {
-                if (IsDefault)
-                    throw new InvalidOperationException($"Invalid token instance: default");
+                if (IsEmpty)
+                    throw new InvalidOperationException($"Invalid token instance: empty");
 
-                if (index < 0 || index >= _sourceSegment.Length)
+                if (index < 0 || index >= _segment.Count)
                     throw new IndexOutOfRangeException();
 
-                return _source![_sourceSegment.Offset + index];
+                return _source![_segment.Offset + index];
             }
         }
 
+        #endregion
+
+        #region Index & Range
+
         public char this[Index index] => index.IsFromEnd switch
         {
-            true => this[_sourceSegment.Length - index.Value],
+            true => this[_segment.Count - index.Value],
             false => this[index.Value]
         };
 
         public Tokens this[Range range] => range
-            .GetOffsetAndLength(_sourceSegment.Length)
+            .GetOffsetAndLength(_segment.Count)
             .ApplyTo(Slice);
 
-        #endregion
-
-        #region Empty
-        public bool IsEmpty => !IsDefault && _sourceSegment.Length == 0;
-
-        /// <summary>
-        /// Returns the DEFAULT-EMPTY segment: a segment whose source-string is the empty string (see <see cref="string.Empty"/>)
-        /// </summary>
-        public static Tokens Empty { get; } = new(string.Empty, 0, 0);
-        #endregion
-
-        #region DefaultValueProvider
-        public bool IsDefault => _source is null;
-
-        public static Tokens Default => default;
-        #endregion
-
-        #region Constructors
-
-        public Tokens(
-            string sourceString,
-            Segment tokenSegment)
-        {
-            _source = sourceString ?? throw new ArgumentNullException(nameof(sourceString));
-            _sourceSegment = tokenSegment;
-
-            if (tokenSegment.Offset > sourceString.Length
-                || sourceString.Length < (tokenSegment.Offset + tokenSegment.Length))
-                throw new ArgumentException(
-                    $"Invalid args. source-length:{sourceString.Length}, "
-                    + $"offset:{tokenSegment.Offset}, segment-length:{tokenSegment.Length}");
-
-            _valueHash = new Lazy<int>(() => sourceString
-                .Substring(tokenSegment.Offset, tokenSegment.Length)
-                .Aggregate(0, HashCode.Combine));
-        }
-
-        public Tokens(
-            string sourceString,
-            int offset,
-            int length)
-            : this(sourceString, Segment.Of(
-                offset < 0
-                    ? throw new ArgumentException($"Invalid {nameof(offset)}: {offset}")
-                    : offset,
-                length < 0
-                    ? throw new ArgumentException($"Invalid {nameof(length)}: {length}")
-                    : length))
-        {
-        }
-
-        public Tokens(string sourceString, int offset)
-            : this(sourceString, offset, sourceString?.Length - offset ?? 0)
-        {
-        }
-
-        public Tokens(string sourceString)
-            : this(sourceString, 0, sourceString?.Length ?? 0)
-        {
-        }
-        #endregion
-
-        #region Of
-        public static Tokens Of(
-            string sourceString,
-            int offset,
-            int length)
-            => new(sourceString, offset, length);
-
-        public static Tokens Of(
-            string sourceString,
-            int offset)
-            => new(sourceString, offset);
-
-        public static Tokens Of(
-            string sourceString,
-            Segment tokenSegment)
-            => new(sourceString, tokenSegment);
-
-        public static Tokens Of(string sourceString) => new(sourceString);
-        #endregion
-
-        #region Implicits
-        public static implicit operator Tokens(string sourceString) => new(sourceString);
-
-        public static implicit operator string(Tokens tokens) => tokens.ToString()!;
-        #endregion
-
-        #region Slice
         public Tokens Slice(
             int offset,
             int length)
-            => new(_source!, offset + _sourceSegment.Offset, length);
+            => new(_source!, LunaSegment.Of(offset + _segment.Offset, length));
 
         public Tokens Slice(
             int offset)
-            => new(_source!, offset + _sourceSegment.Offset, _sourceSegment.Length - offset);
+            => new(_source!, LunaSegment.Of(offset + _segment.Offset, _segment.Count - offset));
+
         #endregion
 
         #region object Overrides
+
         public override int GetHashCode() => HashCode.Combine(
-            _sourceSegment.Offset,
-            _sourceSegment.Length,
-            _valueHash?.Value ?? 0);
+            _segment,
+            _sourceHash?.Value ?? 0);
 
         public override string? ToString()
         {
             if (_source is null)
                 return null;
 
-            if (_sourceSegment.Offset == 0 && _sourceSegment.Length == _source.Length)
+            if (_segment.Offset == 0 && _segment.Count == _source.Length)
                 return _source;
 
-            else return _source.Substring(_sourceSegment.Offset, _sourceSegment.Length);
+            else return _source.Substring(_segment.Offset, _segment.Count);
         }
+
+        public override bool Equals(
+            [NotNullWhen(true)] object? obj)
+            => obj is Tokens other && Equals(other);
+
+        public static bool operator==(Tokens left, Tokens right) => left.Equals(right);
+
+        public static bool operator!=(Tokens left, Tokens right) => !left.Equals(right);
+
+        #endregion
+
+        #region IEnumerable
+
+        public IEnumerator<char> GetEnumerator() => new TokenEnumerator(this);
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        #endregion
+
+        #region IEquatable
+
+        public bool Equals(Tokens other) => Equals(other, true);
+
         #endregion
 
         #region API
-        public char[]? ToArray()
+
+        public ReadOnlySpan<char> AsSpan()
         {
-            return !IsDefault
-                ? AsSpan().ToArray()
-                : null;
+            if (IsDefault)
+                throw new InvalidOperationException("Invalid state: default");
+
+            return _source.AsSpan(_segment.Offset, _segment.Count);
         }
 
+        public char[] ToArray() => AsSpan().ToArray();
+
+        #region Expand
         /// <summary>
-        /// Merge two intersecting <see cref="Tokens"/> instances.
+        /// Grow or shrink this token by the given number of characters.
+        /// </summary>
+        /// <param name="count">Number of characters to add to or remove from the total number of characters in this instance</param>
+        /// <returns></returns>
+        public Tokens ExpandBy(int count) => Of(_source!, _segment.Offset, _segment.Count + count);
+
+        public static Tokens operator +(Tokens left, int right) => left.ExpandBy(right);
+
+        public static Tokens operator -(Tokens left, int right) => left.ExpandBy(-right);
+
+        #endregion
+
+        #region Merge
+
+        /// <summary>
+        /// Merge two <see cref="Tokens_old"/> instances.
+        /// <para/>
+        /// Note: merging a default Token with a non-default token yields the non-default token.
         /// </summary>
         /// <param name="other">The token instance to merge with</param>
         /// <returns></returns>
-        public Tokens Merge(Tokens other)
+        public Tokens MergeWith(Tokens other)
         {
-            if (IsDefault || other.IsDefault)
-                throw new ArgumentException("Cannot merge default tokens");
-
-            if (IsEmpty)
-                return other;
-
-            if (other.IsEmpty)
+            if (IsDefault && other.IsDefault)
                 return this;
 
-            if (!Intersects(this, other))
-                throw new ArgumentException("Cannot merge non-intersecting tokens");
-
-            return Of(_source!, _sourceSegment + other._sourceSegment);
-        }
-
-        /// <summary>
-        /// Joins two consecutive <see cref="Tokens"/> instances, non-default instances. See <see cref="Tokens.IsConsecutiveTo(Tokens)"/>
-        /// <para/>Note that this method is commutative. i.e:
-        /// <code>
-        /// Token x = ...;
-        /// Token y = ...;
-        /// 
-        /// // assume both are consecutive.
-        /// Token z1 = x.Join(y);
-        /// Token z2 = y.Join(x);
-        /// z1.Equals(z2) // &lt;-- will be true.
-        /// </code>
-        /// </summary>
-        /// <param name="other">The token instance to concatenate</param>
-        /// <returns>The new token created from joining both tokens</returns>
-        /// <exception cref="InvalidOperationException">If the tokens cannot be joined</exception>
-        public Tokens ConJoin(Tokens other)
-        {
-            if (!CanJoin(other))
-                throw new InvalidOperationException($"Invalid segment: non-combinable");
-
-            if (IsEmpty)
+            if (IsDefault)
                 return other;
 
-            if (other.IsEmpty)
+            if (other.IsDefault)
                 return this;
 
-            return new Tokens(
-                _source!,
-                SourceSegment + other.SourceSegment);
+            if (!EqualityComparer<string>.Default.Equals(_source, other._source))
+                throw new InvalidOperationException("Invalid merge: unequal sources");
+
+            return Of(_source!, _segment + other._segment);
         }
 
-        /// <summary>
-        /// Expand this token by the given number of characters to the right
-        /// </summary>
-        /// <param name="count">Number of characters by which we will expand this token instance</param>
-        /// <returns></returns>
-        public Tokens ExpandBy(int count) => new(_source!, _sourceSegment.Offset, count + count);
+        public static Tokens operator +(Tokens left, Tokens right) => left.MergeWith(right);
 
-        /// <summary>
-        /// Returns a span representation of this token
-        /// </summary>
-        /// <returns></returns>
-        public ReadOnlySpan<char> AsSpan()
-            => !IsDefault
-                ? _source.AsSpan(_sourceSegment.Offset, _sourceSegment.Length)
-                : default;
+        public static Tokens Merge(Tokens first, Tokens second) => first.MergeWith(second);
 
-        /// <summary>
-        /// Calls <see cref="Tokens.ConJoin(Tokens)"/> on each consecutive items in the given sequence.
-        /// </summary>
-        /// <param name="segmentTokens">A sequence of consecutively related <see cref="Tokens"/> instances</param>
-        /// <returns>A new instance that is a combination of all the given consecutive instances</returns>
-        internal static Tokens Join(IEnumerable<Tokens> segmentTokens)
-        {
-            ArgumentNullException.ThrowIfNull(segmentTokens);
+        #endregion
 
-            return segmentTokens.Aggregate(
-                Tokens.Empty,
-                (segmentToken, next) => segmentToken.ConJoin(next));
-        }
-
+        #region Contains
         public bool Contains(string substring)
         {
-            if (IsDefault)
-                return false;
-
             if (substring is null)
                 return false;
 
-            return _source!.IndexOf(substring, _sourceSegment.Offset, _sourceSegment.Length) >= 0;
+            if (IsDefaultOrEmpty)
+                return false;
+
+            return _source!.IndexOf(substring, _segment.Offset, _segment.Count) >= 0;
         }
 
         public bool Contains(Tokens subtokens)
@@ -284,7 +278,7 @@ namespace Axis.Pulsar.Core.Utils
             if (IsDefault ^ subtokens.IsDefault)
                 return false;
 
-            if (subtokens.SourceSegment.Length > SourceSegment.Length)
+            if (subtokens._segment.Count > _segment.Count)
                 return false;
 
             return AsSpan().Contains(subtokens.AsSpan(), StringComparison.InvariantCulture);
@@ -297,9 +291,11 @@ namespace Axis.Pulsar.Core.Utils
             if (IsDefault)
                 return false;
 
-            return _source!.IndexOfAny(chars, _sourceSegment.Offset, _sourceSegment.Length) >= 0;
+            return _source!.IndexOfAny(chars, _segment.Offset, _segment.Count) >= 0;
         }
+        #endregion
 
+        #region Split
         /// <summary>
         /// Splits this token into an array of tokens seprated by the given delimiters
         /// </summary>
@@ -313,21 +309,21 @@ namespace Axis.Pulsar.Core.Utils
             params Tokens[] delimiters)
         {
             #region Validate
-            if (offset < 0 || offset >= _sourceSegment.Length)
+            if (offset < 0 || offset >= _segment.Count)
                 throw new ArgumentOutOfRangeException(nameof(offset));
 
-            if (length + offset > _sourceSegment.Length)
+            if (length + offset > _segment.Count)
                 throw new ArgumentOutOfRangeException(nameof(length));
 
             _ = delimiters
                 .ThrowIfNull(
-                    new ArgumentNullException(nameof(delimiters)))
+                    () => new ArgumentNullException(nameof(delimiters)))
                 .ThrowIf(
                     d => d.IsEmpty(),
-                    new ArgumentException($"Invalid '{nameof(delimiters)}': empty array"))
+                    _ => new ArgumentException($"Invalid '{nameof(delimiters)}': empty array"))
                 .ThrowIfAny(
                     d => d.IsDefaultOrEmpty,
-                    new ArgumentException($"Invalid delimiter: default/empty"));
+                    _ => new ArgumentException($"Invalid delimiter: default/empty"));
             #endregion
 
             var auxTokens = Slice(offset, length);
@@ -335,39 +331,40 @@ namespace Axis.Pulsar.Core.Utils
 
             // delimiter matchers
             var delimMatchers = delimiters
-                .OrderByDescending(delim => delim.SourceSegment.Length)
-                .Select(delim => SubstringMatcher.OfLookAhead(delim, auxTokens))
+                .OrderByDescending(delim => delim._segment.Count)
+                .Select(delim => SubstringMatcher.LookAheadMatcher.Of(delim, auxTokens, 0))
                 .ToArray();
 
             for (int cnt = 0; cnt < length; cnt++)
             {
-                var match = delimMatchers
-                    .Select(m => (
-                        isMatch: m.TryNextWindow(out var matched) && matched,
-                        delim: m.CurrentPattern))
-                    .ToArray() // run every matcher
-                    .FirstOrDefault(tuple => tuple.isMatch);
+                (bool isMatch, Tokens delim) match = default;
+                foreach (var matcher in delimMatchers)
+                {
+                    if (matcher.TryNextWindow(out var matched)
+                        && matched && !match.isMatch)
+                        match = (true, matcher.Pattern);
+                }
 
                 if (match.isMatch)
                 {
                     parts.Add((
                         Delimiter: match.delim,
-                        Tokens: Tokens.Empty));
+                        Tokens: Tokens.EmptyAt(_source!, offset + cnt + match.delim.Segment.Count)));
 
                     // skip all matchers by match.delim.SourceSegment.Length characters
-                    var skipCount = match.delim.SourceSegment.Length - 1;
-                    delimMatchers.ForAll(m => m.TrySkip(skipCount, out _));
+                    var skipCount = match.delim._segment.Count - 1;
+                    delimMatchers.ForAll(m => m.Advance(skipCount));
                     cnt += skipCount;
                 }
 
                 else if (parts.Count == 0)
                     parts.Add((
-                        Delimiter: Tokens.Empty,
+                        Delimiter: string.Empty,
                         Tokens: auxTokens.Slice(cnt, 1)));
 
                 else parts[^1] = (
                     parts[^1].Delimiter,
-                    Tokens: parts[^1].Tokens + auxTokens.Slice(cnt, 1));
+                    Tokens: parts[^1].Tokens + 1);
             }
 
             return parts.ToArray();
@@ -376,207 +373,112 @@ namespace Axis.Pulsar.Core.Utils
         public (Tokens Delimiter, Tokens Tokens)[] Split(
             int offset,
             params Tokens[] delimiters)
-            => Split(offset, SourceSegment.Length - offset, delimiters);
+            => Split(offset, _segment.Count - offset, delimiters);
 
         public (Tokens Delimiter, Tokens Tokens)[] Split(
             params Tokens[] delimiters)
-            => Split(0, SourceSegment.Length, delimiters);
-
+            => Split(0, _segment.Count, delimiters);
         #endregion
 
-        #region IEnumerable
-
-        public IEnumerator<char> GetEnumerator() => new TokenEnumerator(this);
-
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-        #endregion
-
-        #region Relationship Checks
-
         /// <summary>
-        /// Returns true if the tokens are consecutive, or either one is empty.
-        /// </summary>
-        private bool CanJoin(Tokens other)
-        {
-            if (IsDefault || other.IsDefault)
-                return false;
-
-            if (IsEmpty || other.IsEmpty)
-                return true;
-
-            if (IsConsecutiveTo(other) || other.IsConsecutiveTo(this))
-                return true;
-
-            return false;
-        }
-
-        public bool IsSourceRefEqual(Tokens other) => ReferenceEquals(_source, other._source);
-
-        public bool IsSourceEqual(Tokens other)
-        {
-            var stringComparer = EqualityComparer<string>.Default;
-            return IsSourceRefEqual(other) || stringComparer.Equals(_source, other._source);
-        }
-
-        public bool IsValueHashEqual(Tokens other)
-        {
-            // both tokens are default
-            if (_valueHash is null && other._valueHash is null)
-                return true;
-
-            else if (_valueHash is null ^ other._valueHash is null)
-                return false;
-
-            else return (_valueHash?.Value ?? 0) == (other._valueHash?.Value ?? 0);
-        }
-
-        /// <summary>
-        /// Checks if the given token directly succeeds this instance.
-        /// <para/>
-        /// To be consecutive, the following needs to be true:
-        /// <list type="number">
-        /// <item>Both segments must have equivalent backing strings, i.e, <see cref="IsSourceEqual(Tokens)"/> must return true</item>
-        /// <item><c>_sourceSegment.Offset + _length</c> of this segment must be equal to <c>_sourceSegment.Offset</c> of <paramref name="other"/></item>
-        /// </list>
+        /// Indicates that the tokens have equivalent sources, and their segments overlap
         /// </summary>
         /// <param name="other"></param>
         /// <returns></returns>
-        public bool IsConsecutiveTo(Tokens other)
+        public bool IntersectsWith(Tokens other)
         {
-            if (IsDefault || other.IsDefault)
+            if (IsDefault && other.IsDefault)
+                return true;
+
+            return
+                EqualityComparer<string>.Default.Equals(_source, other._source)
+                && _segment.Intersects(other._segment);
+        }
+
+        public static bool Intersects(Tokens first, Tokens second) => first.IntersectsWith(second);
+
+        /// <summary>
+        /// Indicates that this instance is directly preceeding the given instance.
+        /// <para/>
+        /// Note: directly preceeding means this token ends exactly one character before
+        /// the start of the <paramref name="successor"/> instance.
+        /// </summary>
+        /// <param name="successor">The successor instance</param>
+        /// <returns>True if this instance preceeds the given instance, false otherwise</returns>
+        public bool Preceeds(Tokens successor)
+        {
+            if (IsDefault || successor.IsDefault)
                 return false;
 
-            if (!IsSourceEqual(other))
-                return false;
-
-            return other._sourceSegment.Offset == _sourceSegment.Offset + _sourceSegment.Length;
+            return
+                EqualityComparer<string>.Default.Equals(_source, successor._source)
+                && _segment.EndOffset + 1 == successor._segment.Offset;
         }
 
         /// <summary>
-        /// Checks if the current instance intersects with the given instance.
+        /// Indicates that this instance is directly succeeding the given instance.
         /// <para/>
-        /// To overlap:
-        /// <list type="number">
-        /// <item>Either token may be empty. </item>
-        /// <item>The source of both instances must be equal</item>
-        /// <item>Some element (index) of one instance must be found as an element in the other instance</item>
-        /// </list>
+        /// Note: directly succeeding means this token starts from the very next character
+        /// after the <paramref name="predecessor"/> instance ends.
         /// </summary>
-        /// <param name="second">The instance to check for intersection</param>
-        /// <returns>True if both instances intersect, false otherwise</returns>
-        public static bool Intersects(Tokens first, Tokens second)
-        {
-            if (first.IsDefault || second.IsDefault)
-                return false;
+        /// <param name="predecessor">The predecessor instance</param>
+        /// <returns>True if this instance succeeds the given instance, false otherwise</returns>
+        public bool Succeeds(Tokens predecessor) => predecessor.Preceeds(this);
 
-            if (first.IsEmpty || second.IsEmpty)
+        public bool Equals(string other)
+        {
+            if (IsDefault && other is null)
                 return true;
 
-            if (!first.IsSourceEqual(second))
-                return false;
-
-            return first._sourceSegment.Intersects(second._sourceSegment);
-        }
-
-        public override bool Equals(object? obj)
-        {
-            return obj is Tokens other && Equals(other);
-        }
-
-        public bool Equals(string? value)
-        {
-            var other = value is null
-               ? Tokens.Default
-               : Tokens.Of(value!);
-
-            return Equals(other);
-        }
-
-        public bool Equals(string? value, bool isCaseSensitive)
-        {
-            if (isCaseSensitive)
-                return Equals(value);
-
-            if (IsDefault && value is null)
+            if (IsEmpty && string.Empty.Equals(other))
                 return true;
 
-            if (IsEmpty && string.IsNullOrEmpty(value))
-                return true;
+            if (_source is not null && other is not null)
+                return AsSpan().Equals(other.AsSpan(), StringComparison.InvariantCulture);
 
-            if (value!.Length != _sourceSegment.Length)
-                return false;
-
-            for (int index = 0; index < _sourceSegment.Length; index++)
-            {
-                if (char.ToLowerInvariant(value[index]) != char.ToLowerInvariant(this[index]))
-                    return false;
-            }
-            return true;
+            return false;
         }
 
         public bool Equals(char value) => Equals(new[] { value });
 
         public bool Equals(char[] value)
         {
-            ArgumentNullException.ThrowIfNull(value);
+            if (IsDefault && value is null)
+                return true;
 
-            if (this.IsDefault)
-                return false;
+            if (IsEmpty && value?.Length == 0)
+                return true;
 
-            if (value.Length != _sourceSegment.Length)
-                return false;
+            if (_source is not null && value is not null)
+                return AsSpan().Equals(new ReadOnlySpan<char>(value), StringComparison.InvariantCulture);
 
-            for (int cnt = 0; cnt < _sourceSegment.Length; cnt++)
-            {
-                if (this[cnt] != value[cnt])
-                    return false;
-            }
-
-            return true;
+            return false;
         }
 
-        public bool Equals(Tokens other)
+        public bool Equals(Tokens other, bool isCaseSensitive)
         {
-            if (IsDefault && other.IsDefault)
-                return true;
+            if (_segment.Count != other._segment.Count)
+                return false;
 
             if (_source is null ^ other._source is null)
                 return false;
 
-            if (IsEmpty && other.IsEmpty)
-                return true;
-
-            if (other.SourceSegment.Length != _sourceSegment.Length)
-                return false;
-
-            if (IsSourceEqual(other) && _sourceSegment.Offset == other._sourceSegment.Offset)
-                return true;
-
-            for (int cnt = 0; cnt < _sourceSegment.Length; cnt++)
+            var flag = isCaseSensitive switch
             {
-                if (this[cnt] != other[cnt])
-                    return false;
-            }
+                true => StringComparison.InvariantCulture,
+                false => StringComparison.InvariantCultureIgnoreCase
+            };
 
-            return true;
+            return
+                ReferenceEquals(_source, other._source)
+                || AsSpan().Equals(other.AsSpan(), flag);
         }
 
-        public static bool operator ==(Tokens left, Tokens right)
-        {
-            return left.Equals(right);
-        }
-
-        public static bool operator !=(Tokens left, Tokens right)
-        {
-            return !(left == right);
-        }
-
-        public static Tokens operator +(Tokens left, Tokens right) => left.ConJoin(right);
         #endregion
 
+
         #region Nested types
-        internal class TokenEnumerator: IEnumerator<char>
+        internal class TokenEnumerator : IEnumerator<char>
         {
             private readonly Tokens _tokens;
             private int _index;
@@ -587,7 +489,7 @@ namespace Axis.Pulsar.Core.Utils
                 _disposed = false;
                 _index = -1;
                 _tokens = tokens.ThrowIfDefault(
-                    new ArgumentException($"Invalid {nameof(tokens)}: default instance"));
+                    _ => new ArgumentException($"Invalid {nameof(tokens)}: default instance"));
             }
 
             public char Current => AssertDisposed(() => _tokens[_index]);
@@ -600,19 +502,17 @@ namespace Axis.Pulsar.Core.Utils
             {
                 var newIndex = _index + 1;
 
-                if (newIndex > _tokens.SourceSegment.Length)
+                if (newIndex > _tokens.Segment.Count)
                     return false;
 
                 _index = newIndex;
-                return _index < _tokens.SourceSegment.Length;
+                return _index < _tokens.Segment.Count;
             });
 
             public void Reset() => AssertDisposed(() => _index = -1);
 
             private T AssertDisposed<T>(Func<T> func)
             {
-                ArgumentNullException.ThrowIfNull(func);
-
                 if (_disposed)
                     throw new InvalidOperationException("Enumerator is disposed");
 

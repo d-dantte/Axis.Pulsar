@@ -2,6 +2,7 @@
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Errors;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Utils;
 using System.Collections.Immutable;
 
@@ -21,9 +22,9 @@ namespace Axis.Pulsar.Core.Grammar.Groups
         {
             Cardinality = cardinality;
             Elements = elements
-                .ThrowIfNull(new ArgumentNullException(nameof(elements)))
-                .ThrowIf(items => items.IsEmpty(), new ArgumentException("Invalid elements: empty"))
-                .ThrowIfAny(e => e is null, new ArgumentException($"Invalid element: null"))
+                .ThrowIfNull(() => new ArgumentNullException(nameof(elements)))
+                .ThrowIf(items => items.IsEmpty(), _ => new ArgumentException("Invalid elements: empty"))
+                .ThrowIfAny(e => e is null, _ => new ArgumentException($"Invalid element: null"))
                 .ApplyTo(ImmutableArray.CreateRange);
         }
 
@@ -36,7 +37,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             TokenReader reader,
             ProductionPath parentPath,
             ILanguageContext context,
-            out IResult<NodeSequence> result)
+            out IRecognitionResult<INodeSequence> result)
         {
             ArgumentNullException.ThrowIfNull(reader);
             ArgumentNullException.ThrowIfNull(parentPath);
@@ -49,7 +50,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
 
                 reader.Reset(position);
 
-                if (result.IsErrorResult(out GroupRecognitionError gre)
+                if (result.IsError(out GroupRecognitionError gre)
                     && gre.Cause is FailedRecognitionError)
                     continue;
                 
@@ -60,7 +61,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             result = FailedRecognitionError
                 .Of(parentPath, position)
                 .ApplyTo(GroupRecognitionError.Of)
-                .ApplyTo(Result.Of<NodeSequence>);
+                .ApplyTo(error => RecognitionResult.Of<INodeSequence>(error));
 
             return false;
         }

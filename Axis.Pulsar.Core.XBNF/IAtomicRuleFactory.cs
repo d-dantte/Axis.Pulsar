@@ -84,7 +84,7 @@ public interface IAtomicRuleFactory
         {
             _key = key.ThrowIfNot(
                 IArgument.ArgumentPattern.IsMatch,
-                new ArgumentException($"Invalid argument key: {key}"));
+                _ => new ArgumentException($"Invalid argument key: {key}"));
         }
 
         public static Argument Of(string key) => new(key);
@@ -181,7 +181,7 @@ public interface IAtomicRuleFactory
         {
             Delimiter = delimiter.ThrowIfNot(
                 Enum.IsDefined,
-                new ArgumentOutOfRangeException(nameof(delimiter)));
+                _ => new ArgumentOutOfRangeException(nameof(delimiter)));
         }
 
         public static ContentArgument Of(ContentArgumentDelimiter delimiter) => new(delimiter);

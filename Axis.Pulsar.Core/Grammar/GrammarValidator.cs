@@ -200,15 +200,15 @@ namespace Axis.Pulsar.Core.Grammar
                 Grammar = grammar ?? throw new ArgumentNullException(nameof(grammar));
 
                 HealthyRefs = healthyRefs
-                    .ThrowIfNull(new ArgumentNullException(nameof(healthyRefs)))
+                    .ThrowIfNull(() => new ArgumentNullException(nameof(healthyRefs)))
                     .ToImmutableHashSet();
 
                 OrphanedRefs = orphanedRefs
-                    .ThrowIfNull(new ArgumentNullException(nameof(orphanedRefs)))
+                    .ThrowIfNull(() => new ArgumentNullException(nameof(orphanedRefs)))
                     .ToImmutableHashSet();
 
                 UnresolvableProductions = undelimitedProductions
-                    .ThrowIfNull(new ArgumentNullException(nameof(undelimitedProductions)))
+                    .ThrowIfNull(() => new ArgumentNullException(nameof(undelimitedProductions)))
                     .ToImmutableHashSet();
 
                 UnreferencedProductions = Grammar.ProductionSymbols

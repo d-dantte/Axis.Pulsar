@@ -605,7 +605,7 @@ internal static class GrammarParser
 
             // optional min match count
             if (!reader.TryGetPattern(DigitPattern, out var minMatchCount))
-                minMatchCount = Tokens.Empty;
+                minMatchCount = default;
 
             result = ParserAccumulator
                 .Of(reader,
@@ -1201,7 +1201,7 @@ internal static class GrammarParser
                 }
 
                 // content chars
-                var contentTokens = Tokens.Empty;
+                var contentTokens = Tokens.EmptyAt(reader.Source, reader.Position);
                 while (reader.TryGetToken(out var stringChar))
                 {
                     if (stringChar[0] == '\\'
@@ -1217,7 +1217,7 @@ internal static class GrammarParser
                         break;
                     }
 
-                    contentTokens += stringChar; // contentTokens = contentTokens.Join(stringChar);
+                    contentTokens += stringChar;
                 }
 
                 // end delim
@@ -1466,7 +1466,7 @@ internal static class GrammarParser
 
         try
         {
-            var tokens = Tokens.Empty;
+            var tokens = Tokens.EmptyAt(reader.Source, position);
             while (reader.TryGetToken(out var token))
             {
                 if (NumberArgValueEndDelimiters.Contains(token[0]))
@@ -1595,7 +1595,7 @@ internal static class GrammarParser
             }
 
             // read content
-            var contentToken = Tokens.Empty;
+            var contentToken = Tokens.EmptyAt(reader.Source, reader.Position);
             while(reader.TryGetToken(out var token))
             {
                 if ('*' == token[0]
@@ -1646,7 +1646,7 @@ internal static class GrammarParser
             }
 
             // read content
-            var contentToken = Tokens.Empty;
+            var contentToken = Tokens.EmptyAt(reader.Source, reader.Position);
             while (reader.TryGetToken(out var token))
             {
                 if ('\n' == token[0]

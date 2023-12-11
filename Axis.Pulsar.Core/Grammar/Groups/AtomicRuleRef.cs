@@ -1,7 +1,7 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
-using Axis.Pulsar.Core.Grammar.Errors;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar.Groups
@@ -14,7 +14,8 @@ namespace Axis.Pulsar.Core.Grammar.Groups
 
         public AtomicRuleRef(Cardinality cardinality, IAtomicRule rule)
         {
-            Cardinality = cardinality.ThrowIfDefault(new ArgumentException($"Invalid {nameof(cardinality)}: default"));
+            Cardinality = cardinality.ThrowIfDefault(
+                _ => new ArgumentException($"Invalid {nameof(cardinality)}: default"));
             Ref = rule ?? throw new ArgumentNullException(nameof(rule));
         }
 
@@ -27,7 +28,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             TokenReader reader,
             ProductionPath parentPath,
             ILanguageContext context,
-            out IResult<NodeSequence> result)
+            out IRecognitionResult<INodeSequence> result)
         {
             ArgumentNullException.ThrowIfNull(reader);
             ArgumentNullException.ThrowIfNull(parentPath);
@@ -43,12 +44,12 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                         or PartialRecognitionError => GroupRecognitionError.Of((IRecognitionError)err, 0),
                         _ => err
                     })
-                    .MapAs<NodeSequence>();
+                    .MapAs<INodeSequence>();
 
                 return false;
             }
 
-            result = ruleResult.Map(node => NodeSequence.Of(node));
+            result = ruleResult.Map(node => INodeSequence.Of(node));
             return true;
         }
     }

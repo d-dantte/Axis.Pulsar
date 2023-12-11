@@ -2,6 +2,7 @@
 using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Utils;
 using System.Text.RegularExpressions;
 
@@ -21,7 +22,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             MatchType = matchType ?? throw new ArgumentNullException(nameof(matchType));
             Id = id.ThrowIfNot(
                 IProduction.SymbolPattern.IsMatch,
-                new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
+                _ => new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
         }
 
         public static TerminalPattern Of(
@@ -34,7 +35,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             TokenReader reader,
             ProductionPath productionPath,
             ILanguageContext context,
-            out IResult<ICSTNode> result)
+            out IRecognitionResult<ICSTNode> result)
         {
             ArgumentNullException.ThrowIfNull(reader);
             ArgumentNullException.ThrowIfNull(productionPath);
@@ -54,15 +55,14 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                     Pattern,
                     open),
 
-                _ => Result.Of<ICSTNode>(
-                    new InvalidOperationException(
-                        $"Invalid match type: {MatchType}"))
+                _ => throw new InvalidOperationException(
+                        $"Invalid match type: {MatchType}")
             };
 
-            return result.IsDataResult();
+            return result.IsSuccess();
         }
 
-        private static IResult<ICSTNode> RecognizeClosedPattern(
+        private static IRecognitionResult<ICSTNode> RecognizeClosedPattern(
             TokenReader reader,
             ProductionPath productionPath,
             Regex pattern,
@@ -76,23 +76,23 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 {
                     var match = pattern.Match(
                         tokens.Source!,
-                        tokens.SourceSegment.Offset,
+                        tokens.Segment.Offset,
                         length);
 
                     if (match.Success && match.Length == length)
                         return ICSTNode
                             .Of(productionPath.Name, tokens[..length])
-                            .ApplyTo(Result.Of<ICSTNode>);
+                            .ApplyTo(RecognitionResult.Of);
                 }
             }
 
             reader.Reset(position);
             return FailedRecognitionError
                 .Of(productionPath, position)
-                .ApplyTo(Result.Of<ICSTNode>);
+                .ApplyTo(error => RecognitionResult.Of<ICSTNode>(error));
         }
 
-        private static IResult<ICSTNode> RecognizeOpenPattern(
+        private static IRecognitionResult<ICSTNode> RecognizeOpenPattern(
             TokenReader reader,
             ProductionPath productionPath,
             Regex pattern,
@@ -116,17 +116,17 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 }
             }
 
-            var trueLength = tokens.SourceSegment.Length - mismatchCount;
+            var trueLength = tokens.Segment.Count - mismatchCount;
             if ((trueLength == 0 && matchType.AllowsEmptyTokens)
                 || trueLength > 0)
                 return ICSTNode
                     .Of(productionPath.Name, reader.GetTokens(trueLength, true))
-                    .ApplyTo(Result.Of);
+                    .ApplyTo(RecognitionResult.Of);
 
             else 
                 return FailedRecognitionError
                     .Of(productionPath, position)
-                    .ApplyTo(Result.Of<ICSTNode>);
+                    .ApplyTo(error => RecognitionResult.Of<ICSTNode>(error));
         }
     }
 
@@ -181,7 +181,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 AllowsEmptyTokens = allowsEmptyTokens;
                 MaxMismatch = maxMismatch.ThrowIf(
                         v => v < 1,
-                        new ArgumentOutOfRangeException(nameof(maxMismatch)));
+                        _ => new ArgumentOutOfRangeException(nameof(maxMismatch)));
             }
 
             public override int GetHashCode() => HashCode.Combine(MaxMismatch, AllowsEmptyTokens);
@@ -228,11 +228,11 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             {
                 MinMatch = minMatch.ThrowIf(
                     v => v < 1,
-                    new ArgumentException($"Invariant error: {nameof(Closed.MinMatch)} < 1"));
+                    _ => new ArgumentException($"Invariant error: {nameof(Closed.MinMatch)} < 1"));
 
                 MaxMatch = maxMatch.ThrowIf(
                     v => v < 1,
-                    new ArgumentException($"Invariant error: {nameof(Closed.MaxMatch)} < 1"));
+                    _ => new ArgumentException($"Invariant error: {nameof(Closed.MaxMatch)} < 1"));
 
                 if (MinMatch > MaxMatch)
                     throw new ArgumentException($"Invariant error: {nameof(Closed.MaxMatch)} < {nameof(Closed.MinMatch)}");

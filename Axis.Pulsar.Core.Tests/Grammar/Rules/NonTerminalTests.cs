@@ -16,7 +16,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
         internal static IGroupElement MockElement(
             Cardinality cardinality,
             bool recognitionStatus,
-            IResult<NodeSequence> recognitionResult)
+            IResult<INodeSequence> recognitionResult)
         {
             var mock = new Mock<IGroupElement>();
 
@@ -25,13 +25,13 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                     It.IsAny<TokenReader>(),
                     It.IsAny<ProductionPath>(),
                     It.IsAny<ILanguageContext>(),
-                    out It.Ref<IResult<NodeSequence>>.IsAny))
+                    out It.Ref<IResult<INodeSequence>>.IsAny))
                 .Returns(
                     new TryRecognizeNodeSequence((
                         TokenReader reader,
                         ProductionPath? path,
                         ILanguageContext cxt,
-                        out IResult<NodeSequence> result) =>
+                        out IResult<INodeSequence> result) =>
                 {
                     result = recognitionResult;
                     return recognitionStatus;
@@ -49,7 +49,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             var element = MockElement(
                 Cardinality.OccursOnlyOnce(),
                 true,
-                Result.Of(NodeSequence.Empty));
+                Result.Of(INodeSequence.Empty));
             var nt = NonTerminal.Of(element);
             var success = nt.TryRecognize("stuff", path, null!, out var result);
             Assert.IsTrue(success);
@@ -63,7 +63,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 FailedRecognitionError
                     .Of(path, 0)
                     .ApplyTo(GroupRecognitionError.Of)
-                    .ApplyTo(Result.Of<NodeSequence>));
+                    .ApplyTo(Result.Of<INodeSequence>));
             nt = NonTerminal.Of(element);
             success = nt.TryRecognize("stuff", path, null!, out result);
             Assert.IsFalse(success);
@@ -77,7 +77,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 PartialRecognitionError
                     .Of(path, 0, 11)
                     .ApplyTo(p => GroupRecognitionError.Of(p, 2))
-                    .ApplyTo(Result.Of<NodeSequence>));
+                    .ApplyTo(Result.Of<INodeSequence>));
             nt = NonTerminal.Of(element);
             success = nt.TryRecognize("stuff", path, null!, out result);
             Assert.IsFalse(success);
@@ -91,7 +91,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 FailedRecognitionError
                     .Of(path, 3)
                     .ApplyTo(e => GroupRecognitionError.Of(e, 2))
-                    .ApplyTo(Result.Of<NodeSequence>));
+                    .ApplyTo(Result.Of<INodeSequence>));
             nt = NonTerminal.Of(element);
             success = nt.TryRecognize("stuff", path, null!, out result);
             Assert.IsFalse(success);
@@ -102,7 +102,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             element = MockElement(
                 Cardinality.OccursOnlyOnce(),
                 false,
-                Result.Of<NodeSequence>(new Exception()));
+                Result.Of<INodeSequence>(new Exception()));
             nt = NonTerminal.Of(element);
             success = nt.TryRecognize("stuff", path, null!, out result);
             Assert.IsFalse(success);

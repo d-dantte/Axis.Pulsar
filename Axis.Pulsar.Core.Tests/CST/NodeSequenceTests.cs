@@ -13,10 +13,10 @@ namespace Axis.Pulsar.Core.Tests.CST
             var str = "prevnext";
             var prevNode = ICSTNode.Of("t", Tokens.Of(str, 0, 4));
             var nextNode = ICSTNode.Of("t", Tokens.Of(str, 4, 4));
-            var ns = NodeSequence.Of(prevNode);
-            var ns2 = NodeSequence.Of(nextNode);
+            var ns = INodeSequence.Of(prevNode);
+            var ns2 = INodeSequence.Of(nextNode);
 
-            var result = ns.Prepend(NodeSequence.Empty);
+            var result = ns.Prepend(INodeSequence.Empty);
             Assert.IsNotNull(result);
             Assert.AreEqual(1, result.Count);
 
@@ -53,10 +53,10 @@ namespace Axis.Pulsar.Core.Tests.CST
             var str = "prevnext";
             var prevNode = ICSTNode.Of("t", Tokens.Of(str, 0, 4));
             var nextNode = ICSTNode.Of("t", Tokens.Of(str, 4, 4));
-            var ns = NodeSequence.Of(prevNode);
-            var ns2 = NodeSequence.Of(nextNode);
+            var ns = INodeSequence.Of(prevNode);
+            var ns2 = INodeSequence.Of(nextNode);
 
-            var result = ns.Append(NodeSequence.Empty);
+            var result = ns.Append(INodeSequence.Empty);
             Assert.IsNotNull(result);
             Assert.AreEqual(1, result.Count);
 

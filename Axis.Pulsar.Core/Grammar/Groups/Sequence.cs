@@ -2,6 +2,7 @@
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Errors;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Utils;
 using System.Collections.Immutable;
 
@@ -21,9 +22,9 @@ namespace Axis.Pulsar.Core.Grammar.Groups
         {
             Cardinality = cardinality;
             Elements = elements
-                .ThrowIfNull(new ArgumentNullException(nameof(elements)))
-                .ThrowIf(items => items.IsEmpty(), new ArgumentException("Invalid elements: empty"))
-                .ThrowIfAny(e => e is null, new ArgumentException($"Invalid element: null"))
+                .ThrowIfNull(() => new ArgumentNullException(nameof(elements)))
+                .ThrowIf(items => items.IsEmpty(), _ => new ArgumentException("Invalid elements: empty"))
+                .ThrowIfAny(e => e is null, _ => new ArgumentException($"Invalid element: null"))
                 .ApplyTo(ImmutableArray.CreateRange);
         }
 
@@ -36,17 +37,17 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             TokenReader reader,
             ProductionPath parentPath,
             ILanguageContext context,
-            out IResult<NodeSequence> result)
+            out IRecognitionResult<INodeSequence> result)
         {
             ArgumentNullException.ThrowIfNull(reader);
             ArgumentNullException.ThrowIfNull(parentPath);
 
             var position = reader.Position;
-            var nodes = new List<ICSTNode>();
+            var nodes = new List<IRecognitionResult<INodeSequence>>();
             foreach (var element in Elements)
             {
                 if (element.Cardinality.TryRepeat(reader, parentPath, context, element, out var elementResult))
-                    nodes.AddRange(elementResult.Resolve());
+                    nodes.Add(elementResult);
 
                 else
                 {
@@ -59,7 +60,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                 }
             }
 
-            result = Result.Of<NodeSequence>(nodes);
+            result = nodes.Fold((acc, next) => acc.Append(next));
             return true;
         }
     }

@@ -11,16 +11,16 @@ namespace Axis.Pulsar.Core.CST
         /// <returns>A collection of nodes found at the given path, or an empty enumerable</returns>
         public static IEnumerable<ICSTNode> FindNodes(this ICSTNode root, NodePath searchPath)
         {
-            return searchPath.Segments.Aggregate(NodeSequence.Of(root), (seq, segment) =>
+            return searchPath.Segments.Aggregate(INodeSequence.Of(root), (seq, segment) =>
             {
                 return seq
                     .SelectMany(node => node switch
                     {
                         ICSTNode.NonTerminal ntn => ntn.Nodes,
-                        _ => NodeSequence.Empty
+                        _ => INodeSequence.Empty
                     })
                     .Where(segment.Matches)
-                    .ApplyTo(NodeSequence.Of);
+                    .ApplyTo(nodes => INodeSequence.Of(nodes.ToArray()));
             });
         }
 

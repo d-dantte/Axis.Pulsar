@@ -2,6 +2,7 @@
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Errors;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar.Groups
@@ -17,11 +18,12 @@ namespace Axis.Pulsar.Core.Grammar.Groups
 
         public ProductionRef(Cardinality cardinality, string productionSymbol)
         {
-            Cardinality = cardinality.ThrowIfDefault(new ArgumentException($"Invalid {nameof(cardinality)}: default"));
+            Cardinality = cardinality.ThrowIfDefault(
+                _ => new ArgumentException($"Invalid {nameof(cardinality)}: default"));
             Ref = productionSymbol
                 .ThrowIfNot(
                     IProduction.SymbolPattern.IsMatch,
-                    new ArgumentException($"Invalid {nameof(productionSymbol)}: '{productionSymbol}'"));
+                    _ => new ArgumentException($"Invalid {nameof(productionSymbol)}: '{productionSymbol}'"));
         }
 
         public static ProductionRef Of(
@@ -33,7 +35,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             TokenReader reader,
             ProductionPath parentPath,
             ILanguageContext context,
-            out IResult<NodeSequence> result)
+            out IRecognitionResult<INodeSequence> result)
         {
             ArgumentNullException.ThrowIfNull(reader);
             ArgumentNullException.ThrowIfNull(parentPath);
@@ -47,15 +49,15 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                     .TransformError(err => err switch
                     {
                         FailedRecognitionError
-                        or PartialRecognitionError => GroupRecognitionError.Of((IRecognitionError)err, 0),
+                        or PartialRecognitionError => GroupRecognitionError.Of(err, 0),
                         _ => err
                     })
-                    .MapAs<NodeSequence>();
+                    .MapAs<INodeSequence>();
 
                 return false;
             }
 
-            result = refResult.Map(node => NodeSequence.Of(node));
+            result = refResult.Map(node => INodeSequence.Of(node));
             return true;
         }
     }

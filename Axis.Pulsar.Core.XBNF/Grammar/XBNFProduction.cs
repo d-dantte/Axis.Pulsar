@@ -23,7 +23,7 @@ public class XBNFProduction : IProduction
         Rule = rule ?? throw new ArgumentNullException(nameof(rule));
         Symbol = symbol.ThrowIfNot(
             IProduction.SymbolPattern.IsMatch,
-            new ArgumentException($"Invalid {nameof(symbol)}: {symbol}"));
+            _ => new ArgumentException($"Invalid {nameof(symbol)}: {symbol}"));
     }
 
     public static XBNFProduction Of(string symbol, IRule rule) => new(symbol, rule);

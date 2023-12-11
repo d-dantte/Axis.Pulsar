@@ -1,6 +1,7 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Utils;
 using System.Collections.Immutable;
 
@@ -79,33 +80,36 @@ namespace Axis.Pulsar.Core.Grammar.Rules
 
             StartDelimiter = startDelimiter.ThrowIf(
                 string.IsNullOrEmpty,
-                new ArgumentException($"Invalid start delimiter"));
+                _ => new ArgumentException($"Invalid start delimiter"));
             EndDelimiter = endDelimiter;
 
             LegalRanges = legalRanges
-                .ThrowIfNull(new ArgumentNullException(nameof(legalRanges)))
+                .ThrowIfNull(() => new ArgumentNullException(nameof(legalRanges)))
                 .ApplyTo(CharRange.NormalizeRanges)
                 .ToImmutableHashSet();
             IllegalRanges = illegalRanges
-                .ThrowIfNull(new ArgumentNullException(nameof(illegalRanges)))
+                .ThrowIfNull(() => new ArgumentNullException(nameof(illegalRanges)))
                 .ApplyTo(CharRange.NormalizeRanges)
                 .ToImmutableHashSet();
 
             LegalSequences = legalSequences
-                .ThrowIfNull(new ArgumentNullException(nameof(legalSequences)))
-                .ThrowIfAny(t => t.IsDefault || t.IsEmpty, new ArgumentException("Invalid legal sequence: default/empty"))
+                .ThrowIfNull(() => new ArgumentNullException(nameof(legalSequences)))
+                .ThrowIfAny(t => t.IsDefault || t.IsEmpty, _ => new ArgumentException("Invalid legal sequence: default/empty"))
                 .Distinct()
-                .OrderByDescending(t => t.SourceSegment.Length)
+                .OrderByDescending(t => t.Segment.Count)
                 .ToImmutableArray();
             IllegalSequences = illegalSequences
-                .ThrowIfNull(new ArgumentNullException(nameof(illegalSequences)))
-                .ThrowIfAny(t => t.IsDefault || t.IsEmpty, new ArgumentException("Invalid legal sequence: default/empty"))
+                .ThrowIfNull(() => new ArgumentNullException(nameof(illegalSequences)))
+                .ThrowIfAny(t => t.IsDefault || t.IsEmpty, _ => new ArgumentException("Invalid legal sequence: default/empty"))
+                .Concat(EndDelimiter!) // <-- add the end-delimiter to the illegal sequence list
                 .Distinct()
+                .Where(seq => !seq.IsDefaultOrEmpty)
+                .OrderByDescending(t => t.Segment.Count)
                 .ToImmutableArray();
 
             Id = id.ThrowIfNot(
                 IProduction.SymbolPattern.IsMatch,
-                new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
+                _ => new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
 
             if (EndDelimiter is null
                 && IllegalRanges.IsEmpty
@@ -135,11 +139,11 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             TokenReader reader,
             ProductionPath productionPath,
             ILanguageContext context,
-            out IResult<ICSTNode> result)
+            out IRecognitionResult<ICSTNode> result)
         {
             var position = reader.Position;
             var delimPath = productionPath.Next(Id);
-            var tokens = Tokens.Empty;
+            var tokens = Tokens.EmptyAt(reader.Source, position);
 
             // Open Delimiter
             if (!TryRecognizeStartDelimiter(reader, out var startDelimTokens))
@@ -147,23 +151,23 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 reader.Reset(position);
                 result = FailedRecognitionError
                     .Of(delimPath, position)
-                    .ApplyTo(Result.Of<ICSTNode>);
+                    .ApplyTo(error => RecognitionResult.Of<ICSTNode>(error));
 
                 return false;
             }
-            tokens = tokens.ConJoin(startDelimTokens);
+            tokens += startDelimTokens;
 
             // String
             if (!TryRecognizeString(reader, out var stringTokens))
             {
                 reader.Reset(position);
                 result = PartialRecognitionError
-                    .Of(delimPath, position, tokens.SourceSegment.EndOffset - position - 1)
-                    .ApplyTo(Result.Of<ICSTNode>);
+                    .Of(delimPath, position, tokens.Segment.EndOffset - position - 1)
+                    .ApplyTo(error => RecognitionResult.Of<ICSTNode>(error));
 
                 return false;
             }
-            tokens = tokens.ConJoin(stringTokens);
+            tokens += stringTokens;
 
             // End Delimiter
             if (EndDelimiter is not null)
@@ -172,17 +176,17 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 {
                     reader.Reset(position);
                     result = PartialRecognitionError
-                        .Of(delimPath, position, tokens.SourceSegment.EndOffset - position - 1)
-                        .ApplyTo(Result.Of<ICSTNode>);
+                        .Of(delimPath, position, tokens.Segment.EndOffset - position - 1)
+                        .ApplyTo(error => RecognitionResult.Of<ICSTNode>(error));
 
                     return false;
                 }
-                tokens = tokens.ConJoin(endDelimTokens);
+                tokens += endDelimTokens;
             }
 
             result = ICSTNode
                 .Of(delimPath.Name, tokens)
-                .ApplyTo(Result.Of);
+                .ApplyTo(RecognitionResult.Of);
             return true;
         }
 
@@ -226,27 +230,19 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             out Tokens tokens)
         {
             var position = reader.Position;
-            tokens = Tokens.Empty;
+            tokens = Tokens.EmptyAt(reader.Source, position);
 
             // end delimiter escape
             var endDelimiterEscapeMatcher = EndDelimiter is null || EndDelimiterEscapeSequence.IsDefaultOrEmpty
                 ? null
-                : SubstringMatcher.OfLookBehind(
+                : SubstringMatcher.LookBehindMatcher.Of(
                     EndDelimiterEscapeSequence,
                     reader.Source,
                     position);
 
-            // end delimiter sequence
-            var illegalTokens = EndDelimiter is null
-                ? IllegalSequences.AsEnumerable()
-                : IllegalSequences
-                    .Concat(EndDelimiter!)
-                    .OrderByDescending(t => t.SourceSegment.Length)
-                    .ToArray();
-
             // descending-ordered array of illegal matchers
-            var illegalMatchers = illegalTokens
-                .Select(sequence => SubstringMatcher.OfLookBehind(
+            var illegalMatchers = IllegalSequences
+                .Select(sequence => SubstringMatcher.LookBehindMatcher.Of(
                     sequence,
                     reader.Source,
                     position))
@@ -294,24 +290,17 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             out Tokens tokens)
         {
             var position = reader.Position;
-            tokens = Tokens.Empty;
-
-            // end delimiter sequence
-            var illegalTokens = EndDelimiter is null
-                ? IllegalSequences.AsEnumerable()
-                : IllegalSequences
-                    .Concat(EndDelimiter!)
-                    .OrderByDescending(t => t.SourceSegment.Length);
+            tokens = Tokens.EmptyAt(reader.Source, position);
 
             // descending-ordered array of illegal matchers
-            var illegalMatchers = illegalTokens
-                .Select(sequence => SubstringMatcher.OfLookBehind(
+            var illegalMatchers = IllegalSequences
+                .Select(sequence => SubstringMatcher.LookBehindMatcher.Of(
                     sequence,
                     reader.Source,
                     position))
                 .ToArray();
 
-            while(true)
+            while (true)
             {
                 // find the next legal sequence
                 var legalToken = LegalSequences
@@ -336,14 +325,14 @@ namespace Axis.Pulsar.Core.Grammar.Rules
 
                 // illegal sequence
                 if (illegalMatchers.Any(matcher => ContainsIllegalSequence(
-                    windowLength: legalToken.Tokens.SourceSegment.Length,
+                    windowLength: legalToken.Tokens.Segment.Count,
                     matcher: matcher,
                     sequenceLength: out _)))
                     break;
 
                 // no illegal ranges or sequences
                 tokens += legalToken.Tokens;
-                reader.Advance(legalToken.Tokens.SourceSegment.Length);
+                reader.Advance(legalToken.Tokens.Segment.Count);
             }
 
             return !tokens.IsEmpty || AcceptsEmptyString;
@@ -368,7 +357,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             {
                 if (matcher.TryNextWindow(out var isMatch) && isMatch)
                 {
-                    sequenceLength = matcher.PatternLength;
+                    sequenceLength = matcher.Pattern.Segment.Count;
                     return true;
                 }
             }

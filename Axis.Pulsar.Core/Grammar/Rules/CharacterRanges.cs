@@ -1,6 +1,7 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Utils;
 using System.Collections.Immutable;
 
@@ -46,7 +47,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
 
             Id = id.ThrowIfNot(
                 IProduction.SymbolPattern.IsMatch,
-                new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
+                _ => new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
         }
 
         public static CharacterRanges Of(
@@ -63,7 +64,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             TokenReader reader,
             ProductionPath productionPath,
             ILanguageContext context,
-            out IResult<ICSTNode> result)
+            out IRecognitionResult<ICSTNode> result)
         {
             ArgumentNullException.ThrowIfNull(reader);
             ArgumentNullException.ThrowIfNull(productionPath);
@@ -78,13 +79,13 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 reader.Reset(position);
                 result = FailedRecognitionError
                     .Of(charRangePath, position)
-                    .ApplyTo(Result.Of<ICSTNode>);
+                    .ApplyTo(RecognitionResult.Of<ICSTNode, FailedRecognitionError>);
                 return false;
             }
 
             result = ICSTNode
                 .Of(charRangePath.Name, token)
-                .ApplyTo(Result.Of);
+                .ApplyTo(RecognitionResult.Of);
             return true;
         }
         
@@ -104,7 +105,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 .Select(range => range
                     .ThrowIf(
                         string.IsNullOrWhiteSpace,
-                        new FormatException($"Invalid range list: separate each range by a comma."))
+                        _ => new FormatException($"Invalid range list: separate each range by a comma."))
                     .ApplyTo(CharRange.Parse))
                 .ApplyTo(CharRange.NormalizeRanges)
                 .ToArray();

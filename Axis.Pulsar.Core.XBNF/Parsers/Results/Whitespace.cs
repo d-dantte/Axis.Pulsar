@@ -21,11 +21,11 @@ internal class Whitespace :
     {
         Content = whitespaceToken
             .ThrowIf(
-                t => t.SourceSegment.Length != 1,
-                new ArgumentException($"Invalid token: {whitespaceToken}"))
+                t => t.Segment.Count != 1,
+                _ => new ArgumentException($"Invalid token: {whitespaceToken}"))
             .ThrowIfNot(
                 t => _WhitespaceChars.Contains(t[0]),
-                new ArgumentException($"Invalid whitespace character: {whitespaceToken}"));
+                _ => new ArgumentException($"Invalid whitespace character: {whitespaceToken}"));
     }
 
     public static Whitespace Of(Tokens whitespaceToken) => new(whitespaceToken);

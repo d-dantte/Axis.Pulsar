@@ -16,11 +16,11 @@ public class XBNFGrammar : IGrammar
     {
         _root = root.ThrowIf(
             string.IsNullOrWhiteSpace,
-            new ArgumentException($"Invalid {nameof(root)}: '{root}'"));
+            _ => new ArgumentException($"Invalid {nameof(root)}: '{root}'"));
 
         _productions = productions
-            .ThrowIfNull(new ArgumentNullException(nameof(productions)))
-            .ThrowIfAny(prod => prod is null, new ArgumentException($"Invalid production: null"))
+            .ThrowIfNull(() => new ArgumentNullException(nameof(productions)))
+            .ThrowIfAny(prod => prod is null, _ => new ArgumentException($"Invalid production: null"))
             .ToDictionary(prod => prod.Symbol, prod => prod);
 
         ValidateGrammar();

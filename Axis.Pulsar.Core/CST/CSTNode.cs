@@ -28,7 +28,10 @@ namespace Axis.Pulsar.Core.CST
         /// <param name="name">The node name</param>
         /// <param name="nodes">The list of comprising nodes</param>
         /// <returns></returns>
-        public static ICSTNode Of(string name, params ICSTNode[] nodes) => new NonTerminal(name, nodes);
+        public static ICSTNode Of(
+            string name,
+            params ICSTNode[] nodes)
+            => new NonTerminal(name, INodeSequence.Of(nodes));
 
         /// <summary>
         /// Creates an instance of a <see cref="NonTerminal"/> node
@@ -36,7 +39,10 @@ namespace Axis.Pulsar.Core.CST
         /// <param name="name">The node name</param>
         /// <param name="nodes">The list of comprising nodes</param>
         /// <returns></returns>
-        public static ICSTNode Of(string name, NodeSequence nodes) => new NonTerminal(name, nodes);
+        public static ICSTNode Of(
+            string name,
+            INodeSequence nodes)
+            => new NonTerminal(name, nodes);
 
         /// <summary>
         /// 
@@ -44,7 +50,10 @@ namespace Axis.Pulsar.Core.CST
         /// <param name="name">The production symbol name</param>
         /// <param name="tokens">The tokens</param>
         /// <returns></returns>
-        public static ICSTNode Of(string name, Tokens tokens) => new Terminal(name, tokens);
+        public static ICSTNode Of(
+            string name,
+            Tokens tokens)
+            => new Terminal(name, tokens);
 
         #endregion
 
@@ -56,8 +65,9 @@ namespace Axis.Pulsar.Core.CST
             IDefaultValueProvider<NonTerminal>
         {
             private readonly string _name;
-            private readonly NodeSequence _nodes;
-            private readonly Lazy<string> _text;
+            private readonly INodeSequence _nodes;
+            private readonly DeferredValue<string> _text;
+            private readonly DeferredValue<Tokens> _tokens;
 
             #region DefaultValueProvider
             public static NonTerminal Default => default;
@@ -70,23 +80,36 @@ namespace Axis.Pulsar.Core.CST
             /// <summary>
             /// The list of composing nodes
             /// </summary>
-            public NodeSequence Nodes => _nodes;
+            public INodeSequence Nodes => _nodes;
 
-            public Tokens Tokens => _nodes?.Tokens ?? Tokens.Default;
+            public Tokens Tokens => _tokens.Value;
 
-            public NonTerminal(string name, NodeSequence nodes)
+            public NonTerminal(string name, INodeSequence nodes)
             {
-                _name = name.ThrowIf(string.IsNullOrWhiteSpace, new ArgumentNullException(nameof(name)));
-                _nodes = nodes.ThrowIfNull(new ArgumentNullException(nameof(nodes)));
+                _name = name.ThrowIf(
+                    string.IsNullOrWhiteSpace,
+                    _ => new ArgumentNullException(nameof(name)));
+                _nodes = nodes.ThrowIfNull(() => new ArgumentNullException(nameof(nodes)));
 
-                var node = this;
-                _text = new Lazy<string>(() =>
+                var tokenProvider = _tokens = new DeferredValue<Tokens>(() =>
                 {
-                    var tokenString = node.Tokens.SourceSegment.Length > 20
-                        ? $"{node.Tokens[..20]}..."
-                        : node.Tokens.ToString();
+                    return nodes.Count switch
+                    {
+                        0 => Tokens.Default,
+                        1 => nodes.First().Tokens,
+                        _ => nodes.Aggregate(
+                            func: (tok, next) => tok.MergeWith(next.Tokens),
+                            seed: Tokens.Default)
+                    };
+                });
 
-                    return $"[@N name: {node.Name}; NodeCount: {node.Nodes.Count}; Tokens: {tokenString}]";
+                _text = new DeferredValue<string>(() =>
+                {
+                    var tokenString = tokenProvider.Value.Segment.Count > 20
+                        ? $"{tokenProvider.Value[..20]}..."
+                        : tokenProvider.Value.ToString();
+
+                    return $"[@N name: {name}; NodeCount: {nodes.Count}; Tokens: {tokenString}]";
                 });
             }
 
@@ -115,12 +138,11 @@ namespace Axis.Pulsar.Core.CST
 
             public Terminal(string name, Tokens tokens)
             {
-                _tokens = tokens.ThrowIfDefault(new ArgumentException(
-                    $"Invalid {nameof(tokens)}: default"));
+                _tokens = tokens;
 
                 _name = name.ThrowIf(
                     n => !IProduction.SymbolPattern.IsMatch(n),
-                    new ArgumentException($"Invalid {nameof(name)}: '{name}'"));
+                    _ => new ArgumentException($"Invalid {nameof(name)}: '{name}'"));
             }
 
             public static bool operator ==(Terminal left, Terminal right) => left.Equals(right);

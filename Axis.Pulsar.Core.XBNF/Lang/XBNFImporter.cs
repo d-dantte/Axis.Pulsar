@@ -36,7 +36,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
 
                 // convert IRecognitionErrors to FormatException
                 .TransformError(err => err switch { 
-                    IRecognitionError rerror => RecognitionFormatException.Of(rerror, inputTokens),
+                    IRecognitionError__ rerror => RecognitionFormatException.Of(rerror, inputTokens),
                     _ => err
                 })
 

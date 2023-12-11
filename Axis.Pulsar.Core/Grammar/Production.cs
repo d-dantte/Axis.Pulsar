@@ -1,5 +1,5 @@
-﻿using Axis.Luna.Common.Results;
-using Axis.Pulsar.Core.CST;
+﻿using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Utils;
 using System.Text.RegularExpressions;
 
@@ -31,7 +31,7 @@ namespace Axis.Pulsar.Core.Grammar
             TokenReader reader,
             ProductionPath? parentPath,
             ILanguageContext context,
-            out IResult<ICSTNode> result);
+            out IRecognitionResult<ICSTNode> result);
 
         /// <summary>
         /// 

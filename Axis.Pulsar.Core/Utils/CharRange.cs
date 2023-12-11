@@ -156,7 +156,7 @@ public readonly struct CharRange:
         return input
             .ThrowIf(
                 string.IsNullOrWhiteSpace,
-                new ArgumentException($"Invalid input"))
+                _ => new ArgumentException($"Invalid input"))
             .Split('-', StringSplitOptions.RemoveEmptyEntries)
             .ApplyTo(bounds =>
             {
@@ -208,7 +208,7 @@ public readonly struct CharRange:
     public static IEnumerable<CharRange> NormalizeRanges(IEnumerable<CharRange> charRanges)
     {
         return charRanges
-            .ThrowIfNull(new ArgumentNullException(nameof(charRanges)))
+            .ThrowIfNull(() => new ArgumentNullException(nameof(charRanges)))
             .OrderBy(range => range.LowerBound)
             .Aggregate(new List<CharRange>(), (list, range) =>
             {

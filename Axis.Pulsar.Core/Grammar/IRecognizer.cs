@@ -1,4 +1,4 @@
-﻿using Axis.Luna.Common.Results;
+﻿using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar
@@ -20,6 +20,6 @@ namespace Axis.Pulsar.Core.Grammar
             TokenReader reader,
             ProductionPath productionPath,
             ILanguageContext context,
-            out IResult<TResult> result);
+            out IRecognitionResult<TResult> result);
     }
 }

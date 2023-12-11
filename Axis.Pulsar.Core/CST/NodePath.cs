@@ -21,7 +21,7 @@ namespace Axis.Pulsar.Core.CST
             ArgumentNullException.ThrowIfNull(segments);
 
             _segments = segments
-                .ThrowIfAny(s => s is null, new ArgumentException("Invalid segment: null"))
+                .ThrowIfAny(s => s is null, _ => new ArgumentException("Invalid segment: null"))
                 .ToImmutableArray();
 
             // text
@@ -77,7 +77,7 @@ namespace Axis.Pulsar.Core.CST
             ArgumentNullException.ThrowIfNull(filters);
 
             _filters = filters
-                .ThrowIfAny(f => f is null, new ArgumentException("Invalid filter: null"))
+                .ThrowIfAny(f => f is null, _ => new ArgumentException("Invalid filter: null"))
                 .ToImmutableArray();
 
             // text

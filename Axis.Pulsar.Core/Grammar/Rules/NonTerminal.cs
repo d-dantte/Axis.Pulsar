@@ -3,6 +3,7 @@ using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Groups;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar.Rules
@@ -32,7 +33,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             TokenReader reader,
             ProductionPath productionPath,
             ILanguageContext context,
-            out IResult<ICSTNode> result)
+            out IRecognitionResult<ICSTNode> result)
         {
             ArgumentNullException.ThrowIfNull(nameof(reader));
             ArgumentNullException.ThrowIfNull(nameof(productionPath));
@@ -50,13 +51,12 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                     {
                         if (gre.Cause is FailedRecognitionError fre
                             && gre.ElementCount >= RecognitionThreshold)
-                            return PartialRecognitionError
-                                .Of(productionPath,
-                                    position,
-                                    gre.Cause.TokenSegment.EndOffset - position - 1)
-                                .As<Exception>();
+                            return PartialRecognitionError.Of(
+                                productionPath,
+                                position,
+                                fre.TokenSegment.EndOffset - position - 1);
 
-                        else return (Exception)gre.Cause;
+                        else return gre.Cause;
                     })
                     .MapAs<ICSTNode>();
                 return false;

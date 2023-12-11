@@ -2,7 +2,7 @@
 
 namespace Axis.Pulsar.Core.Grammar.Groups
 {
-    public interface IGroupElement: IRecognizer<NodeSequence>
+    public interface IGroupElement: IRecognizer<INodeSequence>
     {
         /// <summary>
         /// The cardinality of the element

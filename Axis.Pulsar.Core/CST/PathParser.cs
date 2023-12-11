@@ -3,6 +3,7 @@ using Axis.Luna.Common.Utils;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Errors;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.CST
@@ -34,19 +35,19 @@ namespace Axis.Pulsar.Core.CST
             .Select(nt => (char)nt)
             .ToHashSet();
 
-        public static bool TryParse(string pathText, out IResult<NodePath> result)
+        public static bool TryParse(string pathText, out IRecognitionResult<NodePath> result)
         {
             result = Parse(pathText);
-            return result.IsDataResult();
+            return result.IsSuccess();
         }
 
-        public static IResult<NodePath> Parse(string pathText)
+        public static IRecognitionResult<NodePath> Parse(string pathText)
         {
             if (string.IsNullOrEmpty(pathText))
                 throw new ArgumentException("Invalid path: null/empty");
 
             if (!TryRecognizePath(pathText, out var result))
-                return Result.Of<NodePath>(ToFormatException(result));
+                return RecognitionResult.Of<NodePath>(ToFormatException(result));
 
             return result;
         }
@@ -57,7 +58,7 @@ namespace Axis.Pulsar.Core.CST
             TokenReader reader,
             ProductionPath parentPath,
             object context,
-            out IResult<Tokens> result)
+            out IRecognitionResult<Tokens> result)
         {
             var position = reader.Position;
             var tokensPath = parentPath.Next("tokens");
@@ -71,21 +72,21 @@ namespace Axis.Pulsar.Core.CST
                     reader.Reset(position);
                     result = FailedRecognitionError
                         .Of(tokensPath, position)
-                        .ApplyTo(Result.Of<Tokens>);
+                        .ApplyTo(RecognitionResult.Of<Tokens>);
                     return false;
                 }
                 #endregion
 
                 #region tokens
                 var isEscaping = false;
-                var tokens = Tokens.Empty;
+                var tokens = Tokens.Default;
                 while (reader.TryGetToken(out var token))
                 {
                     if (!isEscaping)
                     {
                         if ('\\'.Equals(token[0]))
                         {
-                            tokens = tokens.ConJoin(token);
+                            tokens += token;
                             isEscaping = true;
                         }
                         else if ('>'.Equals(token[0]))
@@ -93,22 +94,22 @@ namespace Axis.Pulsar.Core.CST
                             reader.Back(1);
                             break;
                         }
-                        else tokens = tokens.ConJoin(token);
+                        else tokens += token;
                     }
                     else
                     {
                         if ('\\'.Equals(token[0]) || '>'.Equals(token[0]))
                         {
-                            tokens = tokens.ConJoin(token);
+                            tokens += token;
                             isEscaping = false;
                         }
                         else
                         {
                             reader.Reset(position);
-                            var newLength = (openDelim.SourceSegment + tokens.SourceSegment).EndOffset - position + 1;
+                            var newLength = (openDelim.Segment + tokens.Segment).EndOffset - position + 1;
                             result = PartialRecognitionError
                                 .Of(tokensPath, position, newLength)
-                                .ApplyTo(Result.Of<Tokens>);
+                                .ApplyTo(RecognitionResult.Of<Tokens>);
                             return false;
                         }
                     }
@@ -120,21 +121,21 @@ namespace Axis.Pulsar.Core.CST
                     || !'>'.Equals(closeDelim[0]))
                 {
                     reader.Reset(position);
-                    var newLength = (openDelim.SourceSegment + tokens.SourceSegment).EndOffset - position + 1;
+                    var newLength = (openDelim.Segment + tokens.Segment).EndOffset - position + 1;
                     result = PartialRecognitionError
                         .Of(tokensPath, position, newLength)
-                        .ApplyTo(Result.Of<Tokens>);
+                        .ApplyTo(RecognitionResult.Of<Tokens>);
                     return false;
                 }
                 #endregion
 
-                result = Result.Of(tokens);
+                result = RecognitionResult.Of(tokens);
                 return true;
             }
             catch (Exception e)
             {
                 reader.Reset(position);
-                result = Result.Of<Tokens>(e);
+                result = RecognitionResult.Of<Tokens>(e);
                 return false;
             }
         }
@@ -143,7 +144,7 @@ namespace Axis.Pulsar.Core.CST
             TokenReader reader,
             ProductionPath parentPath,
             object context,
-            out IResult<Tokens> result)
+            out IRecognitionResult<Tokens> result)
         {
             var position = reader.Position;
             var symbolNamePath = parentPath.Next("symbol-name");
@@ -157,20 +158,20 @@ namespace Axis.Pulsar.Core.CST
                 {
                     result = FailedRecognitionError
                         .Of(symbolNamePath, position)
-                        .ApplyTo(Result.Of<Tokens>);
+                        .ApplyTo(RecognitionResult.Of<Tokens>);
                     return false;
                 }
                 else if (char.IsAsciiLetter(delimiter[0]))
                 {
                     reader.Back();
-                    delimiter = Tokens.Empty;
+                    delimiter = Tokens.EmptyAt(reader.Source, position);
                 }
                 else if (!':'.Equals(delimiter[0]))
                 {
                     reader.Reset(position);
                     result = FailedRecognitionError
                         .Of(symbolNamePath, position)
-                        .ApplyTo(Result.Of<Tokens>);
+                        .ApplyTo(RecognitionResult.Of<Tokens>);
                     return false;
                 }
                 else hasDelimiter = true;
@@ -182,25 +183,25 @@ namespace Axis.Pulsar.Core.CST
                     if (!hasDelimiter)
                         result = FailedRecognitionError
                             .Of(symbolNamePath, position)
-                            .ApplyTo(Result.Of<Tokens>);
+                            .ApplyTo(RecognitionResult.Of<Tokens>);
 
                     else result = PartialRecognitionError
                         .Of(symbolNamePath,
                             position,
-                            delimiter.SourceSegment.EndOffset - position + 1)
-                        .ApplyTo(Result.Of<Tokens>);
+                            delimiter.Segment.EndOffset - position + 1)
+                        .ApplyTo(RecognitionResult.Of<Tokens>);
 
                     reader.Reset(position);
                     return false;
                 }
                 #endregion
 
-                result = Result.Of(symbolName);
+                result = RecognitionResult.Of(symbolName);
                 return true;
             }
             catch (Exception e)
             {
-                result = Result.Of<Tokens>(e);
+                result = RecognitionResult.Of<Tokens>(e);
                 return false;
             }
         }
@@ -209,7 +210,7 @@ namespace Axis.Pulsar.Core.CST
             TokenReader reader,
             ProductionPath parentPath,
             object context,
-            out IResult<NodeType> result)
+            out IRecognitionResult<NodeType> result)
         {
             var position = reader.Position;
             var filterTypePath = parentPath.Next("filter-type");
@@ -221,14 +222,14 @@ namespace Axis.Pulsar.Core.CST
                 {
                     result = FailedRecognitionError
                         .Of(filterTypePath, position)
-                        .ApplyTo(Result.Of<NodeType>);
+                        .ApplyTo(RecognitionResult.Of<NodeType>);
                     return false;
                 }
 
                 if (!'@'.Equals(delim[0]))
                 {
                     reader.Back();
-                    result = Result.Of(NodeType.Unspecified);
+                    result = RecognitionResult.Of(NodeType.Unspecified);
                     return true;
                 }
                 #endregion
@@ -241,18 +242,18 @@ namespace Axis.Pulsar.Core.CST
                     result = PartialRecognitionError
                         .Of(filterTypePath,
                             position,
-                            delim.SourceSegment.EndOffset - position + 1)
-                        .ApplyTo(Result.Of<NodeType>);;
+                            delim.Segment.EndOffset - position + 1)
+                        .ApplyTo(RecognitionResult.Of<NodeType>);;
                     return false;
                 }
                 #endregion
 
-                result = Result.Of((NodeType)char.ToUpper(typeChar[0]));
+                result = RecognitionResult.Of((NodeType)char.ToUpper(typeChar[0]));
                 return true;
             }
             catch (Exception e)
             {
-                result = Result.Of<NodeType>(e);
+                result = RecognitionResult.Of<NodeType>(e);
                 return false;
             }
         }
@@ -261,7 +262,7 @@ namespace Axis.Pulsar.Core.CST
             TokenReader reader,
             ProductionPath parentPath,
             object context,
-            out IResult<NodeFilter> result)
+            out IRecognitionResult<NodeFilter> result)
         {
             var position = reader.Position;
             var filterPath = parentPath.Next("filter");
@@ -303,16 +304,16 @@ namespace Axis.Pulsar.Core.CST
                     })
 
                     // map to result
-                    .ToResult(data => NodeFilter.Of(
+                    .ToResult((Func<(NodeType type, Tokens name, Tokens tokens), NodeFilter>)(data => NodeFilter.Of(
                         data.type,
                         data.name,
-                        data.tokens));
+                        data.tokens)));
 
-                return result.IsDataResult();
+                return result.IsSuccess();
             }
             catch (Exception e)
             {
-                result = Result.Of<NodeFilter>(e);
+                result = RecognitionResult.Of<NodeFilter>(e);
                 return false;
             }
         }
@@ -321,7 +322,7 @@ namespace Axis.Pulsar.Core.CST
             TokenReader reader,
             ProductionPath parentPath,
             object context,
-            out IResult<PathSegment> result)
+            out IRecognitionResult<PathSegment> result)
         {
             var position = reader.Position;
             var segmentPath = parentPath.Next("segment");
@@ -362,18 +363,18 @@ namespace Axis.Pulsar.Core.CST
                     // map to result
                     .ToResult(data => PathSegment.Of(data.ToArray()));
 
-                return result.IsDataResult();
+                return result.IsSuccess();
             }
             catch (Exception e)
             {
-                result = Result.Of<PathSegment>(e);
+                result = RecognitionResult.Of<PathSegment>(e);
                 return false;
             }
         }
 
         internal static bool TryRecognizePath(
             TokenReader reader,
-            out IResult<NodePath> result)
+            out IRecognitionResult<NodePath> result)
         {
             var position = reader.Position;
             var nodePath = ProductionPath.Of("node-path");
@@ -414,27 +415,26 @@ namespace Axis.Pulsar.Core.CST
                     // map to result
                     .ToResult(data => NodePath.Of(data.ToArray()));
 
-                return result.IsDataResult();
+                return result.IsSuccess();
             }
             catch (Exception e)
             {
-                result = Result.Of<NodePath>(e);
+                result = RecognitionResult.Of<NodePath>(e);
                 return false;
             }
         }
 
         #endregion
 
-        private static FormatException ToFormatException(IResult<NodePath> errorResult)
+        private static FormatException ToFormatException(IRecognitionResult<NodePath> errorResult)
         {
             ArgumentNullException.ThrowIfNull(errorResult);
 
-            if (errorResult.IsErrorResult(out Exception error))
+            if (errorResult.IsError(out Exception error))
             {
-
                 return error switch
                 {
-                    IRecognitionError re => new FormatException(
+                    IRecognitionError__ re => new FormatException(
                         $"Invalid path format: error detected at position {re.TokenSegment.Offset}"),
                     Exception e => new FormatException($"Invalid path format: unclassified error", e)
                 };

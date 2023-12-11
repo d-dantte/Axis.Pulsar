@@ -24,7 +24,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Axis.Pulsar.Core.XBNF\Axis.Pulsar.Core.XBNF.csproj" />
-    <ProjectReference Include="..\Axis.Pulsar.Core\Axis.Pulsar.Core.csproj" />
   </ItemGroup>
 
 </Project>

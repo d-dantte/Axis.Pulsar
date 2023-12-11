@@ -2,6 +2,7 @@
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Errors;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar.Groups
@@ -36,11 +37,11 @@ namespace Axis.Pulsar.Core.Grammar.Groups
         {
             MaxOccurence = max.ThrowIf(
                 i => i < 0,
-                new ArgumentException($"{nameof(max)} cannot be negative"));
+                _ => new ArgumentException($"{nameof(max)} cannot be negative"));
 
             MinOccurence = min.ThrowIf(
                 i => i < 0,
-                new ArgumentException($"{nameof(min)} cannot be negative"));
+                _ => new ArgumentException($"{nameof(min)} cannot be negative"));
 
             Validate();
         }
@@ -104,7 +105,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             ProductionPath productionPath,
             ILanguageContext context,
             IGroupElement element,
-            out IResult<NodeSequence> result)
+            out IRecognitionResult<INodeSequence> result)
         {
             ArgumentNullException.ThrowIfNull(reader);
             ArgumentNullException.ThrowIfNull(element);
@@ -112,8 +113,8 @@ namespace Axis.Pulsar.Core.Grammar.Groups
 
             var occurence = 0;
             var position = reader.Position;
-            var results = new List<IResult<NodeSequence>>();
-            IResult<NodeSequence>? elementResult = null;
+            var results = new List<IRecognitionResult<INodeSequence>>();
+            IRecognitionResult<INodeSequence>? elementResult = null;
 
             while (CanRepeat(occurence))
             {
@@ -136,14 +137,14 @@ namespace Axis.Pulsar.Core.Grammar.Groups
 
             if (IsValidRange(occurence))
             {
-                result = results.FoldInto(_results => _results.Fold());
+                result = results.Fold((acc, next) => acc.Append(next));
                 return true;
             }
             else
             {
                 reader.Reset(position);
                 var nodes = results
-                    .FoldInto(_results => _results.Fold())
+                    .Fold((acc, next) => acc.Append(next))
                     .Resolve();
 
                 result = elementResult switch
@@ -151,7 +152,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                     null => FailedRecognitionError
                         .Of(productionPath, position)
                         .ApplyTo(GroupRecognitionError.Of)
-                        .ApplyTo(Result.Of<NodeSequence>),
+                        .ApplyTo(error => RecognitionResult.Of<INodeSequence>(error)),
 
                     _ => elementResult.TransformError((GroupRecognitionError gre) => GroupRecognitionError.Of(
                             gre.Cause,

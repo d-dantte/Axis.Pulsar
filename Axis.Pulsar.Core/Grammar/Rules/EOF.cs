@@ -1,6 +1,7 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar.Rules
@@ -16,14 +17,14 @@ namespace Axis.Pulsar.Core.Grammar.Rules
         {
             Id = id.ThrowIfNot(
                 IProduction.SymbolPattern.IsMatch,
-                new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
+                _ => new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
         }
 
         public bool TryRecognize(
             TokenReader reader,
             ProductionPath productionPath,
             ILanguageContext context,
-            out IResult<ICSTNode> result)
+            out IRecognitionResult<ICSTNode> result)
         {
             ArgumentNullException.ThrowIfNull(reader);
             ArgumentNullException.ThrowIfNull(productionPath);
@@ -34,8 +35,8 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             if (!reader.TryGetToken(out _))
             {
                 result = ICSTNode
-                    .Of(eofPath.Name, Tokens.Empty)
-                    .ApplyTo(Result.Of);
+                    .Of(eofPath.Name, default(Tokens))
+                    .ApplyTo(RecognitionResult.Of);
                 return true;
             }
             else
@@ -43,7 +44,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 reader.Reset(position);
                 result = FailedRecognitionError
                     .Of(eofPath, position)
-                    .ApplyTo(Result.Of<ICSTNode>);
+                    .ApplyTo(error => RecognitionResult.Of<ICSTNode>(error));
                 return false;
             }
         }

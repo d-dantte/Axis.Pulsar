@@ -20,13 +20,13 @@ namespace Axis.Pulsar.Core.XBNF.Definitions
             ContentArgumentDelimiter contentDelimiterType,
             IAtomicRuleFactory factory)
         {
-            Factory = factory.ThrowIfNull(new ArgumentNullException(nameof(factory)));
+            Factory = factory.ThrowIfNull(() => new ArgumentNullException(nameof(factory)));
             ContentDelimiterType = contentDelimiterType.ThrowIfNot(
                 Enum.IsDefined,
-                new ArgumentException($"Invalid content delimiter type: '{contentDelimiterType}' is undefined"));
+                _ => new ArgumentException($"Invalid content delimiter type: '{contentDelimiterType}' is undefined"));
             Id = id.ThrowIfNot(
                 IProduction.SymbolPattern.IsMatch,
-                new FormatException($"Invalid {nameof(id)} format: '{id}'"));
+                _ => new FormatException($"Invalid {nameof(id)} format: '{id}'"));
         }
 
         public static AtomicRuleDefinition Of(
