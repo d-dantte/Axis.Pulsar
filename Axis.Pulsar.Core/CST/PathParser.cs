@@ -1,8 +1,8 @@
 ﻿using Axis.Luna.Common.Results;
-using Axis.Luna.Common.Utils;
+using Axis.Luna.Common.Unions;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar;
-using Axis.Pulsar.Core.Grammar.Errors;
+using Axis.Pulsar.Core.Grammar.Nodes;
 using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Utils;
 
@@ -35,412 +35,417 @@ namespace Axis.Pulsar.Core.CST
             .Select(nt => (char)nt)
             .ToHashSet();
 
-        public static bool TryParse(string pathText, out IRecognitionResult<NodePath> result)
-        {
-            result = Parse(pathText);
-            return result.IsSuccess();
-        }
-
-        public static IRecognitionResult<NodePath> Parse(string pathText)
+        public static bool TryParse(string pathText, out IResult<NodePath> result)
         {
             if (string.IsNullOrEmpty(pathText))
                 throw new ArgumentException("Invalid path: null/empty");
 
-            if (!TryRecognizePath(pathText, out var result))
-                return RecognitionResult.Of<NodePath>(ToFormatException(result));
+            _ = TryRecognizePath(pathText, out var pathResult);
+            result = pathResult.MapMatch(
+                data => Result.Of(data),
+                _ => PathParser
+                    .ToFormatException(pathResult)
+                    .ApplyTo(Result.Of<NodePath>),
+                _ => PathParser
+                    .ToFormatException(pathResult)
+                    .ApplyTo(Result.Of<NodePath>));
 
-            return result;
+            return result.IsDataResult();
+        }
+
+        public static NodePath Parse(string pathText)
+        {
+            if (string.IsNullOrEmpty(pathText))
+                throw new ArgumentException("Invalid path: null/empty");
+
+            _ = TryRecognizePath(pathText, out var result);
+            return result.Is(out NodePath path) ? path : ToFormatException(result).Throw<NodePath>();
         }
 
         #region Recognizers
 
         internal static bool TryRecognizeTokens(
             TokenReader reader,
-            ProductionPath parentPath,
+            SymbolPath parentPath,
             object context,
-            out IRecognitionResult<Tokens> result)
+            out PathParserResult<Tokens> result)
         {
             var position = reader.Position;
             var tokensPath = parentPath.Next("tokens");
 
-            try
+            #region open delimiter
+            if (!reader.TryGetToken(out var openDelim)
+                || !'<'.Equals(openDelim[0]))
             {
-                #region open delimiter
-                if (!reader.TryGetToken(out var openDelim)
-                    || !'<'.Equals(openDelim[0]))
-                {
-                    reader.Reset(position);
-                    result = FailedRecognitionError
-                        .Of(tokensPath, position)
-                        .ApplyTo(RecognitionResult.Of<Tokens>);
-                    return false;
-                }
-                #endregion
+                reader.Reset(position);
+                result = FailedRecognitionError
+                    .Of(tokensPath, position)
+                    .ApplyTo(cause => PathParserResult<Tokens>.Of(cause));
+                return false;
+            }
+            #endregion
 
-                #region tokens
-                var isEscaping = false;
-                var tokens = Tokens.Default;
-                while (reader.TryGetToken(out var token))
+            #region tokens
+            var isEscaping = false;
+            var tokens = Tokens.Default;
+            while (reader.TryGetToken(out var token))
+            {
+                if (!isEscaping)
                 {
-                    if (!isEscaping)
+                    if ('\\'.Equals(token[0]))
                     {
-                        if ('\\'.Equals(token[0]))
-                        {
-                            tokens += token;
-                            isEscaping = true;
-                        }
-                        else if ('>'.Equals(token[0]))
-                        {
-                            reader.Back(1);
-                            break;
-                        }
-                        else tokens += token;
+                        tokens += token;
+                        isEscaping = true;
+                    }
+                    else if ('>'.Equals(token[0]))
+                    {
+                        reader.Back(1);
+                        break;
+                    }
+                    else tokens += token;
+                }
+                else
+                {
+                    if ('\\'.Equals(token[0]) || '>'.Equals(token[0]))
+                    {
+                        tokens += token;
+                        isEscaping = false;
                     }
                     else
                     {
-                        if ('\\'.Equals(token[0]) || '>'.Equals(token[0]))
-                        {
-                            tokens += token;
-                            isEscaping = false;
-                        }
-                        else
-                        {
-                            reader.Reset(position);
-                            var newLength = (openDelim.Segment + tokens.Segment).EndOffset - position + 1;
-                            result = PartialRecognitionError
-                                .Of(tokensPath, position, newLength)
-                                .ApplyTo(RecognitionResult.Of<Tokens>);
-                            return false;
-                        }
+                        reader.Reset(position);
+                        var newLength = (openDelim.Segment + tokens.Segment).EndOffset - position + 1;
+                        result = PartialRecognitionError
+                            .Of(tokensPath, position, newLength)
+                            .ApplyTo(cause => PathParserResult<Tokens>.Of(cause));
+                        return false;
                     }
                 }
-                #endregion
-
-                #region close delimiter
-                if (!reader.TryGetToken(out var closeDelim)
-                    || !'>'.Equals(closeDelim[0]))
-                {
-                    reader.Reset(position);
-                    var newLength = (openDelim.Segment + tokens.Segment).EndOffset - position + 1;
-                    result = PartialRecognitionError
-                        .Of(tokensPath, position, newLength)
-                        .ApplyTo(RecognitionResult.Of<Tokens>);
-                    return false;
-                }
-                #endregion
-
-                result = RecognitionResult.Of(tokens);
-                return true;
             }
-            catch (Exception e)
+            #endregion
+
+            #region close delimiter
+            if (!reader.TryGetToken(out var closeDelim)
+                || !'>'.Equals(closeDelim[0]))
             {
                 reader.Reset(position);
-                result = RecognitionResult.Of<Tokens>(e);
+                var newLength = (openDelim.Segment + tokens.Segment).EndOffset - position + 1;
+                result = PartialRecognitionError
+                    .Of(tokensPath, position, newLength)
+                    .ApplyTo(cause => PathParserResult<Tokens>.Of(cause));
                 return false;
             }
+            #endregion
+
+            result = PathParserResult<Tokens>.Of(tokens);
+            return true;
         }
 
         internal static bool TryRecognizeSymbolName(
             TokenReader reader,
-            ProductionPath parentPath,
+            SymbolPath parentPath,
             object context,
-            out IRecognitionResult<Tokens> result)
+            out PathParserResult<Tokens> result)
         {
             var position = reader.Position;
             var symbolNamePath = parentPath.Next("symbol-name");
 
-            try
+            #region delimiter
+            var hasDelimiter = false;
+
+            if (!reader.TryGetToken(out var delimiter))
             {
-                #region delimiter
-                var hasDelimiter = false;
-
-                if (!reader.TryGetToken(out var delimiter))
-                {
-                    result = FailedRecognitionError
-                        .Of(symbolNamePath, position)
-                        .ApplyTo(RecognitionResult.Of<Tokens>);
-                    return false;
-                }
-                else if (char.IsAsciiLetter(delimiter[0]))
-                {
-                    reader.Back();
-                    delimiter = Tokens.EmptyAt(reader.Source, position);
-                }
-                else if (!':'.Equals(delimiter[0]))
-                {
-                    reader.Reset(position);
-                    result = FailedRecognitionError
-                        .Of(symbolNamePath, position)
-                        .ApplyTo(RecognitionResult.Of<Tokens>);
-                    return false;
-                }
-                else hasDelimiter = true;
-                #endregion
-
-                #region Name
-                if (!reader.TryGetPattern(IProduction.SymbolPattern, out var symbolName))
-                {
-                    if (!hasDelimiter)
-                        result = FailedRecognitionError
-                            .Of(symbolNamePath, position)
-                            .ApplyTo(RecognitionResult.Of<Tokens>);
-
-                    else result = PartialRecognitionError
-                        .Of(symbolNamePath,
-                            position,
-                            delimiter.Segment.EndOffset - position + 1)
-                        .ApplyTo(RecognitionResult.Of<Tokens>);
-
-                    reader.Reset(position);
-                    return false;
-                }
-                #endregion
-
-                result = RecognitionResult.Of(symbolName);
-                return true;
-            }
-            catch (Exception e)
-            {
-                result = RecognitionResult.Of<Tokens>(e);
+                result = FailedRecognitionError
+                    .Of(symbolNamePath, position)
+                    .ApplyTo(cause => PathParserResult<Tokens>.Of(cause));
                 return false;
             }
+            else if (char.IsAsciiLetter(delimiter[0]))
+            {
+                reader.Back();
+                delimiter = Tokens.EmptyAt(reader.Source, position);
+            }
+            else if (!':'.Equals(delimiter[0]))
+            {
+                reader.Reset(position);
+                result = FailedRecognitionError
+                    .Of(symbolNamePath, position)
+                    .ApplyTo(cause => PathParserResult<Tokens>.Of(cause));
+                return false;
+            }
+            else hasDelimiter = true;
+            #endregion
+
+            #region Name
+            if (!reader.TryGetPattern(Production.SymbolPattern, out var symbolName))
+            {
+                if (!hasDelimiter)
+                    result = FailedRecognitionError
+                        .Of(symbolNamePath, position)
+                        .ApplyTo(cause => PathParserResult<Tokens>.Of(cause));
+
+                else result = PartialRecognitionError
+                    .Of(symbolNamePath,
+                        position,
+                        delimiter.Segment.EndOffset - position + 1)
+                    .ApplyTo(cause => PathParserResult<Tokens>.Of(cause));
+
+                reader.Reset(position);
+                return false;
+            }
+            #endregion
+
+            result = PathParserResult<Tokens>.Of(symbolName);
+            return true;
         }
 
         internal static bool TryRecognizeFilterType(
             TokenReader reader,
-            ProductionPath parentPath,
+            SymbolPath parentPath,
             object context,
-            out IRecognitionResult<NodeType> result)
+            out PathParserResult<NodeType> result)
         {
             var position = reader.Position;
             var filterTypePath = parentPath.Next("filter-type");
 
-            try
+            #region delimiter
+            if (!reader.TryGetToken(out var delim))
             {
-                #region delimiter
-                if (!reader.TryGetToken(out var delim))
-                {
-                    result = FailedRecognitionError
-                        .Of(filterTypePath, position)
-                        .ApplyTo(RecognitionResult.Of<NodeType>);
-                    return false;
-                }
-
-                if (!'@'.Equals(delim[0]))
-                {
-                    reader.Back();
-                    result = RecognitionResult.Of(NodeType.Unspecified);
-                    return true;
-                }
-                #endregion
-
-                #region type
-                if (!reader.TryGetToken(out var typeChar)
-                    || !FilterTypeCharacters.Contains(char.ToUpper(typeChar[0])))
-                {
-                    reader.Reset(position);
-                    result = PartialRecognitionError
-                        .Of(filterTypePath,
-                            position,
-                            delim.Segment.EndOffset - position + 1)
-                        .ApplyTo(RecognitionResult.Of<NodeType>);;
-                    return false;
-                }
-                #endregion
-
-                result = RecognitionResult.Of((NodeType)char.ToUpper(typeChar[0]));
-                return true;
-            }
-            catch (Exception e)
-            {
-                result = RecognitionResult.Of<NodeType>(e);
+                result = FailedRecognitionError
+                    .Of(filterTypePath, position)
+                    .ApplyTo(cause => PathParserResult<NodeType>.Of(cause));
                 return false;
             }
+
+            if (!'@'.Equals(delim[0]))
+            {
+                reader.Back();
+                result = PathParserResult<NodeType>.Of(NodeType.Unspecified);
+                return true;
+            }
+            #endregion
+
+            #region type
+            if (!reader.TryGetToken(out var typeChar)
+                || !FilterTypeCharacters.Contains(char.ToUpper(typeChar[0])))
+            {
+                reader.Reset(position);
+                result = PartialRecognitionError
+                    .Of(filterTypePath,
+                        position,
+                        delim.Segment.EndOffset - position + 1)
+                    .ApplyTo(cause => PathParserResult<NodeType>.Of(cause)); ;
+                return false;
+            }
+            #endregion
+
+            result = PathParserResult<NodeType>.Of((NodeType)char.ToUpper(typeChar[0]));
+            return true;
         }
 
         internal static bool TryRecognizeFilter(
             TokenReader reader,
-            ProductionPath parentPath,
+            SymbolPath parentPath,
             object context,
-            out IRecognitionResult<NodeFilter> result)
+            out PathParserResult<NodeFilter> result)
         {
             var position = reader.Position;
             var filterPath = parentPath.Next("filter");
+            var accumulatorArgs = NodeRecognitionAccumulator.Args(
+                reader,
+                filterPath,
+                (object)null!);
 
-            try
-            {
-                result = ParserAccumulator
-                    .Of(reader,
-                        filterPath,
-                        context,
-                        (type: default(NodeType), name: default(Tokens), tokens: default(Tokens)))
+            result = NodeRecognitionAccumulator
+                .Of<(NodeType type, Tokens name, Tokens tokens), SymbolPath, object>(default)
 
-                    // filter type
-                    .ThenTry<NodeType>(
-                        TryRecognizeFilterType,
-                        (data, ttype) => (type: ttype, data.name, data.tokens))
+                // filter type
+                .ThenTry<NodeType, PathParserResult<NodeType>>(
+                    TryRecognizeFilterType,
+                    accumulatorArgs,
+                    (data, ttype) => (type: ttype, data.name, data.tokens))
 
-                    // symbol name
-                    .ThenTry<Tokens>(
-                        TryRecognizeSymbolName,
-                        (data, name) => (data.type, name, data.tokens),
-                        data => data)
+                // symbol name
+                .ThenTry<Tokens, PathParserResult<Tokens>>(
+                    TryRecognizeSymbolName,
+                    accumulatorArgs,
+                    (data, name) => (data.type, name, data.tokens),
+                    (data, fre) => data)
 
-                    // tokens
-                    .ThenTry<Tokens>(
-                        TryRecognizeTokens,
-                        (data, tokens) => (data.type, data.name, tokens),
-                        data => data)
+                // tokens
+                .ThenTry<Tokens, PathParserResult<Tokens>>(
+                    TryRecognizeTokens,
+                    accumulatorArgs,
+                    (data, tokens) => (data.type, data.name, tokens),
+                    (data, fre) => data)
 
-                    // errors?
-                    .TransformError((data, err, recognitionCount) => (err, recognitionCount) switch
-                    {
-                        (FailedRecognitionError, >= 1) => PartialRecognitionError.Of(
-                            filterPath,
-                            position,
-                            reader.Position - position + 1),
+                // errors?
+                .MapAll(
 
-                        _ => err
-                    })
+                    // data
+                    filterInfo => NodeFilter
+                        .Of(filterInfo.type,
+                            filterInfo.name,
+                            filterInfo.tokens)
+                        .ApplyTo(PathParserResult<NodeFilter>.Of),
 
-                    // map to result
-                    .ToResult((Func<(NodeType type, Tokens name, Tokens tokens), NodeFilter>)(data => NodeFilter.Of(
-                        data.type,
-                        data.name,
-                        data.tokens)));
+                    // failed recognition
+                    (fre, list) => PathParserResult<NodeFilter>.Of(fre),
 
-                return result.IsSuccess();
-            }
-            catch (Exception e)
-            {
-                result = RecognitionResult.Of<NodeFilter>(e);
-                return false;
-            }
+                    // partial recognition
+                    (pre, list) => PathParserResult<NodeFilter>.Of(pre));
+
+            return result.Is(out NodeFilter _);
         }
 
         internal static bool TryRecognizeSegment(
             TokenReader reader,
-            ProductionPath parentPath,
+            SymbolPath parentPath,
             object context,
-            out IRecognitionResult<PathSegment> result)
+            out PathParserResult<PathSegment> result)
         {
             var position = reader.Position;
             var segmentPath = parentPath.Next("segment");
+            var accumulatorArgs = NodeRecognitionAccumulator.Args(
+                reader,
+                segmentPath,
+                (object)null!);
 
-            try
+            var accumulator = NodeRecognitionAccumulator
+                .Of<List<NodeFilter>, SymbolPath, object>(new List<NodeFilter>())
+
+                // filter
+                .ThenTry<NodeFilter, PathParserResult<NodeFilter>>(
+                    TryRecognizeFilter,
+                    accumulatorArgs,
+                    (filters, filter) => filters.AddItem(filter));
+
+            while (reader.TryGetTokens("|", out var filterSeparator))
             {
-                var accumulator = ParserAccumulator
-                    .Of(reader,
-                        segmentPath,
-                        context,
-                        new List<NodeFilter>())
+                accumulator = accumulator.ThenTry<NodeFilter, PathParserResult<NodeFilter>>(
+                    TryRecognizeFilter,
+                    accumulatorArgs,
+                    (filters, filter) => filters.AddItem(filter));
+            }
 
-                    // filter
-                    .ThenTry<NodeFilter>(
-                        TryRecognizeFilter,
-                        (filters, filter) => filters.AddItem(filter));
+            result = accumulator.MapAll(
 
-                while (reader.TryGetTokens("|", out var filterSeparator))
-                {
-                    _ = accumulator.ThenTry<NodeFilter>(
-                        TryRecognizeFilter,
-                        (filters, filter) => filters.AddItem(filter));
-                }
+                // data
+                list => list
+                    .ToArray()
+                    .ApplyTo(PathSegment.Of)
+                    .ApplyTo(PathParserResult<PathSegment>.Of),
 
-                result = accumulator
-
-                    // errors?
-                    .TransformError((data, err, recognitionCount) => (err, recognitionCount) switch
-                    {
-                        (FailedRecognitionError, >= 1) => PartialRecognitionError.Of(
-                            segmentPath,
+                // failed recognition
+                (fre, list) => list.Count < 1
+                    ? PathParserResult<PathSegment>.Of(fre)
+                    : PartialRecognitionError
+                        .Of(segmentPath,
                             position,
-                            reader.Position - position + 1),
+                            reader.Position - position + 1)
+                        .ApplyTo(PathParserResult<PathSegment>.Of),
 
-                        _ => err
-                    })
+                // partial recognition
+                (pre, list) => PathParserResult<PathSegment>.Of(pre));
 
-                    // map to result
-                    .ToResult(data => PathSegment.Of(data.ToArray()));
-
-                return result.IsSuccess();
-            }
-            catch (Exception e)
-            {
-                result = RecognitionResult.Of<PathSegment>(e);
-                return false;
-            }
+            return result.Is(out PathSegment _);
         }
 
         internal static bool TryRecognizePath(
             TokenReader reader,
-            out IRecognitionResult<NodePath> result)
+            out PathParserResult<NodePath> result)
         {
             var position = reader.Position;
-            var nodePath = ProductionPath.Of("node-path");
+            var nodePath = SymbolPath.Of("node-path");
+            var accumulatorArgs = NodeRecognitionAccumulator.Args(
+                reader,
+                nodePath,
+                (object)null!);
 
-            try
+            var accumulator = NodeRecognitionAccumulator.Of<
+                List<PathSegment>,
+                SymbolPath,
+                object>(
+                new List<PathSegment>())
+
+                // segment
+                .ThenTry<PathSegment, PathParserResult<PathSegment>>(
+                    TryRecognizeSegment,
+                    accumulatorArgs,
+                    (segments, segment) => segments.AddItem(segment));
+
+            while (reader.TryGetTokens("/", out var segmentSeparator))
             {
-                var accumulator = ParserAccumulator
-                    .Of(reader,
-                        nodePath,
-                        new object(),
-                        new List<PathSegment>())
+                accumulator = accumulator.ThenTry<PathSegment, PathParserResult<PathSegment>>(
+                    TryRecognizeSegment,
+                    accumulatorArgs,
+                    (segments, segment) => segments.AddItem(segment));
+            }
 
-                    // segment
-                    .ThenTry<PathSegment>(
-                        TryRecognizeSegment,
-                        (segments, segment) => segments.AddItem(segment));
+            result = accumulator.MapAll(
 
-                while (reader.TryGetTokens("/", out var segmentSeparator))
-                {
-                    _ = accumulator.ThenTry<PathSegment>(
-                        TryRecognizeSegment,
-                        (segments, segment) => segments.AddItem(segment));
-                }
+                // data
+                list => list
+                    .ToArray()
+                    .ApplyTo(NodePath.Of)
+                    .ApplyTo(PathParserResult<NodePath>.Of),
 
-                result = accumulator
-
-                    // errors?
-                    .TransformError((data, err, recognitionCount) => (err, recognitionCount) switch
-                    {
-                        (FailedRecognitionError, >= 1) => PartialRecognitionError.Of(
-                            nodePath,
+                // failed recognition
+                (fre, list) => list.Count < 1
+                    ? PathParserResult<NodePath>.Of(fre) 
+                    : PartialRecognitionError
+                        .Of(nodePath,
                             position,
-                            reader.Position - position + 1),
+                            reader.Position - position + 1)
+                        .ApplyTo(PathParserResult<NodePath>.Of),
+                
+                // partial recognition
+                (pre, list) => PathParserResult<NodePath>.Of(pre));
 
-                        _ => err
-                    })
-
-                    // map to result
-                    .ToResult(data => NodePath.Of(data.ToArray()));
-
-                return result.IsSuccess();
-            }
-            catch (Exception e)
-            {
-                result = RecognitionResult.Of<NodePath>(e);
-                return false;
-            }
+            return result.Is(out NodePath _);
         }
 
         #endregion
 
-        private static FormatException ToFormatException(IRecognitionResult<NodePath> errorResult)
+        private static FormatException ToFormatException(PathParserResult<NodePath> errorResult)
         {
             ArgumentNullException.ThrowIfNull(errorResult);
 
-            if (errorResult.IsError(out Exception error))
-            {
-                return error switch
-                {
-                    IRecognitionError__ re => new FormatException(
-                        $"Invalid path format: error detected at position {re.TokenSegment.Offset}"),
-                    Exception e => new FormatException($"Invalid path format: unclassified error", e)
-                };
-            }
+            INodeRecognitionError? error =
+                errorResult.Is(out FailedRecognitionError fre) ? fre :
+                errorResult.Is(out PartialRecognitionError pre) ? pre :
+                null;
 
-            throw new ArgumentException($"Invalid result: not error-reuslt");
+            return error switch
+            {
+                FailedRecognitionError fe => new FormatException(
+                    $"Invalid path format: error detected at position {fe.TokenSegment.Offset}"),
+                PartialRecognitionError pe => new FormatException(
+                    $"Invalid path format: error detected at position {pe.TokenSegment.Offset}"),
+                _ => throw new InvalidOperationException($"Invalid error result: {errorResult}")
+            };
         }
+    }
+
+    public class PathParserResult<TResult> :
+        NodeRecognitionResultBase<TResult, PathParserResult<TResult>>,
+        IUnionOf<TResult, FailedRecognitionError, PartialRecognitionError, PathParserResult<TResult>>
+    {
+        public PathParserResult(object value)
+        : base(value)
+        {
+        }
+
+        public static PathParserResult<TResult> Of(
+            TResult value)
+            => new(value!);
+
+        public static PathParserResult<TResult> Of(
+            FailedRecognitionError value)
+            => new(value);
+
+        public static PathParserResult<TResult> Of(
+            PartialRecognitionError value)
+            => new(value);
     }
 }

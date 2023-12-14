@@ -1,5 +1,6 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.XBNF.Lang;
 
 namespace Axis.Pulsar.Core.XBNF.Tests.E2E

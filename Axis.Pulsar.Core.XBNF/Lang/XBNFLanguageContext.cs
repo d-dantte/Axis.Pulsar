@@ -3,6 +3,7 @@ using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Validation;
+using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.XBNF.Parsers;
 using System.Collections.Immutable;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;

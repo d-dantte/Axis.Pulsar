@@ -1,6 +1,7 @@
 using Axis.Pulsar.Core.Grammar;
+using Axis.Pulsar.Core.Lang;
 
-namespace Axis.Pulsar.Core.IO
+namespace Axis.Pulsar.Core.Lang
 {
     /// <summary>
     /// 

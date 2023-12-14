@@ -1,8 +1,8 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
-using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Results;
+using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar.Groups
@@ -96,20 +96,20 @@ namespace Axis.Pulsar.Core.Grammar.Groups
         /// 
         /// </summary>
         /// <param name="reader"></param>
-        /// <param name="productionPath">The path of the production that owns the <paramref name="element"/></param>
+        /// <param name="symbolPath">The path of the production that owns the <paramref name="element"/></param>
         /// <param name="element">The element to apply cardinality recognition to</param>
         /// <param name="result">The result of applying cardinality recognition</param>
         /// <returns></returns>
         public bool TryRepeat(
             TokenReader reader,
-            ProductionPath productionPath,
+            SymbolPath symbolPath,
             ILanguageContext context,
             IGroupElement element,
-            out IRecognitionResult<INodeSequence> result)
+            out GroupRecognitionResult result)
         {
             ArgumentNullException.ThrowIfNull(reader);
             ArgumentNullException.ThrowIfNull(element);
-            ArgumentNullException.ThrowIfNull(productionPath);
+            ArgumentNullException.ThrowIfNull(symbolPath);
 
             var occurence = 0;
             var position = reader.Position;
@@ -121,7 +121,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                 var stepPosition = reader.Position;
                 if (element.TryRecognize(
                     reader,
-                    productionPath,
+                    symbolPath,
                     context,
                     out elementResult))
                 {
@@ -150,7 +150,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                 result = elementResult switch
                 {
                     null => FailedRecognitionError
-                        .Of(productionPath, position)
+                        .Of(symbolPath, position)
                         .ApplyTo(GroupRecognitionError.Of)
                         .ApplyTo(error => RecognitionResult.Of<INodeSequence>(error)),
 

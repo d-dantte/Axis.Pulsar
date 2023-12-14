@@ -1,11 +1,11 @@
-﻿using Axis.Luna.Common.Results;
-using Axis.Luna.Extensions;
+﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Results;
+using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
 using System.Collections.Immutable;
 
-namespace Axis.Pulsar.Core.Grammar.Rules
+namespace Axis.Pulsar.Core.Grammar.Nodes
 {
     /// <summary>
     /// Represents parsing tokens with the following properties:
@@ -55,7 +55,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
         public bool AcceptsEmptyString { get; }
 
         /// <summary>
-        /// 
+        /// Constructor
         /// </summary>
         /// <param name="startDelimiter"></param>
         /// <param name="endDelimiter">The optional end-delimiter</param>
@@ -108,7 +108,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 .ToImmutableArray();
 
             Id = id.ThrowIfNot(
-                IProduction.SymbolPattern.IsMatch,
+                Production.SymbolPattern.IsMatch,
                 _ => new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
 
             if (EndDelimiter is null
@@ -137,9 +137,9 @@ namespace Axis.Pulsar.Core.Grammar.Rules
         #region Procedural implementation
         public bool TryRecognize(
             TokenReader reader,
-            ProductionPath productionPath,
+            SymbolPath productionPath,
             ILanguageContext context,
-            out IRecognitionResult<ICSTNode> result)
+            out NodeRecognitionResult result)
         {
             var position = reader.Position;
             var delimPath = productionPath.Next(Id);
@@ -151,7 +151,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 reader.Reset(position);
                 result = FailedRecognitionError
                     .Of(delimPath, position)
-                    .ApplyTo(error => RecognitionResult.Of<ICSTNode>(error));
+                    .ApplyTo(error => NodeRecognitionResult.Of(error));
 
                 return false;
             }
@@ -163,7 +163,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 reader.Reset(position);
                 result = PartialRecognitionError
                     .Of(delimPath, position, tokens.Segment.EndOffset - position - 1)
-                    .ApplyTo(error => RecognitionResult.Of<ICSTNode>(error));
+                    .ApplyTo(error => NodeRecognitionResult.Of(error));
 
                 return false;
             }
@@ -177,7 +177,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                     reader.Reset(position);
                     result = PartialRecognitionError
                         .Of(delimPath, position, tokens.Segment.EndOffset - position - 1)
-                        .ApplyTo(error => RecognitionResult.Of<ICSTNode>(error));
+                        .ApplyTo(error => NodeRecognitionResult.Of(error));
 
                     return false;
                 }
@@ -185,8 +185,8 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             }
 
             result = ICSTNode
-                .Of(delimPath.Name, tokens)
-                .ApplyTo(RecognitionResult.Of);
+                .Of(delimPath.Symbol, tokens)
+                .ApplyTo(NodeRecognitionResult.Of);
             return true;
         }
 

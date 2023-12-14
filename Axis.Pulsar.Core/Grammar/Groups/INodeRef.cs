@@ -4,7 +4,7 @@
     /// 
     /// </summary>
     /// <typeparam name="TRefType"></typeparam>
-    public interface IRuleRef<TRefType>: IGroupElement
+    public interface INodeRef<TRefType>: IGroupElement
     {
         TRefType Ref { get; }
     }

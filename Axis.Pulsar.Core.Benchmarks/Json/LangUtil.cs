@@ -1,4 +1,5 @@
 ﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.XBNF.Lang;
 
 namespace Axis.Pulsar.Core.Benchmarks.Json

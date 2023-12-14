@@ -1,12 +1,12 @@
 ﻿using Axis.Luna.Common;
-using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Results;
+using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
 using System.Text.RegularExpressions;
 
-namespace Axis.Pulsar.Core.Grammar.Rules
+namespace Axis.Pulsar.Core.Grammar.Nodes
 {
     public class TerminalPattern : IAtomicRule
     {
@@ -21,7 +21,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             Pattern = pattern ?? throw new ArgumentNullException(nameof(pattern));
             MatchType = matchType ?? throw new ArgumentNullException(nameof(matchType));
             Id = id.ThrowIfNot(
-                IProduction.SymbolPattern.IsMatch,
+                Production.SymbolPattern.IsMatch,
                 _ => new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
         }
 
@@ -33,14 +33,14 @@ namespace Axis.Pulsar.Core.Grammar.Rules
 
         public bool TryRecognize(
             TokenReader reader,
-            ProductionPath productionPath,
+            SymbolPath symbolPath,
             ILanguageContext context,
-            out IRecognitionResult<ICSTNode> result)
+            out NodeRecognitionResult result)
         {
             ArgumentNullException.ThrowIfNull(reader);
-            ArgumentNullException.ThrowIfNull(productionPath);
+            ArgumentNullException.ThrowIfNull(symbolPath);
 
-            var patternPath = productionPath.Next(Id);
+            var patternPath = symbolPath.Next(Id);
             result = MatchType switch
             {
                 IMatchType.Closed closed => RecognizeClosedPattern(
@@ -59,12 +59,12 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                         $"Invalid match type: {MatchType}")
             };
 
-            return result.IsSuccess();
+            return result.Is(out ICSTNode _);
         }
 
-        private static IRecognitionResult<ICSTNode> RecognizeClosedPattern(
+        private static NodeRecognitionResult RecognizeClosedPattern(
             TokenReader reader,
-            ProductionPath productionPath,
+            SymbolPath symbolPath,
             Regex pattern,
             IMatchType.Closed matchType)
         {
@@ -81,20 +81,20 @@ namespace Axis.Pulsar.Core.Grammar.Rules
 
                     if (match.Success && match.Length == length)
                         return ICSTNode
-                            .Of(productionPath.Name, tokens[..length])
-                            .ApplyTo(RecognitionResult.Of);
+                            .Of(symbolPath.Symbol, tokens[..length])
+                            .ApplyTo(NodeRecognitionResult.Of);
                 }
             }
 
             reader.Reset(position);
             return FailedRecognitionError
-                .Of(productionPath, position)
-                .ApplyTo(error => RecognitionResult.Of<ICSTNode>(error));
+                .Of(symbolPath, position)
+                .ApplyTo(NodeRecognitionResult.Of);
         }
 
-        private static IRecognitionResult<ICSTNode> RecognizeOpenPattern(
+        private static NodeRecognitionResult RecognizeOpenPattern(
             TokenReader reader,
-            ProductionPath productionPath,
+            SymbolPath symbolPath,
             Regex pattern,
             IMatchType.Open matchType)
         {
@@ -120,13 +120,13 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             if ((trueLength == 0 && matchType.AllowsEmptyTokens)
                 || trueLength > 0)
                 return ICSTNode
-                    .Of(productionPath.Name, reader.GetTokens(trueLength, true))
-                    .ApplyTo(RecognitionResult.Of);
+                    .Of(symbolPath.Symbol, reader.GetTokens(trueLength, true))
+                    .ApplyTo(NodeRecognitionResult.Of);
 
             else 
                 return FailedRecognitionError
-                    .Of(productionPath, position)
-                    .ApplyTo(error => RecognitionResult.Of<ICSTNode>(error));
+                    .Of(symbolPath, position)
+                    .ApplyTo(NodeRecognitionResult.Of);
         }
     }
 

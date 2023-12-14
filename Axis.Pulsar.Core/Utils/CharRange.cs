@@ -61,7 +61,10 @@ public readonly struct CharRange:
     /// <param name="mergeDisjointedRanges"></param>
     /// <param name="merged"></param>
     /// <returns></returns>
-    public bool TryMergeWith(CharRange range, bool mergeDisjointedRanges, out CharRange merged)
+    public bool TryMergeWith(
+        CharRange range,
+        bool mergeDisjointedRanges,
+        out CharRange merged)
     {
         try
         {
@@ -83,6 +86,12 @@ public readonly struct CharRange:
         }
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="range"></param>
+    /// <param name="merged"></param>
+    /// <returns></returns>
     public bool TryMergeWith(
         CharRange range,
         out CharRange merged)

@@ -1,16 +1,12 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
-using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
-using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Groups;
-using Axis.Pulsar.Core.Grammar.Rules;
+using Axis.Pulsar.Core.Grammar.Results;
+using Axis.Pulsar.Core.Grammar.Nodes;
 using Axis.Pulsar.Core.Utils;
-using Axis.Pulsar.Core.XBNF.Definitions;
-using Axis.Pulsar.Core.XBNF.Lang;
 using Axis.Pulsar.Core.XBNF.Parsers.Models;
 using Axis.Pulsar.Core.XBNF.Parsers.Results;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
@@ -41,7 +37,7 @@ internal static class GrammarParser
     internal static bool TryParseGrammar(
         TokenReader reader,
         ParserContext context,
-        out IResult<IGrammar> result)
+        out IRecognitionResult<IGrammar> result)
     {
         var position = reader.Position;
 
@@ -130,7 +126,7 @@ internal static class GrammarParser
                 .Of(reader,
                     productionPath,
                     context,
-                    KeyValuePair.Create<string, IRule>(null!, null!))
+                    KeyValuePair.Create<string, INodeRule>(null!, null!))
 
                 // symbol name
                 .ThenTry<string>(
@@ -155,7 +151,7 @@ internal static class GrammarParser
                 // composite rule
                 .ThenTry<ICompositeRule>(
                     TryParseCompositeRule,
-                    (kvp, rule) => kvp.Key.ValuePair((IRule)rule));
+                    (kvp, rule) => kvp.Key.ValuePair((INodeRule)rule));
 
             result = accummulator.ToResult(kvp => XBNFProduction.Of(
                 kvp.Key,

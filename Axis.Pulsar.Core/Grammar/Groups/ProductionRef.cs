@@ -2,12 +2,14 @@
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Errors;
+using Axis.Pulsar.Core.Grammar.Nodes;
 using Axis.Pulsar.Core.Grammar.Results;
+using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar.Groups
 {
-    public class ProductionRef : IRuleRef<string>
+    public class ProductionRef : INodeRef<string>
     {
         public Cardinality Cardinality { get; }
 

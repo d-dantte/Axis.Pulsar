@@ -1,5 +1,6 @@
 ﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar.Groups;
+using Axis.Pulsar.Core.Grammar.Nodes;
 using System.Collections.Immutable;
 
 namespace Axis.Pulsar.Core.Grammar
@@ -43,7 +44,7 @@ namespace Axis.Pulsar.Core.Grammar
         }
 
         private static void TraverseRule(
-            IRule rule,
+            INodeRule rule,
             TraversalContext context,
             out bool isLeftTerminated)
         {

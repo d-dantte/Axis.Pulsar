@@ -1,11 +1,9 @@
-﻿using Axis.Luna.Common.Results;
-using Axis.Pulsar.Core.CST;
-using Axis.Pulsar.Core.Grammar;
+﻿using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Grammar.Validation;
 using System.Collections.Immutable;
 
-namespace Axis.Pulsar.Core
+namespace Axis.Pulsar.Core.Lang
 {
     /// <summary>
     /// 
@@ -27,6 +25,6 @@ namespace Axis.Pulsar.Core
         /// </summary>
         /// <param name="inputTokens"></param>
         /// <returns></returns>
-        IRecognitionResult<ICSTNode> Recognize(string inputTokens);
+        NodeRecognitionResult Recognize(string inputTokens);
     }
 }

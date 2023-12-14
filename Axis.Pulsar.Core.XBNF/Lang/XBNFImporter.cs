@@ -2,7 +2,8 @@
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Errors;
-using Axis.Pulsar.Core.IO;
+using Axis.Pulsar.Core.Lang;
+using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.XBNF.Definitions;
 using Axis.Pulsar.Core.XBNF.Parsers;
 
@@ -35,8 +36,14 @@ namespace Axis.Pulsar.Core.XBNF.Lang
                 .Map(grammar => new XBNFLanguageContext(grammar, context))
 
                 // convert IRecognitionErrors to FormatException
-                .TransformError(err => err switch { 
-                    IRecognitionError__ rerror => RecognitionFormatException.Of(rerror, inputTokens),
+                .TransformError(err => err switch {
+                    PartialRecognitionError pre => RecognitionFormatException.Of(
+                        pre.TokenSegment.Offset,
+                        pre.TokenSegment.Count,
+                        inputTokens),
+                    IRecognitionError rerror => RecognitionFormatException.Of(
+                        rerror,
+                        inputTokens),
                     _ => err
                 })
 

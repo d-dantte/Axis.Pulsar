@@ -2,11 +2,13 @@
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Results;
+using Axis.Pulsar.Core.Grammar.Nodes;
 using Axis.Pulsar.Core.Utils;
+using Axis.Pulsar.Core.Lang;
 
 namespace Axis.Pulsar.Core.Grammar.Groups
 {
-    public class AtomicRuleRef : IRuleRef<IAtomicRule>
+    public class AtomicRuleRef : INodeRef<IAtomicRule>
     {
         public Cardinality Cardinality { get; }
 

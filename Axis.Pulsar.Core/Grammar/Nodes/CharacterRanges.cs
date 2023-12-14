@@ -1,11 +1,11 @@
-﻿using Axis.Luna.Common.Results;
-using Axis.Luna.Extensions;
+﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Results;
+using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
 using System.Collections.Immutable;
 
-namespace Axis.Pulsar.Core.Grammar.Rules
+namespace Axis.Pulsar.Core.Grammar.Nodes
 {
     /// <summary>
     /// Recognizes a series of character ranges that represents valid or invalid characters
@@ -46,7 +46,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 .ToImmutableArray();
 
             Id = id.ThrowIfNot(
-                IProduction.SymbolPattern.IsMatch,
+                Production.SymbolPattern.IsMatch,
                 _ => new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
         }
 
@@ -62,15 +62,15 @@ namespace Axis.Pulsar.Core.Grammar.Rules
 
         public bool TryRecognize(
             TokenReader reader,
-            ProductionPath productionPath,
+            SymbolPath symbolPath,
             ILanguageContext context,
-            out IRecognitionResult<ICSTNode> result)
+            out NodeRecognitionResult result)
         {
             ArgumentNullException.ThrowIfNull(reader);
-            ArgumentNullException.ThrowIfNull(productionPath);
+            ArgumentNullException.ThrowIfNull(symbolPath);
 
             var position = reader.Position;
-            var charRangePath = productionPath.Next(Id);
+            var charRangePath = symbolPath.Next(Id);
 
             if (!reader.TryGetToken(out var token)
                 || ExcludeList.Any(range => range.Contains(token[0]))
@@ -79,13 +79,13 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 reader.Reset(position);
                 result = FailedRecognitionError
                     .Of(charRangePath, position)
-                    .ApplyTo(RecognitionResult.Of<ICSTNode, FailedRecognitionError>);
+                    .ApplyTo(NodeRecognitionResult.Of);
                 return false;
             }
 
             result = ICSTNode
-                .Of(charRangePath.Name, token)
-                .ApplyTo(RecognitionResult.Of);
+                .Of(charRangePath.Symbol, token)
+                .ApplyTo(NodeRecognitionResult.Of);
             return true;
         }
         

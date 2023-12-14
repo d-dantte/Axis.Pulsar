@@ -57,7 +57,7 @@ namespace Axis.Pulsar.Core.CST
 
         public static bool operator !=(NodePath left, NodePath right) => !(left == right);
 
-        public static implicit operator NodePath(string path) => PathParser.Parse(path).Resolve();
+        public static implicit operator NodePath(string path) => PathParser.Parse(path);
     }
 
     /// <summary>

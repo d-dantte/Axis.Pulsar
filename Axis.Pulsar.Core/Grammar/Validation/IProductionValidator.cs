@@ -1,4 +1,5 @@
 ﻿using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Lang;
 
 namespace Axis.Pulsar.Core.Grammar.Validation
 {
@@ -12,16 +13,14 @@ namespace Axis.Pulsar.Core.Grammar.Validation
         /// a <see cref="ICSTNode"/>. The idea is, after a production is SUCCESSFULLY processed,
         /// the <see cref="ICSTNode"/> instance is passed into the designated validator.
         /// <para/>
-        /// Validation fails if any exception is thrown from this method, or passes if the method
-        /// returns successfully.
+        /// Validation fails if any exception is thrown from this method, or passes otherwise.
         /// <para/>
         /// </summary>
-        /// <param name="productionPath"></param>
+        /// <param name="symbolPath"></param>
         /// <param name="context"></param>
         /// <param name="recogniedNode"></param>
-        /// <returns></returns>
         void Validate(
-            ProductionPath productionPath,
+            SymbolPath symbolPath,
             ILanguageContext context,
             ICSTNode recogniedNode);
     }

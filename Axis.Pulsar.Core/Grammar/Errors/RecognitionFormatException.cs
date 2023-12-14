@@ -48,8 +48,9 @@ namespace Axis.Pulsar.Core.Grammar.Errors
         }
 
         public static RecognitionFormatException Of(
-            IRecognitionError__ error,
+            int index,
+            int count,
             Tokens source)
-            => new(error.TokenSegment.Offset, error.TokenSegment.Count, source);
+            => new(index, count, source);
     }
 }

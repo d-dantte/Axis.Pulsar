@@ -2,7 +2,9 @@
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
+using Axis.Pulsar.Core.Grammar.Nodes;
 using Axis.Pulsar.Core.Grammar.Validation;
+using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
 using Moq;
 using System.Collections.Immutable;
@@ -34,9 +36,9 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Grammar
             return mockContext.Object;
         }
 
-        private IRule MockRule(TryRecognizeNode recognizer)
+        private INodeRule MockRule(TryRecognizeNode recognizer)
         {
-            var mockRule = new Mock<IRule>();
+            var mockRule = new Mock<INodeRule>();
             mockRule
                 .Setup(r => r.TryRecognize(
                     It.IsAny<TokenReader>(),

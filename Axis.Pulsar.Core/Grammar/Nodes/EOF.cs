@@ -1,10 +1,10 @@
-﻿using Axis.Luna.Common.Results;
-using Axis.Luna.Extensions;
+﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Results;
+using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
 
-namespace Axis.Pulsar.Core.Grammar.Rules
+namespace Axis.Pulsar.Core.Grammar.Nodes
 {
     /// <summary>
     /// 
@@ -16,27 +16,27 @@ namespace Axis.Pulsar.Core.Grammar.Rules
         public EOF(string id)
         {
             Id = id.ThrowIfNot(
-                IProduction.SymbolPattern.IsMatch,
+                Production.SymbolPattern.IsMatch,
                 _ => new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
         }
 
         public bool TryRecognize(
             TokenReader reader,
-            ProductionPath productionPath,
+            SymbolPath symbolPath,
             ILanguageContext context,
-            out IRecognitionResult<ICSTNode> result)
+            out NodeRecognitionResult result)
         {
             ArgumentNullException.ThrowIfNull(reader);
-            ArgumentNullException.ThrowIfNull(productionPath);
+            ArgumentNullException.ThrowIfNull(symbolPath);
 
             var position = reader.Position;
-            var eofPath = productionPath.Next(Id);
+            var eofPath = symbolPath.Next(Id);
 
             if (!reader.TryGetToken(out _))
             {
                 result = ICSTNode
-                    .Of(eofPath.Name, default(Tokens))
-                    .ApplyTo(RecognitionResult.Of);
+                    .Of(eofPath.Symbol, default(Tokens))
+                    .ApplyTo(NodeRecognitionResult.Of);
                 return true;
             }
             else
@@ -44,7 +44,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 reader.Reset(position);
                 result = FailedRecognitionError
                     .Of(eofPath, position)
-                    .ApplyTo(error => RecognitionResult.Of<ICSTNode>(error));
+                    .ApplyTo(NodeRecognitionResult.Of);
                 return false;
             }
         }

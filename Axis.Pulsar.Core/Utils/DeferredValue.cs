@@ -2,8 +2,9 @@
 {
     internal class DeferredValue<TValue>
     {
-        private Func<TValue> _valueFactory;
+        private readonly Func<TValue> _valueFactory;
         private TValue _value;
+        private Exception? _exception;
 
         /// <summary>
         /// 
@@ -19,11 +20,25 @@
             {
                 if (!IsGenerated)
                 {
-                    _value = _valueFactory.Invoke();
-                    IsGenerated = true;
+                    try
+                    {
+                        _value = _valueFactory.Invoke();
+                    }
+                    catch (Exception ex)
+                    {
+                        _exception = ex;
+                        throw;
+                    }
+                    finally
+                    {
+                        IsGenerated = true;
+                    }
                 }
 
-                return _value;
+                if (_exception is null)
+                    return _value;
+
+                else throw _exception;
             }
         }
 

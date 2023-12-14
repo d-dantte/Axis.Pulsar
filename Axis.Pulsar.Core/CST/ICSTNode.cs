@@ -1,6 +1,5 @@
 ﻿using Axis.Luna.Common;
 using Axis.Luna.Extensions;
-using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.CST
@@ -121,7 +120,8 @@ namespace Axis.Pulsar.Core.CST
         /// </summary>
         public readonly struct Terminal :
             ICSTNode,
-            IDefaultValueProvider<Terminal>
+            IDefaultValueProvider<Terminal>,
+            IEquatable<Terminal>
         {
             private readonly Tokens _tokens;
             private readonly string _name;
@@ -141,7 +141,7 @@ namespace Axis.Pulsar.Core.CST
                 _tokens = tokens;
 
                 _name = name.ThrowIf(
-                    n => !IProduction.SymbolPattern.IsMatch(n),
+                    string.IsNullOrWhiteSpace,
                     _ => new ArgumentException($"Invalid {nameof(name)}: '{name}'"));
             }
 
@@ -151,8 +151,12 @@ namespace Axis.Pulsar.Core.CST
 
             public override bool Equals(object? obj)
             {
-                return obj is Terminal other
-                    && _tokens.Equals(other.Tokens)
+                return obj is Terminal other && Equals(other);
+            }
+
+            public bool Equals(Terminal other)
+            {
+                return _tokens.Equals(other.Tokens)
                     && EqualityComparer<string>.Default.Equals(_name, other._name);
             }
 

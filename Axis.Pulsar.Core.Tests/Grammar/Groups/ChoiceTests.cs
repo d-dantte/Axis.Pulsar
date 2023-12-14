@@ -6,6 +6,7 @@ using Axis.Pulsar.Core.Utils;
 using Moq;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar.Errors;
+using Axis.Pulsar.Core.Lang;
 
 namespace Axis.Pulsar.Core.Tests.Grammar.Groups
 {

@@ -1,10 +1,10 @@
-﻿using Axis.Luna.Common.Results;
-using Axis.Luna.Extensions;
+﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Results;
+using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
 
-namespace Axis.Pulsar.Core.Grammar.Rules
+namespace Axis.Pulsar.Core.Grammar.Nodes
 {
     public class TerminalLiteral : IAtomicRule
     {
@@ -19,7 +19,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             Tokens = tokens ?? throw new ArgumentNullException(nameof(tokens));
             IsCaseInsensitive = isCaseInsensitive;
             Id = id.ThrowIfNot(
-                IProduction.SymbolPattern.IsMatch,
+                Production.SymbolPattern.IsMatch,
                 _ => new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
         }
 
@@ -36,21 +36,21 @@ namespace Axis.Pulsar.Core.Grammar.Rules
 
         public bool TryRecognize(
             TokenReader reader,
-            ProductionPath productionPath,
+            SymbolPath symbolPath,
             ILanguageContext context,
-            out IRecognitionResult<ICSTNode> result)
+            out NodeRecognitionResult result)
         {
             ArgumentNullException.ThrowIfNull(reader);
 
             var position = reader.Position;
-            var literalPath = productionPath.Next(Id);
+            var literalPath = symbolPath.Next(Id);
 
             if (reader.TryGetTokens(Tokens.Length, true, out var tokens)
                 && tokens.Equals(Tokens, !IsCaseInsensitive))
             {
                 result = ICSTNode
-                    .Of(literalPath.Name, tokens)
-                    .ApplyTo(RecognitionResult.Of);
+                    .Of(literalPath.Symbol, tokens)
+                    .ApplyTo(NodeRecognitionResult.Of);
                 return true;
             }
             else
@@ -58,7 +58,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules
                 reader.Reset(position);
                 result = FailedRecognitionError
                     .Of(literalPath, position)
-                    .ApplyTo(error => RecognitionResult.Of<ICSTNode>(error));
+                    .ApplyTo(NodeRecognitionResult.Of);
                 return false;
             }
         }

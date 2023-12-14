@@ -1,4 +1,4 @@
-﻿namespace Axis.Pulsar.Core.IO
+﻿namespace Axis.Pulsar.Core.Lang
 {
     /// <summary>
     /// 

@@ -1,4 +1,6 @@
-﻿namespace Axis.Pulsar.Core.Grammar
+﻿using Axis.Pulsar.Core.Grammar.Nodes;
+
+namespace Axis.Pulsar.Core.Grammar
 {
     /// <summary>
     /// 
@@ -20,7 +22,7 @@
         /// </summary>
         /// <param name="name"></param>
         /// <returns></returns>
-        public IProduction this[string name] { get; }
+        public Production this[string name] { get; }
 
         /// <summary>
         /// 
@@ -39,7 +41,7 @@
         /// </summary>
         /// <param name="name"></param>
         /// <returns></returns>
-        public IProduction GetProduction(string name);
+        public Production GetProduction(string name);
 
         /// <summary>
         /// 
@@ -47,6 +49,6 @@
         /// <param name="name"></param>
         /// <param name="production"></param>
         /// <returns></returns>
-        public bool TryGetProduction(string name, out IProduction? production);
+        public bool TryGetProduction(string name, out Production? production);
     }
 }

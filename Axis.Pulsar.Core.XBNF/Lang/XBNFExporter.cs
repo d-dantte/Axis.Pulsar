@@ -1,8 +1,8 @@
 ﻿using Axis.Luna.Extensions;
-using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Groups;
-using Axis.Pulsar.Core.Grammar.Rules;
-using Axis.Pulsar.Core.IO;
+using Axis.Pulsar.Core.Grammar.Nodes;
+using Axis.Pulsar.Core.Lang;
+using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.XBNF.Definitions;
 using System.Text;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
@@ -36,7 +36,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
                 .ToString();
         }
 
-        internal static string WriteRule(IRule rule, XBNFLanguageContext context)
+        internal static string WriteRule(INodeRule rule, XBNFLanguageContext context)
         {
             ArgumentNullException.ThrowIfNull(rule);
 
