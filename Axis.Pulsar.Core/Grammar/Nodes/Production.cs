@@ -22,12 +22,12 @@ namespace Axis.Pulsar.Core.Grammar.Nodes
         /// <summary>
         /// 
         /// </summary>
-        string Symbol { get; }
+        public string Symbol { get; }
 
         /// <summary>
         /// 
         /// </summary>
-        INodeRule Rule { get; }
+        public INodeRule Rule { get; }
 
         public Production(string symbol, INodeRule rule)
         {

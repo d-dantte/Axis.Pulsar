@@ -1,4 +1,5 @@
-﻿using Axis.Luna.Common.Results;
+﻿using Axis.Luna.Common;
+using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Results;
@@ -15,7 +16,9 @@ namespace Axis.Pulsar.Core.Grammar.Groups
     /// <see cref="CST.ICSTNode.NonTerminal"/> instance with zero child-nodes.
     /// </para>
     /// </summary>
-    public readonly struct Cardinality
+    public readonly struct Cardinality:
+        IEquatable<Cardinality>,
+        IDefaultValueProvider<Cardinality>
     {
         #region properties
         /// <summary>
@@ -31,6 +34,14 @@ namespace Axis.Pulsar.Core.Grammar.Groups
         public bool IsOpen => MaxOccurence is null;
 
         public bool IsClosed => !IsOpen;
+        #endregion
+
+        #region DefaultValueProvider
+
+        public bool IsDefault => MaxOccurence is null && MinOccurence == 0;
+
+        public static Cardinality Default => default;
+
         #endregion
 
         private Cardinality(int min, int? max = null)
@@ -49,8 +60,12 @@ namespace Axis.Pulsar.Core.Grammar.Groups
         #region overrides
         public override bool Equals(object? obj)
         {
-            return obj is Cardinality other
-                && other.MinOccurence == MinOccurence
+            return obj is Cardinality other && Equals(other);
+        }
+
+        public bool Equals(Cardinality other)
+        {
+            return other.MinOccurence == MinOccurence
                 && other.MaxOccurence == MaxOccurence;
         }
 
@@ -113,8 +128,8 @@ namespace Axis.Pulsar.Core.Grammar.Groups
 
             var occurence = 0;
             var position = reader.Position;
-            var results = new List<IRecognitionResult<INodeSequence>>();
-            IRecognitionResult<INodeSequence>? elementResult = null;
+            var nodeSequence = INodeSequence.Empty;
+            GroupRecognitionResult elementResult = GroupRecognitionResult.Of(nodeSequence);
 
             while (CanRepeat(occurence))
             {
@@ -125,7 +140,11 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                     context,
                     out elementResult))
                 {
-                    results.Add(elementResult);
+                    if (!elementResult.Is(out INodeSequence elementSequence))
+                        throw new InvalidOperationException(
+                            $"Invalid result: Expected sequence, found - {elementResult}");
+
+                    nodeSequence = nodeSequence.Append(elementSequence);
                     occurence++;
                 }
                 else
@@ -137,27 +156,24 @@ namespace Axis.Pulsar.Core.Grammar.Groups
 
             if (IsValidRange(occurence))
             {
-                result = results.Fold((acc, next) => acc.Append(next));
+                result = GroupRecognitionResult.Of(nodeSequence);
                 return true;
             }
             else
             {
                 reader.Reset(position);
-                var nodes = results
-                    .Fold((acc, next) => acc.Append(next))
-                    .Resolve();
+                result = elementResult.MapMatch(
 
-                result = elementResult switch
-                {
-                    null => FailedRecognitionError
+                    // data, but since the range wasn't valid...
+                    _ => FailedRecognitionError
                         .Of(symbolPath, position)
-                        .ApplyTo(GroupRecognitionError.Of)
-                        .ApplyTo(error => RecognitionResult.Of<INodeSequence>(error)),
+                        .ApplyTo(error => GroupRecognitionError.Of(error, nodeSequence.Count))
+                        .ApplyTo(GroupRecognitionResult.Of),
 
-                    _ => elementResult.TransformError((GroupRecognitionError gre) => GroupRecognitionError.Of(
-                            gre.Cause,
-                            nodes.Count + gre.ElementCount))
-                };
+                    // GroupRecognitionError
+                    gre => GroupRecognitionError
+                        .Of(gre.Cause, nodeSequence.Count + gre.ElementCount)
+                        .ApplyTo(GroupRecognitionResult.Of));
 
                 return false;
             }

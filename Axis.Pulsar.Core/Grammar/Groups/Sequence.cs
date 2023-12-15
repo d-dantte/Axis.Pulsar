@@ -36,33 +36,44 @@ namespace Axis.Pulsar.Core.Grammar.Groups
 
         public bool TryRecognize(
             TokenReader reader,
-            ProductionPath parentPath,
+            SymbolPath symbolPath,
             ILanguageContext context,
-            out IRecognitionResult<INodeSequence> result)
+            out GroupRecognitionResult result)
         {
             ArgumentNullException.ThrowIfNull(reader);
-            ArgumentNullException.ThrowIfNull(parentPath);
+            ArgumentNullException.ThrowIfNull(symbolPath);
 
             var position = reader.Position;
-            var nodes = new List<IRecognitionResult<INodeSequence>>();
+            var nodeSequence = INodeSequence.Empty;
+            var elementResult = GroupRecognitionResult.Of(INodeSequence.Empty);
             foreach (var element in Elements)
             {
-                if (element.Cardinality.TryRepeat(reader, parentPath, context, element, out var elementResult))
-                    nodes.Add(elementResult);
+                if (element.Cardinality.TryRepeat(reader, symbolPath, context, element, out elementResult))
+                {
+                    if (!elementResult.Is(out INodeSequence elementSequence))
+                        throw new InvalidOperationException(
+                            $"Invalid result: Expected sequence, found - {elementResult}");
 
+                    nodeSequence = nodeSequence.Append(elementSequence);
+                }
                 else
                 {
                     reader.Reset(position);
-                    result = elementResult.TransformError((GroupRecognitionError gre) => GroupRecognitionError.Of(
-                        gre.Cause,
-                        nodes.Count + gre.ElementCount));
-
-                    return false;
+                    break;
                 }
             }
 
-            result = nodes.Fold((acc, next) => acc.Append(next));
-            return true;
+            result = elementResult.MapMatch(
+
+                // last element was recognized
+                _ => GroupRecognitionResult.Of(nodeSequence),
+
+                // GroupRecognitionError
+                gre => GroupRecognitionError
+                    .Of(gre.Cause, gre.ElementCount + nodeSequence.Count)
+                    .ApplyTo(GroupRecognitionResult.Of));
+
+            return result.Is(out INodeSequence _);
         }
     }
 }

@@ -49,7 +49,7 @@ namespace Axis.Pulsar.Core.CST
 
         #region Nested types
         /// <summary>
-        /// 
+        /// make these structs?
         /// </summary>
         private class CollectionNodeSequence: INodeSequence
         {
@@ -68,7 +68,7 @@ namespace Axis.Pulsar.Core.CST
         }
 
         /// <summary>
-        /// 
+        /// make these structs?
         /// </summary>
         private class ConcatenatedNodeSequence: INodeSequence
         {

@@ -1,7 +1,4 @@
-﻿using Axis.Luna.Common.Results;
-using Axis.Luna.Extensions;
-using Axis.Pulsar.Core.CST;
-using Axis.Pulsar.Core.Grammar.Errors;
+﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
@@ -36,22 +33,22 @@ namespace Axis.Pulsar.Core.Grammar.Groups
 
         public bool TryRecognize(
             TokenReader reader,
-            ProductionPath parentPath,
+            SymbolPath symbolPath,
             ILanguageContext context,
-            out IRecognitionResult<INodeSequence> result)
+            out GroupRecognitionResult result)
         {
             ArgumentNullException.ThrowIfNull(reader);
-            ArgumentNullException.ThrowIfNull(parentPath);
+            ArgumentNullException.ThrowIfNull(symbolPath);
 
             var position = reader.Position;
             foreach(var element in Elements)
             {
-                if (element.Cardinality.TryRepeat(reader, parentPath, context, element, out result))
+                if (element.Cardinality.TryRepeat(reader, symbolPath, context, element, out result))
                     return true;
 
                 reader.Reset(position);
 
-                if (result.IsError(out GroupRecognitionError gre)
+                if (result.Is(out GroupRecognitionError gre)
                     && gre.Cause is FailedRecognitionError)
                     continue;
                 
@@ -60,9 +57,9 @@ namespace Axis.Pulsar.Core.Grammar.Groups
 
             reader.Reset(position);
             result = FailedRecognitionError
-                .Of(parentPath, position)
-                .ApplyTo(GroupRecognitionError.Of)
-                .ApplyTo(error => RecognitionResult.Of<INodeSequence>(error));
+                .Of(symbolPath, position)
+                .ApplyTo(error => GroupRecognitionError.Of(error))
+                .ApplyTo(GroupRecognitionResult.Of);
 
             return false;
         }

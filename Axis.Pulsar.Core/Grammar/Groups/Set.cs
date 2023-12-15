@@ -1,5 +1,4 @@
-﻿using Axis.Luna.Common.Results;
-using Axis.Luna.Extensions;
+﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Lang;
@@ -48,16 +47,16 @@ namespace Axis.Pulsar.Core.Grammar.Groups
 
         public bool TryRecognize(
             TokenReader reader,
-            ProductionPath parentPath,
+            SymbolPath symbolPath,
             ILanguageContext context,
-            out IRecognitionResult<INodeSequence> result)
+            out GroupRecognitionResult result)
         {
             ArgumentNullException.ThrowIfNull(reader);
-            ArgumentNullException.ThrowIfNull(parentPath);
+            ArgumentNullException.ThrowIfNull(symbolPath);
 
             var position = reader.Position;
             var elementList = Elements.Reverse().ToList();
-            var results = new List<IRecognitionResult<INodeSequence>>();
+            var nodeSequence = INodeSequence.Empty;
             bool isElementConsumed = false;
             do
             {
@@ -66,14 +65,18 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                 for (int index = elementList.Count - 1; index >= 0; index--)
                 {
                     var elt = elementList[index];
-                    if (elt.Cardinality.TryRepeat(reader, parentPath, context, elt, out var groupResult))
+                    if (elt.Cardinality.TryRepeat(reader, symbolPath, context, elt, out var elementResult))
                     {
-                        results.Add(groupResult);
+                        if (!elementResult.Is(out INodeSequence elementSequence))
+                            throw new InvalidOperationException(
+                                $"Invalid result: Expected sequence, found - {elementResult}");
+
+                        nodeSequence = nodeSequence.Append(elementSequence);
                         elementList.RemoveAt(index);
                         isElementConsumed = true;
                         break;
                     }
-                    else if (groupResult.IsError(out GroupRecognitionError gre)
+                    else if (elementResult.Is(out GroupRecognitionError gre)
                         && gre.Cause is FailedRecognitionError)
                     {
                         reader.Reset(stepPosition);
@@ -82,32 +85,32 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                     else
                     {
                         reader.Reset(stepPosition);
-                        result = groupResult;
+                        result = elementResult;
                         return false;
                     }
                 }
             }
             while (isElementConsumed);
 
-            if (results.Count == Elements.Length || results.Count >= MinRecognitionCount)
+            if (nodeSequence.Count == Elements.Length || nodeSequence.Count >= MinRecognitionCount)
             {
-                result = results.Fold((acc, next) => acc.Append(next));
+                result = GroupRecognitionResult.Of(nodeSequence);
                 return true;
             }
-            else if (results.Count == 0)
+            else if (nodeSequence.Count == 0)
             {
                 result = FailedRecognitionError
-                    .Of(parentPath, position)
-                    .ApplyTo(GroupRecognitionError.Of)
-                    .ApplyTo(error => RecognitionResult.Of<INodeSequence>(error));
+                    .Of(symbolPath, position)
+                    .ApplyTo(fre => GroupRecognitionError.Of(fre))
+                    .ApplyTo(GroupRecognitionResult.Of);
                 return false;
             }
             else
             {
                 result = PartialRecognitionError
-                    .Of(parentPath, position, reader.Position - position)
-                    .ApplyTo(fre => GroupRecognitionError.Of(fre, results.Count))
-                    .ApplyTo(error => RecognitionResult.Of<INodeSequence>(error));
+                    .Of(symbolPath, position, reader.Position - position)
+                    .ApplyTo(pre => GroupRecognitionError.Of(pre, nodeSequence.Count))
+                    .ApplyTo(GroupRecognitionResult.Of);
                 return false;
             }
         }

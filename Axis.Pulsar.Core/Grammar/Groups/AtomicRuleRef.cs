@@ -28,31 +28,35 @@ namespace Axis.Pulsar.Core.Grammar.Groups
 
         public bool TryRecognize(
             TokenReader reader,
-            ProductionPath parentPath,
+            SymbolPath symbolPath,
             ILanguageContext context,
-            out IRecognitionResult<INodeSequence> result)
+            out GroupRecognitionResult result)
         {
             ArgumentNullException.ThrowIfNull(reader);
-            ArgumentNullException.ThrowIfNull(parentPath);
+            ArgumentNullException.ThrowIfNull(symbolPath);
 
             var position = reader.Position;
-            if (!Ref.TryRecognize(reader, parentPath, context, out var ruleResult))
-            {
+            if (!Ref.TryRecognize(reader, symbolPath, context, out var ruleResult))
                 reader.Reset(position);
-                result = ruleResult
-                    .TransformError(err => err switch
-                    {
-                        FailedRecognitionError
-                        or PartialRecognitionError => GroupRecognitionError.Of((IRecognitionError)err, 0),
-                        _ => err
-                    })
-                    .MapAs<INodeSequence>();
 
-                return false;
-            }
+            result = ruleResult.MapMatch(
 
-            result = ruleResult.Map(node => INodeSequence.Of(node));
-            return true;
+                // data
+                data => INodeSequence
+                    .Of(data)
+                    .ApplyTo(GroupRecognitionResult.Of),
+
+                // FailedRecognitionError
+                fre => GroupRecognitionError
+                    .Of(fre)
+                    .ApplyTo(GroupRecognitionResult.Of),
+
+                // PartialREcognitionError
+                pre => GroupRecognitionError
+                    .Of(pre)
+                    .ApplyTo(GroupRecognitionResult.Of));
+
+            return result.Is(out INodeSequence _);
         }
     }
 }
