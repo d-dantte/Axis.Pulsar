@@ -25,7 +25,7 @@ namespace Axis.Pulsar.Core.XBNF.Definitions
                 Enum.IsDefined,
                 _ => new ArgumentException($"Invalid content delimiter type: '{contentDelimiterType}' is undefined"));
             Id = id.ThrowIfNot(
-                IProduction.SymbolPattern.IsMatch,
+                Production.SymbolPattern.IsMatch,
                 _ => new FormatException($"Invalid {nameof(id)} format: '{id}'"));
         }
 

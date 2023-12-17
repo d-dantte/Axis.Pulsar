@@ -1,5 +1,4 @@
-﻿using Axis.Luna.Common.Results;
-using Axis.Pulsar.Core.CST;
+﻿using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Utils;
 
@@ -12,74 +11,72 @@ namespace Axis.Pulsar.Core.Tests.CST
         public void TryRecognizeTokens_Tests()
         {
             var reader = new TokenReader("<bleh bleh>");
-            var path = ProductionPath.Of("dummy");
+            var path = SymbolPath.Of("dummy");
             var parsed = PathParser.TryRecognizeTokens(reader, path, new object(), out var result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual(Tokens.Of("bleh bleh"), result.Resolve());
+            Assert.IsTrue(result.Is(out Tokens t));
+            Assert.AreEqual(Tokens.Of("bleh bleh"), t);
 
             reader = new TokenReader("<bleh \\> bleh>");
-            path = ProductionPath.Of("dummy");
+            path = SymbolPath.Of("dummy");
             parsed = PathParser.TryRecognizeTokens(reader, path, new object(), out result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual(Tokens.Of("bleh \\> bleh"), result.Resolve());
+            Assert.IsTrue(result.Is(out t));
+            Assert.AreEqual(Tokens.Of("bleh \\> bleh"), t);
 
             reader = new TokenReader("no delimiter");
-            path = ProductionPath.Of("dummy");
+            path = SymbolPath.Of("dummy");
             parsed = PathParser.TryRecognizeTokens(reader, path, new object(), out result);
             Assert.IsFalse(parsed);
-            Assert.IsTrue(result.IsErrorResult(out FailedRecognitionError _));
+            Assert.IsTrue(result.Is(out FailedRecognitionError _));
 
             reader = new TokenReader("<bleh \\h bleh>");
-            path = ProductionPath.Of("dummy");
+            path = SymbolPath.Of("dummy");
             parsed = PathParser.TryRecognizeTokens(reader, path, new object(), out result);
             Assert.IsFalse(parsed);
-            Assert.IsTrue(result.IsErrorResult());
-            Assert.IsTrue(result.IsErrorResult(out PartialRecognitionError xx));
+            Assert.IsTrue(result.Is(out PartialRecognitionError _));
 
             reader = new TokenReader("<abcd");
-            path = ProductionPath.Of("dummy");
+            path = SymbolPath.Of("dummy");
             parsed = PathParser.TryRecognizeTokens(reader, path, new object(), out result);
             Assert.IsFalse(parsed);
-            Assert.IsTrue(result.IsErrorResult());
-            Assert.IsTrue(result.IsErrorResult(out PartialRecognitionError _));
+            Assert.IsTrue(result.Is(out PartialRecognitionError _));
         }
 
         [TestMethod]
         public void TryRecongzeSymbolName_Tests()
         {
             var reader = new TokenReader("no-delimiter-symbol-name");
-            var path = ProductionPath.Of("dummy");
+            var path = SymbolPath.Of("dummy");
             var parsed = PathParser.TryRecognizeSymbolName(reader, path, new object(), out var result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual(Tokens.Of("no-delimiter-symbol-name"), result.Resolve());
+            Assert.IsTrue(result.Is(out Tokens t));
+            Assert.AreEqual(Tokens.Of("no-delimiter-symbol-name"), t);
 
             reader = new TokenReader(":delimited-symbol-name");
-            path = ProductionPath.Of("dummy");
+            path = SymbolPath.Of("dummy");
             parsed = PathParser.TryRecognizeSymbolName(reader, path, new object(), out result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual(Tokens.Of("delimited-symbol-name"), result.Resolve());
+            Assert.IsTrue(result.Is(out t));
+            Assert.AreEqual(Tokens.Of("delimited-symbol-name"), t);
 
             reader = new TokenReader("");
-            path = ProductionPath.Of("dummy");
+            path = SymbolPath.Of("dummy");
             parsed = PathParser.TryRecognizeSymbolName(reader, path, new object(), out result);
             Assert.IsFalse(parsed);
-            Assert.IsTrue(result.IsErrorResult(out FailedRecognitionError _));
+            Assert.IsTrue(result.Is(out FailedRecognitionError _));
 
             reader = new TokenReader("?name");
-            path = ProductionPath.Of("dummy");
+            path = SymbolPath.Of("dummy");
             parsed = PathParser.TryRecognizeSymbolName(reader, path, new object(), out result);
             Assert.IsFalse(parsed);
-            Assert.IsTrue(result.IsErrorResult(out FailedRecognitionError _));
+            Assert.IsTrue(result.Is(out FailedRecognitionError _));
 
             reader = new TokenReader("::name");
-            path = ProductionPath.Of("dummy");
+            path = SymbolPath.Of("dummy");
             parsed = PathParser.TryRecognizeSymbolName(reader, path, new object(), out result);
             Assert.IsFalse(parsed);
-            Assert.IsTrue(result.IsErrorResult(out PartialRecognitionError _));
+            Assert.IsTrue(result.Is(out PartialRecognitionError _));
         }
 
 
@@ -87,44 +84,44 @@ namespace Axis.Pulsar.Core.Tests.CST
         public void TryRecognizeFilterType_Tests()
         {
             var reader = new TokenReader("@n");
-            var path = ProductionPath.Of("dummy");
+            var path = SymbolPath.Of("dummy");
             var parsed = PathParser.TryRecognizeFilterType(reader, path, new object(), out var result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual(NodeType.NonTerminal, result.Resolve());
+            Assert.IsTrue(result.Is(out NodeType nt));
+            Assert.AreEqual(NodeType.NonTerminal, nt);
 
             reader = new TokenReader("@T");
-            path = ProductionPath.Of("dummy");
+            path = SymbolPath.Of("dummy");
             parsed = PathParser.TryRecognizeFilterType(reader, path, new object(), out result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual(NodeType.Terminal, result.Resolve());
+            Assert.IsTrue(result.Is(out nt));
+            Assert.AreEqual(NodeType.Terminal, nt);
 
             reader = new TokenReader("@U");
-            path = ProductionPath.Of("dummy");
+            path = SymbolPath.Of("dummy");
             parsed = PathParser.TryRecognizeFilterType(reader, path, new object(), out result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual(NodeType.Unspecified, result.Resolve());
+            Assert.IsTrue(result.Is(out nt));
+            Assert.AreEqual(NodeType.Unspecified, nt);
 
             reader = new TokenReader("bleh");
-            path = ProductionPath.Of("dummy");
+            path = SymbolPath.Of("dummy");
             parsed = PathParser.TryRecognizeFilterType(reader, path, new object(), out result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual(NodeType.Unspecified, result.Resolve());
+            Assert.IsTrue(result.Is(out nt));
+            Assert.AreEqual(NodeType.Unspecified, nt);
 
             reader = new TokenReader("");
-            path = ProductionPath.Of("dummy");
+            path = SymbolPath.Of("dummy");
             parsed = PathParser.TryRecognizeFilterType(reader, path, new object(), out result);
             Assert.IsFalse(parsed);
-            Assert.IsTrue(result.IsErrorResult(out FailedRecognitionError _));
+            Assert.IsTrue(result.Is(out FailedRecognitionError _));
 
             reader = new TokenReader("@p");
-            path = ProductionPath.Of("dummy");
+            path = SymbolPath.Of("dummy");
             parsed = PathParser.TryRecognizeFilterType(reader, path, new object(), out result);
             Assert.IsFalse(parsed);
-            Assert.IsTrue(result.IsErrorResult(out PartialRecognitionError _));
+            Assert.IsTrue(result.Is(out PartialRecognitionError _));
         }
 
         [TestMethod]
@@ -132,38 +129,38 @@ namespace Axis.Pulsar.Core.Tests.CST
         {
             var parsed = PathParser.TryRecognizeFilter("abc", "path", new object(), out var result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual("@U:abc", result.Resolve().ToString());
+            Assert.IsTrue(result.Is(out NodeFilter nf));
+            Assert.AreEqual("@U:abc", nf.ToString());
 
             parsed = PathParser.TryRecognizeFilter(":abc", "path", new object(), out result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual("@U:abc", result.Resolve().ToString());
+            Assert.IsTrue(result.Is(out nf));
+            Assert.AreEqual("@U:abc", nf.ToString());
 
             parsed = PathParser.TryRecognizeFilter("@u:abc", "path", new object(), out result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual("@U:abc", result.Resolve().ToString());
+            Assert.IsTrue(result.Is(out nf));
+            Assert.AreEqual("@U:abc", nf.ToString());
 
             parsed = PathParser.TryRecognizeFilter("@u:abc<tokens>", "path", new object(), out result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual("@U:abc<tokens>", result.Resolve().ToString());
+            Assert.IsTrue(result.Is(out nf));
+            Assert.AreEqual("@U:abc<tokens>", nf.ToString());
 
             parsed = PathParser.TryRecognizeFilter("@u<tokens>", "path", new object(), out result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual("@U<tokens>", result.Resolve().ToString());
+            Assert.IsTrue(result.Is(out nf));
+            Assert.AreEqual("@U<tokens>", nf.ToString());
 
             parsed = PathParser.TryRecognizeFilter("<tokens>", "path", new object(), out result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual("@U<tokens>", result.Resolve().ToString());
+            Assert.IsTrue(result.Is(out nf));
+            Assert.AreEqual("@U<tokens>", nf.ToString());
 
             parsed = PathParser.TryRecognizeFilter("symbol-name<tokens>", "path", new object(), out result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual("@U:symbol-name<tokens>", result.Resolve().ToString());
+            Assert.IsTrue(result.Is(out nf));
+            Assert.AreEqual("@U:symbol-name<tokens>", nf.ToString());
         }
 
         [TestMethod]
@@ -171,23 +168,23 @@ namespace Axis.Pulsar.Core.Tests.CST
         {
             var parsed = PathParser.TryRecognizeSegment("abc", "path", new object(), out var result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual("@U:abc", result.Resolve().ToString());
+            Assert.IsTrue(result.Is(out PathSegment ps));
+            Assert.AreEqual("@U:abc", ps.ToString());
 
             parsed = PathParser.TryRecognizeSegment("abc|@t", "path", new object(), out result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual("@U:abc|@T", result.Resolve().ToString());
+            Assert.IsTrue(result.Is(out ps));
+            Assert.AreEqual("@U:abc|@T", ps.ToString());
 
             parsed = PathParser.TryRecognizeSegment("abc|@t|:stuff", "path", new object(), out result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual("@U:abc|@T|@U:stuff", result.Resolve().ToString());
+            Assert.IsTrue(result.Is(out ps));
+            Assert.AreEqual("@U:abc|@T|@U:stuff", ps.ToString());
 
             parsed = PathParser.TryRecognizeSegment("abc|@t|:stuff|bleh<tokenized>", "path", new object(), out result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual("@U:abc|@T|@U:stuff|@U:bleh<tokenized>", result.Resolve().ToString());
+            Assert.IsTrue(result.Is(out ps));
+            Assert.AreEqual("@U:abc|@T|@U:stuff|@U:bleh<tokenized>", ps.ToString());
         }
 
         [TestMethod]
@@ -195,23 +192,22 @@ namespace Axis.Pulsar.Core.Tests.CST
         {
             var parsed = PathParser.TryRecognizePath("abc", out var result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual("@U:abc", result.Resolve().ToString());
+            Assert.IsTrue(result.Is(out NodePath np));
+            Assert.AreEqual("@U:abc", np.ToString());
 
 
             parsed = PathParser.TryRecognizePath("abc/@n:me/you|<them>", out result);
             Assert.IsTrue(parsed);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual("@U:abc/@N:me/@U:you|@U<them>", result.Resolve().ToString());
+            Assert.IsTrue(result.Is(out np));
+            Assert.AreEqual("@U:abc/@N:me/@U:you|@U<them>", np.ToString());
         }
 
         [TestMethod]
         public void ParsePath_Tests()
         {
-            var result = PathParser.Parse("abc/@n:me/you|<them>");
-            Assert.IsTrue(result.IsDataResult());
+            var path = PathParser.Parse("abc/@n:me/you|<them>");
+            Assert.IsNotNull(path);
 
-            var path = result.Resolve();
             Assert.AreEqual(3, path.Segments.Length);
 
             var segment = path.Segments[0];

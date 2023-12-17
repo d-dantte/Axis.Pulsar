@@ -1,4 +1,5 @@
 ﻿using Axis.Luna.Common.Results;
+using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Nodes;
 using Axis.Pulsar.Core.Utils;
@@ -21,35 +22,33 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
 
             var success = literal.TryRecognize(
                 "abcd efgh...other stuff",
-                ProductionPath.Of("dummy-path"),
+                SymbolPath.Of("dummy-path"),
                 null!,
                 out var result);
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var node = result.Resolve();
+            Assert.IsTrue(result.Is(out ICSTNode node));
             Assert.AreEqual("t", node.Name);
             Assert.AreEqual(Tokens.Of("abcd efgh"), node.Tokens);
 
 
             success = literal.TryRecognize(
                 "abcd exgh...other stuff",
-                ProductionPath.Of("dummy-path"),
+                SymbolPath.Of("dummy-path"),
                 null!,
                 out result);
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            node = result.Resolve();
+            Assert.IsTrue(result.Is(out node));
             Assert.AreEqual("t", node.Name);
             Assert.AreEqual(Tokens.Of("abcd e"), node.Tokens);
 
 
             success = literal.TryRecognize(
                 "not-stuff",
-                ProductionPath.Of("dummy-path"),
+                SymbolPath.Of("dummy-path"),
                 null!,
                 out result);
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult(out FailedRecognitionError ute));
+            Assert.IsTrue(result.Is(out FailedRecognitionError _));
         }
     }
 }

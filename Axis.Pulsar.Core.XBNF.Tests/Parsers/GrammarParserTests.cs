@@ -2,9 +2,9 @@
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
-using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Groups;
 using Axis.Pulsar.Core.Grammar.Nodes;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
 using Axis.Pulsar.Core.XBNF.Definitions;
@@ -29,7 +29,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 .NewBuilder()
                 .Build()
                 .ApplyTo(x => new ParserContext(x));
-            var parentPath = ProductionPath.Of("parent");
+            var parentPath = SymbolPath.Of("parent");
 
             // new line
             var success = GrammarParser.TryParseWhitespace(
@@ -39,8 +39,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var ws = result.Resolve();
+            Assert.IsTrue(result.Is(out Whitespace ws));
             Assert.AreEqual(Whitespace.WhitespaceChar.LineFeed, ws.Char);
 
             // carriage return
@@ -51,8 +50,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            ws = result.Resolve();
+            Assert.IsTrue(result.Is(out ws));
             Assert.AreEqual(Whitespace.WhitespaceChar.CarriageReturn, ws.Char);
 
             // tab
@@ -63,8 +61,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            ws = result.Resolve();
+            Assert.IsTrue(result.Is(out ws));
             Assert.AreEqual(Whitespace.WhitespaceChar.Tab, ws.Char);
 
             // space
@@ -75,8 +72,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            ws = result.Resolve();
+            Assert.IsTrue(result.Is(out ws));
             Assert.AreEqual(Whitespace.WhitespaceChar.Space, ws.Char);
 
             // any other char
@@ -87,7 +83,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult(out FailedRecognitionError ume));
+            Assert.IsTrue(result.Is(out FailedRecognitionError ume));
 
         }
 
@@ -98,7 +94,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 .NewBuilder()
                 .Build()
                 .ApplyTo(x => new ParserContext(x));
-            var parentPath = ProductionPath.Of("parent");
+            var parentPath = SymbolPath.Of("parent");
 
             // comment
             var comment = "# and stuff that doesn't end in a new line";
@@ -109,8 +105,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var lc = result.Resolve();
+            Assert.IsTrue(result.Is(out LineComment lc));
             Assert.AreEqual(comment[1..], lc.Content.ToString());
 
             // comment with new line
@@ -122,8 +117,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            lc = result.Resolve();
+            Assert.IsTrue(result.Is(out lc));
             Assert.AreEqual(comment[1..35], lc.Content.ToString());
 
             // comment with carriage return
@@ -135,8 +129,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            lc = result.Resolve();
+            Assert.IsTrue(result.Is(out lc));
             Assert.AreEqual(comment[1..35], lc.Content.ToString());
 
             // comment with windows new-line
@@ -148,8 +141,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            lc = result.Resolve();
+            Assert.IsTrue(result.Is(out lc));
             Assert.AreEqual(comment[1..35], lc.Content.ToString());
         }
 
@@ -170,9 +162,8 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
+            Assert.IsTrue(result.Is(out BlockComment bc));
             Assert.IsTrue(comment.IsConsumed);
-            var bc = result.Resolve();
             Assert.AreEqual(comment.Source[2..^2], bc.Content.ToString());
 
             // same-line block comment
@@ -184,9 +175,8 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
+            Assert.IsTrue(result.Is(out bc));
             Assert.IsTrue(comment.IsConsumed);
-            bc = result.Resolve();
             Assert.AreEqual(comment.Source[2..^2], bc.Content.ToString());
         }
 
@@ -205,8 +195,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var sb = result.Resolve();
+            Assert.IsTrue(result.Is(out SilentBlock sb));
             Assert.AreEqual(1, sb.Elements.Length);
             Assert.AreEqual(" ", sb.Elements[0].Content.ToString());
 
@@ -219,8 +208,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            sb = result.Resolve();
+            Assert.IsTrue(result.Is(out sb));
             Assert.AreEqual(5, sb.Elements.Length);
             Assert.IsInstanceOfType<Whitespace>(sb.Elements[0]);
             Assert.IsInstanceOfType<Whitespace>(sb.Elements[1]);
@@ -237,8 +225,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            sb = result.Resolve();
+            Assert.IsTrue(result.Is(out sb));
             Assert.AreEqual(5, sb.Elements.Length);
             Assert.IsInstanceOfType<Whitespace>(sb.Elements[0]);
             Assert.IsInstanceOfType<Whitespace>(sb.Elements[1]);
@@ -248,7 +235,6 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
         }
 
         #endregion
-
 
         #region Atomic Rule
 
@@ -268,10 +254,9 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var argPair = result.Resolve();
-            Assert.AreEqual("arg-name", argPair.Argument.ToString());
-            Assert.IsNull(argPair.Value);
+            Assert.IsTrue(result.Is(out Parameter param));
+            Assert.AreEqual("arg-name", param.Argument.ToString());
+            Assert.IsNull(param.Value);
 
             // args / value
             success = GrammarParser.TryParseArgument(
@@ -281,10 +266,9 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            argPair = result.Resolve();
-            Assert.AreEqual("arg-name", argPair.Argument.ToString());
-            Assert.AreEqual("value", argPair.Value);
+            Assert.IsTrue(result.Is(out param));
+            Assert.AreEqual("arg-name", param.Argument.ToString());
+            Assert.AreEqual("value", param.Value);
 
             // args / value
             success = GrammarParser.TryParseArgument(
@@ -294,10 +278,9 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            argPair = result.Resolve();
-            Assert.AreEqual("arg-name", argPair.Argument.ToString());
-            Assert.AreEqual("value2", argPair.Value);
+            Assert.IsTrue(result.Is(out param));
+            Assert.AreEqual("arg-name", param.Argument.ToString());
+            Assert.AreEqual("value2", param.Value);
 
             // args / bool
             success = GrammarParser.TryParseArgument(
@@ -307,10 +290,9 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            argPair = result.Resolve();
-            Assert.AreEqual("arg-name", argPair.Argument.ToString());
-            Assert.AreEqual("True", argPair.Value);
+            Assert.IsTrue(result.Is(out param));
+            Assert.AreEqual("arg-name", param.Argument.ToString());
+            Assert.AreEqual("True", param.Value);
 
             // args / number
             success = GrammarParser.TryParseArgument(
@@ -320,10 +302,9 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            argPair = result.Resolve();
-            Assert.AreEqual("arg-name", argPair.Argument.ToString());
-            Assert.AreEqual("34", argPair.Value);
+            Assert.IsTrue(result.Is(out param));
+            Assert.AreEqual("arg-name", param.Argument.ToString());
+            Assert.AreEqual("34", param.Value);
 
 
             success = GrammarParser.TryParseArgument(
@@ -333,10 +314,9 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            argPair = result.Resolve();
-            Assert.AreEqual("arg-name", argPair.Argument.ToString());
-            Assert.AreEqual("34.54", argPair.Value);
+            Assert.IsTrue(result.Is(out param));
+            Assert.AreEqual("arg-name", param.Argument.ToString());
+            Assert.AreEqual("34.54", param.Value);
         }
 
         [TestMethod]
@@ -355,8 +335,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var args = result.Resolve();
+            Assert.IsTrue(result.Is(out Parameter[] args));
             Assert.AreEqual(1, args.Length);
 
             // args / value
@@ -367,8 +346,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            args = result.Resolve();
+            Assert.IsTrue(result.Is(out args));
             Assert.AreEqual(3, args.Length);
 
             // args / value
@@ -379,8 +357,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            args = result.Resolve();
+            Assert.IsTrue(result.Is(out args));
             Assert.AreEqual(4, args.Length);
         }
 
@@ -401,8 +378,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var info = result.Resolve();
+            Assert.IsTrue(result.Is(out string info));
             Assert.IsTrue(info.Equals("the content\\\""));
 
 
@@ -415,8 +391,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            info = result.Resolve();
+            Assert.IsTrue(result.Is(out info));
             Assert.IsTrue(info.Equals("the content, and its concatenation"));
 
 
@@ -429,8 +404,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            info = result.Resolve();
+            Assert.IsTrue(result.Is(out info));
             Assert.IsTrue(info.Equals("the content, and its concatenation"));
         }
 
@@ -450,8 +424,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var info = result.Resolve();
+            Assert.IsTrue(result.Is(out Parameter info));
             Assert.AreEqual(ContentArgumentDelimiter.Quote, info.Argument.As<ContentArgument>().Delimiter);
             Assert.IsTrue(info.Value!.Equals("the content\\'"));
 
@@ -463,8 +436,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            info = result.Resolve();
+            Assert.IsTrue(result.Is(out info));
             Assert.AreEqual(ContentArgumentDelimiter.DoubleQuote, info.Argument.As<ContentArgument>().Delimiter);
             Assert.IsTrue(info.Value!.Equals("the content\\\""));
 
@@ -476,8 +448,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            info = result.Resolve();
+            Assert.IsTrue(result.Is(out info));
             Assert.AreEqual(ContentArgumentDelimiter.Grave, info.Argument.As<ContentArgument>().Delimiter);
             Assert.IsTrue(info.Value!.Equals("the content\\`"));
 
@@ -489,8 +460,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            info = result.Resolve();
+            Assert.IsTrue(result.Is(out info));
             Assert.AreEqual(ContentArgumentDelimiter.Sol, info.Argument.As<ContentArgument>().Delimiter);
             Assert.IsTrue(info.Value!.Equals("the content\\/"));
 
@@ -502,8 +472,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            info = result.Resolve();
+            Assert.IsTrue(result.Is(out info));
             Assert.AreEqual(ContentArgumentDelimiter.BackSol, info.Argument.As<ContentArgument>().Delimiter);
             Assert.IsTrue(info.Value!.Equals("the content\\\\"));
 
@@ -515,8 +484,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            info = result.Resolve();
+            Assert.IsTrue(result.Is(out info));
             Assert.AreEqual(ContentArgumentDelimiter.VerticalBar, info.Argument.As<ContentArgument>().Delimiter);
             Assert.IsTrue(info.Value!.Equals("the content\\|"));
         }
@@ -544,8 +512,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var rule = result.Resolve();
+            Assert.IsTrue(result.Is(out IAtomicRule rule));
             Assert.IsInstanceOfType<WindowsNewLine>(rule);
 
             success = GrammarParser.TryParseAtomicRule(
@@ -555,8 +522,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            rule = result.Resolve();
+            Assert.IsTrue(result.Is(out rule));
             Assert.IsInstanceOfType<WindowsNewLine>(rule);
             #endregion
 
@@ -568,8 +534,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            rule = result.Resolve();
+            Assert.IsTrue(result.Is(out rule));
             Assert.IsInstanceOfType<TerminalLiteral>(rule);
             var literal = rule.As<TerminalLiteral>();
             Assert.IsFalse(literal.IsCaseInsensitive);
@@ -582,8 +547,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            rule = result.Resolve();
+            Assert.IsTrue(result.Is(out rule));
             Assert.IsInstanceOfType<TerminalLiteral>(rule);
             literal = rule.As<TerminalLiteral>();
             Assert.IsTrue(literal.IsCaseInsensitive);
@@ -598,8 +562,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            rule = result.Resolve();
+            Assert.IsTrue(result.Is(out rule));
             Assert.IsInstanceOfType<TerminalPattern>(rule);
             var pattern = rule.As<TerminalPattern>();
             Assert.AreEqual(IMatchType.Of(1), pattern.MatchType);
@@ -613,8 +576,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            rule = result.Resolve();
+            Assert.IsTrue(result.Is(out rule));
             Assert.IsInstanceOfType<TerminalPattern>(rule);
             pattern = rule.As<TerminalPattern>();
             Assert.AreEqual(IMatchType.Of(1), pattern.MatchType);
@@ -631,8 +593,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            rule = result.Resolve();
+            Assert.IsTrue(result.Is(out rule));
             pattern = rule.As<TerminalPattern>();
             Assert.AreEqual(IMatchType.Of(1, 1), pattern.MatchType);
             Assert.AreEqual("the pattern", pattern.Pattern.ToString());
@@ -644,8 +605,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            rule = result.Resolve();
+            Assert.IsTrue(result.Is(out rule));
             pattern = rule.As<TerminalPattern>();
             Assert.AreEqual(IMatchType.Of(1, false), pattern.MatchType);
             Assert.AreEqual("the pattern", pattern.Pattern.ToString());
@@ -659,8 +619,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            rule = result.Resolve();
+            Assert.IsTrue(result.Is(out rule));
             Assert.IsInstanceOfType<CharacterRanges>(rule);
             var charRange = rule.As<CharacterRanges>();
             Assert.AreEqual(3, charRange.ExcludeList.Length);
@@ -676,8 +635,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            rule = result.Resolve();
+            Assert.IsTrue(result.Is(out rule));
             var dstring = rule.As<DelimitedString>();
             Assert.AreEqual("(", dstring.StartDelimiter);
             Assert.AreEqual(")", dstring.EndDelimiter);
@@ -703,8 +661,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var threshold = result.Resolve();
+            Assert.IsTrue(result.Is(out uint threshold));
             Assert.AreEqual(2u, threshold);
 
             success = GrammarParser.TryParseRecognitionThreshold(
@@ -714,7 +671,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult(out FailedRecognitionError _));
+            Assert.IsTrue(result.Is(out FailedRecognitionError _));
 
             success = GrammarParser.TryParseRecognitionThreshold(
                 ":x2 ",
@@ -723,8 +680,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult(out PartialRecognitionError _));
-
+            Assert.IsTrue(result.Is(out PartialRecognitionError _));
         }
 
 
@@ -743,8 +699,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var cardinality = result.Resolve();
+            Assert.IsTrue(result.Is(out Cardinality cardinality));
             Assert.AreEqual(Cardinality.OccursOnlyOnce(), cardinality);
 
             success = GrammarParser.TryParseCardinality(
@@ -754,8 +709,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            cardinality = result.Resolve();
+            Assert.IsTrue(result.Is(out cardinality));
             Assert.AreEqual(Cardinality.OccursAtLeast(3), cardinality);
 
             success = GrammarParser.TryParseCardinality(
@@ -765,8 +719,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            cardinality = result.Resolve();
+            Assert.IsTrue(result.Is(out cardinality));
             Assert.AreEqual(Cardinality.Occurs(1, 2), cardinality);
 
             success = GrammarParser.TryParseCardinality(
@@ -776,8 +729,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            cardinality = result.Resolve();
+            Assert.IsTrue(result.Is(out cardinality));
             Assert.AreEqual(Cardinality.OccursNeverOrMore(), cardinality);
 
             success = GrammarParser.TryParseCardinality(
@@ -787,8 +739,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            cardinality = result.Resolve();
+            Assert.IsTrue(result.Is(out cardinality));
             Assert.AreEqual(Cardinality.OccursOptionally(), cardinality);
 
             success = GrammarParser.TryParseCardinality(
@@ -798,10 +749,8 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            cardinality = result.Resolve();
+            Assert.IsTrue(result.Is(out cardinality));
             Assert.AreEqual(Cardinality.OccursAtLeastOnce(), cardinality);
-
         }
 
 
@@ -820,8 +769,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var @ref = result.Resolve();
+            Assert.IsTrue(result.Is(out ProductionRef @ref));
             Assert.AreEqual("symbol", @ref.Ref);
             Assert.AreEqual(Cardinality.OccursOptionally(), @ref.Cardinality);
 
@@ -832,8 +780,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            @ref = result.Resolve();
+            Assert.IsTrue(result.Is(out @ref));
             Assert.AreEqual("symbol", @ref.Ref);
             Assert.AreEqual(Cardinality.OccursOnlyOnce(), @ref.Cardinality);
         }
@@ -858,8 +805,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var @ref = result.Resolve();
+            Assert.IsTrue(result.Is(out AtomicRuleRef @ref));
             Assert.AreEqual(Cardinality.OccursOptionally(), @ref.Cardinality);
             Assert.IsInstanceOfType<WindowsNewLine>(@ref.Ref);
 
@@ -870,8 +816,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            @ref = result.Resolve();
+            Assert.IsTrue(result.Is(out @ref));
             Assert.AreEqual(Cardinality.OccursOnly(2), @ref.Cardinality);
             Assert.IsInstanceOfType<TerminalPattern>(@ref.Ref);
 
@@ -896,8 +841,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var element = result.Resolve();
+            Assert.IsTrue(result.Is(out IGroupElement element));
             Assert.AreEqual(Cardinality.OccursOnlyOnce(), element.Cardinality);
             Assert.IsInstanceOfType<AtomicRuleRef>(element);
 
@@ -908,8 +852,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            element = result.Resolve();
+            Assert.IsTrue(result.Is(out element));
             Assert.AreEqual(Cardinality.OccursOnlyOnce(), element.Cardinality);
             Assert.IsInstanceOfType<ProductionRef>(element);
         }
@@ -933,8 +876,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var options = result.Resolve();
+            Assert.IsTrue(result.Is(out IGroupElement[] options));
             Assert.AreEqual(2, options.Length);
 
 
@@ -945,8 +887,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            options = result.Resolve();
+            Assert.IsTrue(result.Is(out options));
             Assert.AreEqual(1, options.Length);
 
 
@@ -957,8 +898,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            options = result.Resolve();
+            Assert.IsTrue(result.Is(out options));
             Assert.AreEqual(3, options.Length);
 
 
@@ -968,8 +908,9 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 metaContext,
                 out result);
 
-            Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult(out PartialRecognitionError fme));
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.Is(out IGroupElement[] elements));
+            Assert.AreEqual(0, elements.Length);
         }
 
         [TestMethod]
@@ -984,7 +925,6 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 .Build()
                 .ApplyTo(x => new ParserContext(x));
 
-
             var success = GrammarParser.TryParseChoice(
                 "?[ $stuff $other-stuff ].1,5",
                 "parent",
@@ -992,8 +932,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var choice = result.Resolve();
+            Assert.IsTrue(result.Is(out Choice choice));
             Assert.AreEqual(2, choice.Elements.Length);
             Assert.AreEqual(Cardinality.Occurs(1, 5), choice.Cardinality);
         }
@@ -1018,8 +957,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var sequence = result.Resolve();
+            Assert.IsTrue(result.Is(out Sequence sequence));
             Assert.AreEqual(2, sequence.Elements.Length);
             Assert.AreEqual(Cardinality.Occurs(1, 5), sequence.Cardinality);
 
@@ -1031,8 +969,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            sequence = result.Resolve();
+            Assert.IsTrue(result.Is(out sequence));
             Assert.AreEqual(2, sequence.Elements.Length);
             Assert.AreEqual(Cardinality.OccursOnlyOnce(), sequence.Cardinality);
         }
@@ -1057,8 +994,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var set = result.Resolve();
+            Assert.IsTrue(result.Is(out Set set));
             Assert.AreEqual(2, set.Elements.Length);
             Assert.AreEqual(Cardinality.OccursOnlyOnce(), set.Cardinality);
 
@@ -1070,8 +1006,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            set = result.Resolve();
+            Assert.IsTrue(result.Is(out set));
             Assert.AreEqual(2, set.Elements.Length);
             Assert.AreEqual(Cardinality.OccursOnlyOnce(), set.Cardinality);
             Assert.AreEqual(5, set.MinRecognitionCount);
@@ -1092,8 +1027,8 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.IsInstanceOfType<Set>(result.Resolve());
+            Assert.IsTrue(result.Is(out IGroup group));
+            Assert.IsInstanceOfType<Set>(group);
 
             success = GrammarParser.TryParseGroup(
                 "+[$tuff]",
@@ -1102,8 +1037,8 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.IsInstanceOfType<Sequence>(result.Resolve());
+            Assert.IsTrue(result.Is(out group));
+            Assert.IsInstanceOfType<Sequence>(group);
 
             success = GrammarParser.TryParseGroup(
                 "?[$tuff]",
@@ -1112,8 +1047,8 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.IsInstanceOfType<Choice>(result.Resolve());
+            Assert.IsTrue(result.Is(out group));
+            Assert.IsInstanceOfType<Choice>(group);
 
             metaContext = MetaContextBuilder
                 .NewBuilder()
@@ -1139,8 +1074,8 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 ]");
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.IsInstanceOfType<Sequence>(result.Resolve());
+            Assert.IsTrue(result.Is(out group));
+            Assert.IsInstanceOfType<Sequence>(group);
         }
 
         [TestMethod]
@@ -1158,8 +1093,8 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.IsInstanceOfType<NonTerminal>(result.Resolve());
+            Assert.IsTrue(result.Is(out ICompositeRule rule));
+            Assert.IsInstanceOfType<NonTerminal>(rule);
         }
 
         #endregion
@@ -1181,8 +1116,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var opTokens = result.Resolve();
+            Assert.IsTrue(result.Is(out Tokens opTokens));
             Assert.IsTrue(opTokens.Equals("->"));
         }
 
@@ -1201,8 +1135,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var name = result.Resolve();
+            Assert.IsTrue(result.Is(out string name));
             Assert.AreEqual("name", name);
 
             success = GrammarParser.TryParseAtomicSymbolName(
@@ -1212,8 +1145,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            name = result.Resolve();
+            Assert.IsTrue(result.Is(out name));
             Assert.AreEqual("name-with-a-dash", name);
 
             success = GrammarParser.TryParseAtomicSymbolName(
@@ -1223,8 +1155,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            name = result.Resolve();
+            Assert.IsTrue(result.Is(out name));
             Assert.AreEqual("name-with-1234-numbers-and-dash-", name);
 
             success = GrammarParser.TryParseAtomicSymbolName(
@@ -1234,7 +1165,6 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult());
 
             success = GrammarParser.TryParseAtomicSymbolName(
                 "@7name",
@@ -1243,7 +1173,6 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult());
         }
 
         [TestMethod]
@@ -1261,8 +1190,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var name = result.Resolve();
+            Assert.IsTrue(result.Is(out string name));
             Assert.AreEqual("name", name);
 
             success = GrammarParser.TryParseCompositeSymbolName(
@@ -1272,8 +1200,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            name = result.Resolve();
+            Assert.IsTrue(result.Is(out name));
             Assert.AreEqual("name-with-a-dash", name);
 
             success = GrammarParser.TryParseCompositeSymbolName(
@@ -1283,8 +1210,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            name = result.Resolve();
+            Assert.IsTrue(result.Is(out name));
             Assert.AreEqual("name-with-1234-numbers-and-dash-", name);
 
             success = GrammarParser.TryParseCompositeSymbolName(
@@ -1294,7 +1220,6 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult());
 
             success = GrammarParser.TryParseCompositeSymbolName(
                 "$7name",
@@ -1303,7 +1228,6 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult());
         }
 
         [TestMethod]
@@ -1322,8 +1246,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var production = result.Resolve();
+            Assert.IsTrue(result.Is(out Production production));
             Assert.IsInstanceOfType<ICompositeRule>(production.Rule);
 
             success = GrammarParser.TryParseProduction(
@@ -1333,8 +1256,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            production = result.Resolve();
+            Assert.IsTrue(result.Is(out production));
             Assert.IsInstanceOfType<ICompositeRule>(production.Rule);
             var nt = production.Rule as NonTerminal;
             Assert.IsInstanceOfType<AtomicRuleRef>(nt!.Element);
@@ -1359,20 +1281,18 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var grammar = result.Resolve();
+            Assert.IsTrue(result.Is(out IGrammar grammar));
             Assert.AreEqual(5, grammar.ProductionCount);
             Assert.AreEqual("int", grammar.Root);
         }
         #endregion
-
 
         #region Nested types
         internal class WindowsNewLine : IAtomicRule
         {
             public string Id { get; set; } = string.Empty;
 
-            public bool TryRecognize(TokenReader reader, ProductionPath productionPath, ILanguageContext context, out IResult<ICSTNode> result)
+            public bool TryRecognize(TokenReader reader, SymbolPath productionPath, ILanguageContext context, out NodeRecognitionResult result)
             {
                 var position = reader.Position;
 
@@ -1380,7 +1300,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                     || '\r' != r[0])
                 {
                     reader.Reset(position);
-                    result = Result.Of<ICSTNode>(FailedRecognitionError.Of(productionPath, position));
+                    result = NodeRecognitionResult.Of(FailedRecognitionError.Of(productionPath, position));
                     return false;
                 }
 
@@ -1388,14 +1308,14 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                     || '\n' != n[0])
                 {
                     reader.Reset(position);
-                    result = Result.Of<ICSTNode>(PartialRecognitionError.Of(
+                    result = NodeRecognitionResult.Of(PartialRecognitionError.Of(
                         productionPath,
                         position,
                         r.Segment.Count));
                     return false;
                 }
 
-                result = Result.Of(ICSTNode.Of(productionPath.Name, r + n));
+                result = NodeRecognitionResult.Of(ICSTNode.Of(productionPath.Symbol, r + n));
                 return true;
             }
         }

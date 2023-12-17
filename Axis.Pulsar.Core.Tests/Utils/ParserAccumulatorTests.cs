@@ -1,343 +1,326 @@
-﻿using Axis.Luna.Common.Results;
+﻿using Axis.Luna.Common.Unions;
+using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Tests.Utils;
 
+
+using FailedError = FailedRecognitionError;
+using PartialError = PartialRecognitionError;
+
 [TestClass]
-public class ParserAccumulatorTests
+public class NodeRecognitionAccumulatorTests
 {
     [TestMethod]
     public void Construction_Tests()
     {
+        var accummulator = NodeRecognitionAccumulator.Of<int, string, object>(0);
+        Assert.IsFalse(accummulator.IsDefault);
+        Assert.IsTrue(accummulator.CanTryRequired);
+        Assert.IsTrue(accummulator.CanTryAlternatives);
 
-        #region Argument exceptions
-        Assert.ThrowsException<ArgumentNullException>(() => ParserAccumulator.Of(
-            null!,
-            "symbol",
-            new object(),
-            0));
-
-        Assert.ThrowsException<ArgumentNullException>(() => ParserAccumulator.Of(
-            "token reader",
-            default(string)!,
-            new object(),
-            0));
-
-        Assert.ThrowsException<ArgumentNullException>(() => ParserAccumulator.Of(
-            "token reader",
-            "symbol",
-            default(object)!,
-            0));
-        #endregion
-
-        var cxt = new object();
-        var accummulator = ParserAccumulator.Of(
-            "token reader",
-            "symbol",
-            cxt,
-            12);
-
-        Assert.IsFalse(accummulator.IsErrored);
-        Assert.IsFalse(accummulator.IsFailedRecognitionError);
+        accummulator = NodeRecognitionAccumulator.Of<int, string, object>(6);
+        Assert.IsFalse(accummulator.IsDefault);
+        Assert.IsTrue(accummulator.CanTryRequired);
+        Assert.IsTrue(accummulator.CanTryAlternatives);
     }
 
     [TestMethod]
     public void ThenTry_Tests()
     {
+
+        var accummulator = NodeRecognitionAccumulator.Of<int, string, object>(12);
+
         #region TryParseSuccess
-
-        var accummulator = ParserAccumulator.Of(
-            "stuff",
-            "symbol",
-            new object(),
-            12);
-
-        _ = accummulator.ThenTry<int>(
+        var rAccumulator = accummulator.ThenTry<int, SRR>(
             TryParseSuccess,
+            NodeRecognitionAccumulator.Args("stuff", "symbol", new object()),
             (x, y) => x + y + 1);
-        Assert.IsFalse(accummulator.IsErrored);
-        var data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(13, data);
+        Assert.IsTrue(rAccumulator.CanTryRequired);
+        Assert.IsFalse(rAccumulator.CanTryAlternatives);
+        Assert.AreEqual(14, rAccumulator.Data);
 
-        _ = accummulator.ThenTry<int>(
+        rAccumulator = accummulator.ThenTry<int, SRR>(
             TryParseSuccess,
+            NodeRecognitionAccumulator.Args("stuff", "symbol", new object()),
             (x, y) => x + y + 1,
-            x => 2 * x);
-        Assert.IsFalse(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(14, data);
+            (x, y) => 2 * x);
+        Assert.IsTrue(rAccumulator.CanTryRequired);
+        Assert.IsFalse(rAccumulator.CanTryAlternatives);
+        Assert.AreEqual(14, rAccumulator.Data);
         #endregion
 
         #region TryParseFailed
-        accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .ThenTry<int>(
-                TryParseFailed,
-                (x, y) => x + y);
-        Assert.IsTrue(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(0, data);
+        rAccumulator = accummulator.ThenTry<int, SRR>(
+            TryParseFailed,
+            NodeRecognitionAccumulator.Args("stuff", "symbol", new object()),
+            (x, y) => x + y + 1);
+        Assert.IsFalse(rAccumulator.CanTryRequired);
+        Assert.IsTrue(rAccumulator.CanTryAlternatives);
+        Assert.AreEqual(12, rAccumulator.Data);
 
-        accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .ThenTry<int>(
-                TryParseFailed,
-                (x, y) => x + y,
-                x => 14);
-        Assert.IsFalse(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(14, data);
+        rAccumulator = accummulator.ThenTry<int, SRR>(
+            TryParseFailed,
+            NodeRecognitionAccumulator.Args("stuff", "symbol", new object()),
+            (x, y) => x + y + 1,
+            (x, y) => 2 * x);
+        Assert.IsTrue(rAccumulator.CanTryRequired);
+        Assert.IsFalse(rAccumulator.CanTryAlternatives);
+        Assert.AreEqual(24, rAccumulator.Data);
         #endregion
 
         #region TryParsePartial
-        accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .ThenTry<int>(
-                TryParsePartial,
-                (x, y) => 20);
-        Assert.IsTrue(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(0, data);
+        rAccumulator = accummulator.ThenTry<int, SRR>(
+            TryParsePartial,
+            NodeRecognitionAccumulator.Args("stuff", "symbol", new object()),
+            (x, y) => x + y + 1);
+        Assert.IsFalse(rAccumulator.CanTryRequired);
+        Assert.IsFalse(rAccumulator.CanTryAlternatives);
+        Assert.AreEqual(12, rAccumulator.Data);
 
-        accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .ThenTry<int>(
-                TryParsePartial,
-                (x, y) => 20,
-                x => x * 8);
-        Assert.IsTrue(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(0, data);
-        #endregion
-
-        #region TryParseUnknown
-        accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .ThenTry<int>(
-                TryParseUnknown,
-                (x, y) => 20);
-        Assert.IsTrue(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(0, data);
-
-        accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .ThenTry<int>(
-                TryParseUnknown,
-                (x, y) => 20,
-                x => x * 8);
-        Assert.IsTrue(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(0, data);
+        rAccumulator = accummulator.ThenTry<int, SRR>(
+            TryParsePartial,
+            NodeRecognitionAccumulator.Args("stuff", "symbol", new object()),
+            (x, y) => x + y + 1,
+            (x, y) => 2 * x);
+        Assert.IsFalse(rAccumulator.CanTryRequired);
+        Assert.IsFalse(rAccumulator.CanTryAlternatives);
+        Assert.AreEqual(12, rAccumulator.Data);
         #endregion
     }
 
     [TestMethod]
     public void OrTry_Tests()
     {
+        var accumulator = NodeRecognitionAccumulator.Of<int, string, object>(12);
+
         #region TryParseSuccess
+        var rAccumulator = accumulator.OrTry<int, SRR>(
+            TryParseSuccess,
+            NodeRecognitionAccumulator.Args("stuff", "symbol", new object()),
+            (x, y) => x + y + 1);
+        Assert.IsTrue(rAccumulator.CanTryRequired);
+        Assert.IsFalse(rAccumulator.CanTryAlternatives);
+        Assert.AreEqual(14, rAccumulator.Data);
 
-        var accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .OrTry<int>(
-                TryParseSuccess,
-                (x, y) => x + y + 1);
-        Assert.IsFalse(accummulator.IsErrored);
-        var data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(12, data);
-
-        accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .ThenTry<int>(TryParseFailed, (x, y) => 0)
-            .OrTry<int>(
-                TryParseSuccess,
-                (x, y) => x + y + 1);
-        Assert.IsFalse(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(13, data);
-
-        accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .ThenTry<int>(TryParseFailed, (x, y) => 0)
-            .OrTry<int>(
-                TryParseFailed,
-                (x, y) => x + y + 1);
-        Assert.IsTrue(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(0, data);
-
-        accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .ThenTry<int>(TryParseFailed, (x, y) => 0)
-            .OrTry<int>(
-                TryParseFailed,
-                (x, y) => x + y + 1,
-                x => x * 2);
-        Assert.IsFalse(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(24, data);
+        rAccumulator = accumulator.OrTry<int, SRR>(
+            TryParseSuccess,
+            NodeRecognitionAccumulator.Args("stuff", "symbol", new object()),
+            (x, y) => x + y + 1,
+            (x, y) => 2 * x);
+        Assert.IsTrue(rAccumulator.CanTryRequired);
+        Assert.IsFalse(rAccumulator.CanTryAlternatives);
+        Assert.AreEqual(14, rAccumulator.Data);
         #endregion
 
         #region TryParseFailed
+        rAccumulator = accumulator.OrTry<int, SRR>(
+            TryParseFailed,
+            NodeRecognitionAccumulator.Args("stuff", "symbol", new object()),
+            (x, y) => x + y + 1);
+        Assert.IsFalse(rAccumulator.CanTryRequired);
+        Assert.IsTrue(rAccumulator.CanTryAlternatives);
+        Assert.AreEqual(12, rAccumulator.Data);
 
-        accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .OrTry<int>(
-                TryParseFailed,
-                (x, y) => x + y + 1);
-        Assert.IsFalse(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(12, data);
+        // when CanTryRequired is false, and CanTryAlternatives is true
+        rAccumulator = rAccumulator.OrTry<int, SRR>(
+            TryParseSuccess,
+            NodeRecognitionAccumulator.Args("stuff", "symbol", new object()),
+            (x, y) => x + y + 1);
+        Assert.IsTrue(rAccumulator.CanTryRequired);
+        Assert.IsFalse(rAccumulator.CanTryAlternatives);
+        Assert.AreEqual(14, rAccumulator.Data);
 
-        accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .ThenTry<int>(TryParseFailed, (x, y) => 0)
-            .OrTry<int>(
-                TryParseFailed,
-                (x, y) => 1);
-        Assert.IsTrue(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(0, data);
-
-        accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .ThenTry<int>(TryParseFailed, (x, y) => 0)
-            .OrTry<int>(
-                TryParseFailed,
-                (x, y) => 1,
-                x => 2);
-        Assert.IsFalse(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(2, data);
-
+        rAccumulator = accumulator.ThenTry<int, SRR>(
+            TryParseFailed,
+            NodeRecognitionAccumulator.Args("stuff", "symbol", new object()),
+            (x, y) => x + y + 1,
+            (x, y) => 2 * x);
+        Assert.IsTrue(rAccumulator.CanTryRequired);
+        Assert.IsFalse(rAccumulator.CanTryAlternatives);
+        Assert.AreEqual(24, rAccumulator.Data);
         #endregion
 
         #region TryParsePartial
+        rAccumulator = accumulator.OrTry<int, SRR>(
+            TryParsePartial,
+            NodeRecognitionAccumulator.Args("stuff", "symbol", new object()),
+            (x, y) => x + y + 1);
+        Assert.IsFalse(rAccumulator.CanTryRequired);
+        Assert.IsFalse(rAccumulator.CanTryAlternatives);
+        Assert.AreEqual(12, rAccumulator.Data);
 
-        accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .OrTry<int>(
-                TryParsePartial,
-                (x, y) => x + y + 1);
-        Assert.IsFalse(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(12, data);
-
-        accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .ThenTry<int>(TryParseFailed, (x, y) => 0)
-            .OrTry<int>(
-                TryParsePartial,
-                (x, y) => 1);
-        Assert.IsTrue(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(0, data);
-
-        accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .ThenTry<int>(TryParseFailed, (x, y) => 0)
-            .OrTry<int>(
-                TryParsePartial,
-                (x, y) => 1,
-                x => 2);
-        Assert.IsTrue(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(0, data);
-
-        #endregion
-
-        #region TryParseUnknown
-
-        accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .OrTry<int>(
-                TryParseUnknown,
-                (x, y) => x + y + 1);
-        Assert.IsFalse(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(12, data);
-
-        accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .ThenTry<int>(TryParseFailed, (x, y) => 0)
-            .OrTry<int>(
-                TryParseUnknown,
-                (x, y) => 1);
-        Assert.IsTrue(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(0, data);
-
-        accummulator = ParserAccumulator
-            .Of("stuff", "symbol", new object(), 12)
-            .ThenTry<int>(TryParseFailed, (x, y) => 0)
-            .OrTry<int>(
-                TryParseUnknown,
-                (x, y) => 1,
-                x => 2);
-        Assert.IsTrue(accummulator.IsErrored);
-        data = 0;
-        accummulator.Consume(d => data = d);
-        Assert.AreEqual(0, data);
+        rAccumulator = accumulator.ThenTry<int, SRR>(
+            TryParsePartial,
+            NodeRecognitionAccumulator.Args("stuff", "symbol", new object()),
+            (x, y) => x + y + 1,
+            (x, y) => 2 * x);
+        Assert.IsFalse(rAccumulator.CanTryRequired);
+        Assert.IsFalse(rAccumulator.CanTryAlternatives);
+        Assert.AreEqual(12, rAccumulator.Data);
         #endregion
     }
 
-    private static bool TryParseSuccess<TData>(
+    private static bool TryParseSuccess(
         TokenReader reader,
         string symbol,
         object context,
-        out IResult<TData> result)
+        out SRR result)
     {
-        result = Result.Of(default(TData)!);
+        result = new SRR(1);
         return true;
     }
 
-    private static bool TryParseFailed<TData>(
+    private static bool TryParseFailed(
         TokenReader reader,
         string symbol,
         object context,
-        out IResult<TData> result)
+        out SRR result)
     {
-        result = Result.Of<TData>(new FailedRecognitionError("symbol", 0));
+        result = new SRR(new FailedRecognitionError("symbol", 0));
         return false;
     }
 
-    private static bool TryParsePartial<TData>(
+    private static bool TryParsePartial(
         TokenReader reader,
         string symbol,
         object context,
-        out IResult<TData> result)
+        out SRR result)
     {
-        result = Result.Of<TData>(new PartialRecognitionError("symbol", 0, 1));
+        result = new SRR(new PartialRecognitionError("symbol", 0, 1));
         return false;
     }
 
-    private static bool TryParseUnknown<TData>(
-        TokenReader reader,
-        string symbol,
-        object context,
-        out IResult<TData> result)
+    internal class SRR : INodeRecognitionResultBase<int, SRR>
     {
-        result = Result.Of<TData>(new Exception());
-        return false;
+        private readonly object? _value;
+
+        object IUnion<int, FailedError, PartialError, SRR>.Value => _value!;
+
+
+        public SRR(object value)
+        {
+            _value = value switch
+            {
+                null => null,
+                FailedError
+                or PartialError
+                or int => value,
+                _ => throw new ArgumentOutOfRangeException(
+                    nameof(value),
+                    $"Invalid {nameof(value)} type: '{value.GetType()}'")
+            };
+        }
+
+        public static PathParserResult<int> Of(
+            int value)
+            => new(value!);
+
+        public static PathParserResult<int> Of(
+            FailedError value)
+            => new(value);
+
+        public static PathParserResult<int> Of(
+            PartialError value)
+            => new(value);
+
+
+        public bool Is(out int value)
+        {
+            if (_value is int n)
+            {
+                value = n;
+                return true;
+            }
+
+            value = default!;
+            return false;
+        }
+
+        public bool Is(out FailedError value)
+        {
+            if (_value is FailedError n)
+            {
+                value = n;
+                return true;
+            }
+
+            value = default!;
+            return false;
+        }
+
+        public bool Is(out PartialError value)
+        {
+            if (_value is PartialError n)
+            {
+                value = n;
+                return true;
+            }
+
+            value = default!;
+            return false;
+        }
+
+        public bool IsNull() => _value is null;
+
+        public TOut MapMatch<TOut>(
+            Func<int, TOut> nodeMapper,
+            Func<FailedError, TOut> failedErrorMapper,
+            Func<PartialError, TOut> partialErrorMapper,
+            Func<TOut> nullMapper = null!)
+        {
+            ArgumentNullException.ThrowIfNull(nodeMapper);
+            ArgumentNullException.ThrowIfNull(failedErrorMapper);
+
+            if (_value is int t1)
+                return nodeMapper.Invoke(t1);
+
+            if (_value is FailedError t2)
+                return failedErrorMapper.Invoke(t2);
+
+            if (_value is PartialError t3)
+                return partialErrorMapper.Invoke(t3);
+
+            // unknown type, assume null
+            return nullMapper switch
+            {
+                null => default!,
+                _ => nullMapper.Invoke()
+            };
+        }
+
+        public void ConsumeMatch(
+            Action<int> resultConsumer,
+            Action<FailedError> failedErrorConsumer,
+            Action<PartialError> partialErrorConsumer,
+            Action nullConsumer = null!)
+        {
+            ArgumentNullException.ThrowIfNull(resultConsumer);
+            ArgumentNullException.ThrowIfNull(failedErrorConsumer);
+            ArgumentNullException.ThrowIfNull(partialErrorConsumer);
+
+            if (_value is int t1)
+                resultConsumer.Invoke(t1);
+
+            else if (_value is FailedError t2)
+                failedErrorConsumer.Invoke(t2);
+
+            else if (_value is PartialError t3)
+                partialErrorConsumer.Invoke(t3);
+
+            else if (_value is null && nullConsumer is not null)
+                nullConsumer.Invoke();
+        }
+
+        public SRR WithMatch(
+            Action<int> resultConsumer,
+            Action<FailedError> failedErrorConsumer,
+            Action<PartialError> partialErrorConsumer,
+            Action nullConsumer = null!)
+        {
+            ConsumeMatch(resultConsumer, failedErrorConsumer, partialErrorConsumer, nullConsumer);
+            return this;
+        }
     }
 }

@@ -55,7 +55,9 @@ namespace Axis.Pulsar.Core.Tests.Utils
             Assert.AreEqual(range, range);
             Assert.IsTrue(range.Equals(range));
             Assert.IsTrue(range.Equals((object)range));
+#pragma warning disable CS1718 // Comparison made to same variable
             Assert.IsTrue(range == range);
+#pragma warning restore CS1718 // Comparison made to same variable
 
             Assert.AreEqual(range, range2);
             Assert.IsTrue(range.Equals(range2));
@@ -70,7 +72,9 @@ namespace Axis.Pulsar.Core.Tests.Utils
             Assert.AreEqual(range3, range3);
             Assert.IsTrue(range3.Equals(range3));
             Assert.IsTrue(range3.Equals((object)range3));
+#pragma warning disable CS1718 // Comparison made to same variable
             Assert.IsTrue(range3 == range3);
+#pragma warning restore CS1718 // Comparison made to same variable
         }
 
         [TestMethod]

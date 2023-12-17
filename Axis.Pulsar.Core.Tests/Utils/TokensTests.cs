@@ -167,6 +167,7 @@ namespace Axis.Pulsar.Core.Tests.Utils
             var a = Tokens.Of(str, 1, 2);
             var b = Tokens.Of(str, 1, 2);
             var c = Tokens.Of("some string", 1, 2);
+            var e = Tokens.Of(str, 4, 2);
             Tokens d = "om";
 
             Assert.IsTrue(a.Equals(a));
@@ -178,6 +179,7 @@ namespace Axis.Pulsar.Core.Tests.Utils
             Assert.IsTrue(a.Equals("om"));
             Assert.IsTrue(b.Equals(new[] { 'o', 'm' }));
             Assert.IsFalse(Tokens.Default.Equals("om"));
+            Assert.IsFalse(e.Equals(a));
         }
 
         [TestMethod]

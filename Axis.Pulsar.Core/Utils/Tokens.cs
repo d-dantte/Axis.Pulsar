@@ -470,7 +470,7 @@ namespace Axis.Pulsar.Core.Utils
             };
 
             return
-                ReferenceEquals(_source, other._source)
+                ((_segment.Offset == other._segment.Offset) && ReferenceEquals(_source, other._source))
                 || AsSpan().Equals(other.AsSpan(), flag);
         }
 

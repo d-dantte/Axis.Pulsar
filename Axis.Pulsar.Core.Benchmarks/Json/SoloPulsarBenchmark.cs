@@ -10,7 +10,17 @@ namespace Axis.Pulsar.Core.Benchmarks.Json
     [MemoryDiagnoser(false)]
     public class SoloPulsarBenchmark
     {
-        //[Benchmark]
+        private static readonly SymbolPath ParentPath = SymbolPath.Of("Parent");
+        private static readonly string JsonStringSample = "the quick brown fox jumps".WrapIn("\"");
+        private static readonly string JsonIntSample = "345435";
+        private static readonly string JsonDecimalSample = "345435.654";
+        private static readonly string JsonScientificSample = "-4.9403E-12";
+        private static readonly string JsonBoolSample = "false";
+        private static readonly string JsonListSample1 = "[]";
+        private static readonly string JsonListSample2 = "[true, 43, [], -32.600001,[null,true,0.0E0  , []]]";
+
+
+        [Benchmark]
         public void ParseJson()
         {
             var result = LangUtil.LanguageContext.Recognize(LangUtil.SampleJson);
@@ -60,43 +70,33 @@ namespace Axis.Pulsar.Core.Benchmarks.Json
             var pre = PartialRecognitionError.Of("stuff", 2, 556);
         }
 
-
-        private static readonly ProductionPath ParentPath = ProductionPath.Of("Parent");
-        private static readonly string JsonStringSample = "the quick brown fox jumps".WrapIn("\"");
-        private static readonly string JsonIntSample = "345435";
-        private static readonly string JsonDecimalSample = "345435.654";
-        private static readonly string JsonScientificSample = "-4.9403E-12";
-        private static readonly string JsonBoolSample = "false";
-        private static readonly string JsonListSample1 = "[]";
-        private static readonly string JsonListSample2 = "[true, 43, [], -32.600001,[null,true,0.0E0  , []]]";
-
-        //[Benchmark]
+        [Benchmark]
         public void ParseJsonString()
         {
             var rule = LangUtil.LanguageContext.Grammar["json-string"];
-            var success = rule.TryProcessRule(
+            var success = rule.TryRecognize(
                 JsonStringSample,
                 ParentPath,
                 LangUtil.LanguageContext,
                 out var result);
         }
 
-        //[Benchmark]
+        [Benchmark]
         public void ParseJsonInt()
         {
             var rule = LangUtil.LanguageContext.Grammar["json-number"];
-            var success = rule.TryProcessRule(
+            var success = rule.TryRecognize(
                 JsonIntSample,
                 ParentPath,
                 LangUtil.LanguageContext,
                 out var result);
         }
 
-        //[Benchmark]
+        [Benchmark]
         public void ParseJsonDecimal()
         {
             var rule = LangUtil.LanguageContext.Grammar["json-number"];
-            var success = rule.TryProcessRule(
+            var success = rule.TryRecognize(
                 JsonDecimalSample,
                 ParentPath,
                 LangUtil.LanguageContext,
@@ -107,7 +107,7 @@ namespace Axis.Pulsar.Core.Benchmarks.Json
         public void ParseJsonScientificDecimal()
         {
             var rule = LangUtil.LanguageContext.Grammar["json-number"];
-            var success = rule.TryProcessRule(
+            var success = rule.TryRecognize(
                 JsonScientificSample,
                 ParentPath,
                 LangUtil.LanguageContext,
@@ -118,29 +118,29 @@ namespace Axis.Pulsar.Core.Benchmarks.Json
         public void ParseJsonBool()
         {
             var rule = LangUtil.LanguageContext.Grammar["json-boolean"];
-            var success = rule.TryProcessRule(
+            var success = rule.TryRecognize(
                 JsonBoolSample,
                 ParentPath,
                 LangUtil.LanguageContext,
                 out var result);
         }
 
-        //[Benchmark]
+        [Benchmark]
         public void ParseJsonList()
         {
             var rule = LangUtil.LanguageContext.Grammar["json-list"];
-            var success = rule.TryProcessRule(
+            var success = rule.TryRecognize(
                 JsonListSample1,
                 ParentPath,
                 LangUtil.LanguageContext,
                 out var result);
         }
 
-        //[Benchmark]
+        [Benchmark]
         public void ParseJsonList2()
         {
             var rule = LangUtil.LanguageContext.Grammar["json-list"];
-            var success = rule.TryProcessRule(
+            var success = rule.TryRecognize(
                 JsonListSample2,
                 ParentPath,
                 LangUtil.LanguageContext,
@@ -151,8 +151,19 @@ namespace Axis.Pulsar.Core.Benchmarks.Json
         public void ParseJsonNull()
         {
             var rule = LangUtil.LanguageContext.Grammar["json-null"];
-            var success = rule.TryProcessRule(
+            var success = rule.TryRecognize(
                 "null",
+                ParentPath,
+                LangUtil.LanguageContext,
+                out var result);
+        }
+
+        [Benchmark]
+        public void ParseJsonNull_Fail()
+        {
+            var rule = LangUtil.LanguageContext.Grammar["json-null"];
+            var success = rule.TryRecognize(
+                "not-null",
                 ParentPath,
                 LangUtil.LanguageContext,
                 out var result);
@@ -182,25 +193,25 @@ namespace Axis.Pulsar.Core.Benchmarks.Json
             var success = reader.TryGetTokens(2, out var tokens);
         }
 
-        [Benchmark]
+        //[Benchmark]
         public void CreateExceptionFailedError()
         {
-            FailedRecognitionError__.Of("symbol", 45 - 4);
+            FailedRecognitionError.Of("symbol", 45 - 4);
         }
 
-        [Benchmark]
+        //[Benchmark]
         public void CreateStructFailedError()
         {
             FailedRecognitionError.Of("symbol", 45 - 4);
         }
 
-        [Benchmark]
+        //[Benchmark]
         public void CreateExceptionPartialError()
         {
-            PartialRecognitionError__.Of("symbol", 45 - 4, 20);
+            PartialRecognitionError.Of("symbol", 45 - 4, 20);
         }
 
-        [Benchmark]
+        //[Benchmark]
         public void CreateStructPartialError()
         {
             PartialRecognitionError.Of("symbol", 45 - 4, 20);

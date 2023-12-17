@@ -10,7 +10,7 @@ public static class NodeRecognitionAccumulator
         TSymbolID symbol,
         TContext context,
         out TUnion result)
-        where TUnion : NodeRecognitionResultBase<TResult, TUnion>;
+        where TUnion : INodeRecognitionResultBase<TResult, TUnion>;
 
     public static NodeRecognitionAccumulator<TData, TSymbolID, TContext> Of<TData, TSymbolID, TContext>(TData data) => new(data);
 
@@ -84,48 +84,100 @@ public readonly struct NodeRecognitionAccumulator<TData, TSymbolID, TContext> :
         };
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <typeparam name="TOutResult"></typeparam>
+    /// <typeparam name="TOutUnion"></typeparam>
+    /// <param name="tryParse"></param>
+    /// <param name="args"></param>
+    /// <param name="mapper"></param>
+    /// <param name="failedRecognitionMapper"></param>
+    /// <returns></returns>
     public NodeRecognitionAccumulator<TData, TSymbolID, TContext> ThenTry<TOutResult, TOutUnion>(
         NodeRecognitionAccumulator.TryParse<TOutUnion, TOutResult, TSymbolID, TContext> tryParse,
         RecognitionArgs<TSymbolID, TContext> args,
         Func<TData, TOutResult, TData> mapper,
-        Func<TData, FailedRecognitionError, TData>? freMapper = null)
-        where TOutUnion : NodeRecognitionResultBase<TOutResult, TOutUnion>
+        Func<TData, FailedRecognitionError, TData>? failedRecognitionMapper = null)
+        where TOutUnion : INodeRecognitionResultBase<TOutResult, TOutUnion>
     {
         ArgumentNullException.ThrowIfNull(tryParse);
         ArgumentNullException.ThrowIfNull(mapper);
 
         // Try required recognition/parse operation?
         if (CanTryRequired)
-            TryOperation(tryParse, args, mapper, freMapper);
+            return TryOperation(tryParse, args, mapper, failedRecognitionMapper);
 
         // Previous recognition failed, and since we cant try required, propagate fatal state.
         return new NodeRecognitionAccumulator<TData, TSymbolID, TContext>(_data, false, false, _error);
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <typeparam name="TOutResult"></typeparam>
+    /// <typeparam name="TOutUnion"></typeparam>
+    /// <param name="tryParse"></param>
+    /// <param name="args"></param>
+    /// <param name="mapper"></param>
+    /// <param name="failedRecognitionMapper"></param>
+    /// <returns></returns>
     public NodeRecognitionAccumulator<TData, TSymbolID, TContext> OrTry<TOutResult, TOutUnion>(
         NodeRecognitionAccumulator.TryParse<TOutUnion, TOutResult, TSymbolID, TContext> tryParse,
         RecognitionArgs<TSymbolID, TContext> args,
         Func<TData, TOutResult, TData> mapper,
-        Func<TData, FailedRecognitionError, TData>? freMapper = null)
-        where TOutUnion : NodeRecognitionResultBase<TOutResult, TOutUnion>
+        Func<TData, FailedRecognitionError, TData>? failedRecognitionMapper = null)
+        where TOutUnion : INodeRecognitionResultBase<TOutResult, TOutUnion>
     {
         ArgumentNullException.ThrowIfNull(tryParse);
         ArgumentNullException.ThrowIfNull(mapper);
 
         // Try alternative recognition/parse operation?
         if (CanTryAlternatives)
-            TryOperation(tryParse, args, mapper, freMapper);
+            return TryOperation(tryParse, args, mapper, failedRecognitionMapper);
 
         // If we can't try alternatives, we may be able to try required. Return this instance
         return this;
     }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <typeparam name="TOutResult"></typeparam>
+    /// <typeparam name="TOutUnion"></typeparam>
+    /// <param name="tryParse"></param>
+    /// <param name="args"></param>
+    /// <param name="predicate"></param>
+    /// <param name="mapper"></param>
+    /// <param name="freMapper"></param>
+    /// <returns></returns>
+    public NodeRecognitionAccumulator<TData, TSymbolID, TContext> TryIf<TOutResult, TOutUnion>(
+        NodeRecognitionAccumulator.TryParse<TOutUnion, TOutResult, TSymbolID, TContext> tryParse,
+        RecognitionArgs<TSymbolID, TContext> args,
+        Func<TData, bool, bool, INodeRecognitionError?, bool> predicate,
+        Func<TData, TOutResult, TData> mapper,
+        Func<TData, FailedRecognitionError, TData>? freMapper = null)
+        where TOutUnion : INodeRecognitionResultBase<TOutResult, TOutUnion>
+    {
+        ArgumentNullException.ThrowIfNull(tryParse);
+        ArgumentNullException.ThrowIfNull(mapper);
+        ArgumentNullException.ThrowIfNull(predicate);
+
+        // Try the operation based on the given predicate
+        if (predicate.Invoke(_data, CanTryRequired, CanTryAlternatives, _error))
+            return TryOperation(tryParse, args, mapper, freMapper);
+
+        // If we can't try based on the predicate, leave things as they are
+        return this;
+    }
+
 
     private NodeRecognitionAccumulator<TData, TSymbolID, TContext> TryOperation<TOutResult, TOutUnion>(
         NodeRecognitionAccumulator.TryParse<TOutUnion, TOutResult, TSymbolID, TContext> tryParse,
         RecognitionArgs<TSymbolID, TContext> args,
         Func<TData, TOutResult, TData> mapper,
         Func<TData, FailedRecognitionError, TData>? freMapper)
-        where TOutUnion : NodeRecognitionResultBase<TOutResult, TOutUnion>
+        where TOutUnion : INodeRecognitionResultBase<TOutResult, TOutUnion>
     {
         _ = tryParse.Invoke(args.Reader, args.Symbol, args.Context, out var tresult);
 

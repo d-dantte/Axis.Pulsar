@@ -1,8 +1,6 @@
-﻿using Axis.Luna.Common.Results;
-using Axis.Luna.Extensions;
+﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Errors;
-using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.XBNF.Definitions;
 using Axis.Pulsar.Core.XBNF.Parsers;
@@ -23,32 +21,32 @@ namespace Axis.Pulsar.Core.XBNF.Lang
             var context = new ParserContext(_metadata);
             _ = GrammarParser.TryParseGrammar(inputTokens, context, out var grammarResult);
 
-            return grammarResult
-
+            if (grammarResult.Is(out IGrammar grammar))
+            {
                 // validate the grammar
-                .WithData(grammar => GrammarValidator
+                GrammarValidator
                     .Validate(grammar)
                     .ThrowIf(
                         r => !r.IsValidGrammar,
-                        r => new GrammarValidationException(r)))
+                        r => new GrammarValidationException(r));
 
                 // create the language context from the grammar
-                .Map(grammar => new XBNFLanguageContext(grammar, context))
+                return new XBNFLanguageContext(grammar, context);
+            }
+            else if (grammarResult.Is(out FailedRecognitionError fre))
+                throw new RecognitionFormatException(
+                    fre.TokenSegment.Offset,
+                    fre.TokenSegment.Count,
+                    inputTokens);
 
-                // convert IRecognitionErrors to FormatException
-                .TransformError(err => err switch {
-                    PartialRecognitionError pre => RecognitionFormatException.Of(
-                        pre.TokenSegment.Offset,
-                        pre.TokenSegment.Count,
-                        inputTokens),
-                    IRecognitionError rerror => RecognitionFormatException.Of(
-                        rerror,
-                        inputTokens),
-                    _ => err
-                })
+            else if (grammarResult.Is(out PartialRecognitionError pre))
+                throw new RecognitionFormatException(
+                    pre.TokenSegment.Offset,
+                    pre.TokenSegment.Count,
+                    inputTokens);
 
-                // get the result
-                .Resolve();
+            else throw new InvalidOperationException(
+                $"Invalid grammar parser result: {grammarResult}");
         }
 
         #region Nested types

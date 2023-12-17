@@ -1,81 +1,46 @@
 ﻿using Axis.Luna.Common.Unions;
-using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Grammar.Results;
 
-namespace Axis.Pulsar.Core.Grammar.Results
+namespace Axis.Pulsar.Core.XBNF.Parsers
 {
     using FailedError = FailedRecognitionError;
     using PartialError = PartialRecognitionError;
 
-    //public class NodeRecognitionResult :
-    //    NodeRecognitionResultBase<ICSTNode, NodeRecognitionResult>,
-    //    IUnionOf<ICSTNode, FailedError, PartialError, NodeRecognitionResult>
-    //{
-    //    private NodeRecognitionResult(object value)
-    //    : base(value)
-    //    {
-    //    }
-
-    //    /// <summary>
-    //    /// Rejects null nodes
-    //    /// </summary>
-    //    /// <param name="value"></param>
-    //    /// <returns></returns>
-    //    /// <exception cref="ArgumentNullException"></exception>
-    //    public static NodeRecognitionResult Of(ICSTNode value) => value switch
-    //    {
-    //        null => throw new ArgumentNullException(nameof(value)),
-    //        _ => new(value)
-    //    };
-
-    //    public static NodeRecognitionResult Of(FailedError value) => new(value);
-
-    //    public static NodeRecognitionResult Of(PartialError value) => new(value);
-    //}
-
-    public readonly struct NodeRecognitionResult :
-        INodeRecognitionResultBase<ICSTNode, NodeRecognitionResult>,
-        IUnionOf<ICSTNode, FailedError, PartialError, NodeRecognitionResult>
+    internal class XBNFResult<TResult> :
+        INodeRecognitionResultBase<TResult, XBNFResult<TResult>>,
+        IUnionOf<TResult, FailedError, PartialError, XBNFResult<TResult>>
     {
         private readonly object? _value;
 
-        object IUnion<ICSTNode, FailedError, PartialError, NodeRecognitionResult>.Value => _value!;
+        object IUnion<TResult, FailedError, PartialError, XBNFResult<TResult>>.Value => _value!;
 
-        #region Construction
-
-        private NodeRecognitionResult(object value)
+        public XBNFResult(object value)
         {
             _value = value switch
             {
                 null => null,
-                FailedError 
+                FailedError
                 or PartialError
-                or ICSTNode => value,
+                or TResult => value,
                 _ => throw new ArgumentOutOfRangeException(
                     nameof(value),
                     $"Invalid {nameof(value)} type: '{value.GetType()}'")
             };
         }
 
-        /// <summary>
-        /// Rejects null nodes
-        /// </summary>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentNullException"></exception>
-        public static NodeRecognitionResult Of(ICSTNode value) => value switch
+        public static XBNFResult<TResult> Of(TResult value) => new(value!);
+
+        public static XBNFResult<TResult> Of(
+            FailedError value)
+            => new(value);
+
+        public static XBNFResult<TResult> Of(
+            PartialError value)
+            => new(value);
+
+        public bool Is(out TResult value)
         {
-            null => throw new ArgumentNullException(nameof(value)),
-            _ => new(value)
-        };
-
-        public static NodeRecognitionResult Of(FailedError value) => new(value);
-
-        public static NodeRecognitionResult Of(PartialError value) => new(value);
-        #endregion
-
-        public bool Is(out ICSTNode value)
-        {
-            if(_value is ICSTNode n)
+            if (_value is TResult n)
             {
                 value = n;
                 return true;
@@ -112,17 +77,17 @@ namespace Axis.Pulsar.Core.Grammar.Results
         public bool IsNull() => _value is null;
 
         public TOut MapMatch<TOut>(
-            Func<ICSTNode, TOut> nodeMapper,
+            Func<TResult, TOut> resultMapper,
             Func<FailedError, TOut> failedErrorMapper,
             Func<PartialError, TOut> partialErrorMapper,
             Func<TOut> nullMapper = null!)
         {
-            ArgumentNullException.ThrowIfNull(nodeMapper);
+            ArgumentNullException.ThrowIfNull(resultMapper);
             ArgumentNullException.ThrowIfNull(failedErrorMapper);
             ArgumentNullException.ThrowIfNull(partialErrorMapper);
 
-            if (_value is ICSTNode t1)
-                return nodeMapper.Invoke(t1);
+            if (_value is TResult t1)
+                return resultMapper.Invoke(t1);
 
             if (_value is FailedError t2)
                 return failedErrorMapper.Invoke(t2);
@@ -139,17 +104,17 @@ namespace Axis.Pulsar.Core.Grammar.Results
         }
 
         public void ConsumeMatch(
-            Action<ICSTNode> nodeConsumer,
+            Action<TResult> resultConsumer,
             Action<FailedError> failedErrorConsumer,
             Action<PartialError> partialErrorConsumer,
             Action nullConsumer = null!)
         {
-            ArgumentNullException.ThrowIfNull(nodeConsumer);
+            ArgumentNullException.ThrowIfNull(resultConsumer);
             ArgumentNullException.ThrowIfNull(failedErrorConsumer);
             ArgumentNullException.ThrowIfNull(partialErrorConsumer);
 
-            if (_value is ICSTNode t1)
-                nodeConsumer.Invoke(t1);
+            if (_value is TResult t1)
+                resultConsumer.Invoke(t1);
 
             else if (_value is FailedError t2)
                 failedErrorConsumer.Invoke(t2);
@@ -161,13 +126,13 @@ namespace Axis.Pulsar.Core.Grammar.Results
                 nullConsumer.Invoke();
         }
 
-        public NodeRecognitionResult WithMatch(
-            Action<ICSTNode> nodeConsumer,
+        public XBNFResult<TResult> WithMatch(
+            Action<TResult> resultConsumer,
             Action<FailedError> failedErrorConsumer,
             Action<PartialError> partialErrorConsumer,
             Action nullConsumer = null!)
         {
-            ConsumeMatch(nodeConsumer, failedErrorConsumer, partialErrorConsumer, nullConsumer);
+            ConsumeMatch(resultConsumer, failedErrorConsumer, partialErrorConsumer, nullConsumer);
             return this;
         }
     }

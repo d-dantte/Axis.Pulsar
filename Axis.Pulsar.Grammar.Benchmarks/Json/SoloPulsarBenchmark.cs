@@ -7,7 +7,7 @@ namespace Axis.Pulsar.Grammar.Benchmarks.Json
     [MemoryDiagnoser(false)]
     public class SoloPulsarBenchmark
     {
-        //[Benchmark]
+        [Benchmark]
         public void ParseJson()
         {
             _ = LangUtil.Grammar.RootRecognizer().TryRecognize(
@@ -50,7 +50,7 @@ namespace Axis.Pulsar.Grammar.Benchmarks.Json
         private static readonly string JsonListSample1 = "[]";
         private static readonly string JsonListSample2 = "[true, 43, [], -32.600001,[null,true,0.0E0  , []]]";
 
-        //[Benchmark]
+        [Benchmark]
         public void ParseJsonString()
         {
             var rule = LangUtil.Grammar.GetRecognizer("json-string");
@@ -68,7 +68,7 @@ namespace Axis.Pulsar.Grammar.Benchmarks.Json
                 out var result);
         }
 
-        //[Benchmark]
+        [Benchmark]
         public void ParseJsonDecimal()
         {
             var rule = LangUtil.Grammar.GetRecognizer("json-number");
@@ -77,7 +77,7 @@ namespace Axis.Pulsar.Grammar.Benchmarks.Json
                 out var result);
         }
 
-        //[Benchmark]
+        [Benchmark]
         public void ParseJsonScientificDecimal()
         {
             var rule = LangUtil.Grammar.GetRecognizer("json-number");
@@ -86,7 +86,7 @@ namespace Axis.Pulsar.Grammar.Benchmarks.Json
                 out var result);
         }
 
-        //[Benchmark]
+        [Benchmark]
         public void ParseJsonBool()
         {
             var rule = LangUtil.Grammar.GetRecognizer("json-boolean");
@@ -95,7 +95,7 @@ namespace Axis.Pulsar.Grammar.Benchmarks.Json
                 out var result);
         }
 
-        //[Benchmark]
+        [Benchmark]
         public void ParseJsonList()
         {
             var rule = LangUtil.Grammar.GetRecognizer("json-list");
@@ -104,7 +104,7 @@ namespace Axis.Pulsar.Grammar.Benchmarks.Json
                 out var result);
         }
 
-        //[Benchmark]
+        [Benchmark]
         public void ParseJsonList2()
         {
             var rule = LangUtil.Grammar.GetRecognizer("json-list");
@@ -119,6 +119,15 @@ namespace Axis.Pulsar.Grammar.Benchmarks.Json
             var rule = LangUtil.Grammar.GetRecognizer("json-null");
             var success = rule.TryRecognize(
                 "null",
+                out var result);
+        }
+
+        [Benchmark]
+        public void ParseJsonNull_Fail()
+        {
+            var rule = LangUtil.Grammar.GetRecognizer("json-null");
+            var success = rule.TryRecognize(
+                "not-null",
                 out var result);
         }
 

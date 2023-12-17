@@ -1,8 +1,7 @@
-﻿using Axis.Luna.Common.Results;
-using Axis.Pulsar.Core.CST;
+﻿using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
-using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Groups;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
 using Moq;
@@ -95,15 +94,10 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
             var cardinality = Cardinality.Occurs(1, 1);
 
             Assert.ThrowsException<ArgumentNullException>(() => cardinality.TryRepeat(
-                null!, ProductionPath.Of("stuff"), null!, mockElement, out _));
+                null!, SymbolPath.Of("stuff"), null!, mockElement, out _));
 
             Assert.ThrowsException<ArgumentNullException>(() => cardinality.TryRepeat(
-                "tokens", null!, null!, mockElement, out _));
-
-            Assert.ThrowsException<ArgumentNullException>(() => cardinality.TryRepeat(
-                "tokens", ProductionPath.Of("stuff"), null!, null!, out _));
-
-
+                "tokens", SymbolPath.Of("stuff"), null!, null!, out _));
         }
 
         [TestMethod]
@@ -114,16 +108,16 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
             passingElementMock
                 .Setup(m => m.TryRecognize(
                     It.IsAny<TokenReader>(),
-                    It.IsAny<ProductionPath>(),
+                    It.IsAny<SymbolPath>(),
                     It.IsAny<ILanguageContext>(),
-                    out It.Ref<IResult<INodeSequence>>.IsAny))
+                    out It.Ref<GroupRecognitionResult>.IsAny))
                 .Returns(new TryRecognizeNodeSequence((
                     TokenReader reader,
-                    ProductionPath? path,
+                    SymbolPath path,
                     ILanguageContext context,
-                    out IResult<INodeSequence> result) =>
+                    out GroupRecognitionResult result) =>
                 {
-                    result = Result.Of(INodeSequence.Of(ICSTNode.Of("dummy", Tokens.Of("source"))));
+                    result = GroupRecognitionResult.Of(INodeSequence.Of(ICSTNode.Of("dummy", Tokens.Of("source"))));
                     return true;
                 }));
 
@@ -131,20 +125,20 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
             failedRecognitionElementMock
                 .Setup(m => m.TryRecognize(
                     It.IsAny<TokenReader>(),
-                    It.IsAny<ProductionPath>(),
+                    It.IsAny<SymbolPath>(),
                     It.IsAny<ILanguageContext>(),
-                    out It.Ref<IResult<INodeSequence>>.IsAny))
+                    out It.Ref<GroupRecognitionResult>.IsAny))
                 .Returns(new TryRecognizeNodeSequence((
                     TokenReader reader,
-                    ProductionPath? path,
+                    SymbolPath path,
                     ILanguageContext context,
-                    out IResult<INodeSequence> result) =>
+                    out GroupRecognitionResult result) =>
                 {
-                    result = Result.Of<INodeSequence>(
+                    result = GroupRecognitionResult.Of(
                         new GroupRecognitionError(
                             elementCount: 0,
                             cause: FailedRecognitionError.Of(
-                                ProductionPath.Of("bleh"),
+                                SymbolPath.Of("bleh"),
                                 10)));
                     return false;
                 }));
@@ -154,44 +148,27 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
             conditionedFailureElementMock
                 .Setup(m => m.TryRecognize(
                     It.IsAny<TokenReader>(),
-                    It.IsAny<ProductionPath>(),
+                    It.IsAny<SymbolPath>(),
                     It.IsAny<ILanguageContext>(),
-                    out It.Ref<IResult<INodeSequence>>.IsAny))
+                    out It.Ref<GroupRecognitionResult>.IsAny))
                 .Returns(new TryRecognizeNodeSequence((
                     TokenReader reader,
-                    ProductionPath? path,
+                    SymbolPath path,
                     ILanguageContext context,
-                    out IResult<INodeSequence> result) =>
+                    out GroupRecognitionResult result) =>
                 {
                     while (passCount-- > 0)
                     {
-                        result = Result.Of(INodeSequence.Of(ICSTNode.Of("dumy", Tokens.Of("source"))));
+                        result = GroupRecognitionResult.Of(INodeSequence.Of(ICSTNode.Of("dumy", Tokens.Of("source"))));
                         return true;
                     }
 
-                    result = Result.Of<INodeSequence>(
+                    result = GroupRecognitionResult.Of(
                         new GroupRecognitionError(
                             elementCount: 0,
                             cause: FailedRecognitionError.Of(
-                                ProductionPath.Of("bleh"),
+                                SymbolPath.Of("bleh"),
                                 10)));
-                    return false;
-                }));
-
-            var nonRecognitionErrorElementMock = new Mock<IGroupElement>();
-            nonRecognitionErrorElementMock
-                .Setup(m => m.TryRecognize(
-                    It.IsAny<TokenReader>(),
-                    It.IsAny<ProductionPath>(),
-                    It.IsAny<ILanguageContext>(),
-                    out It.Ref<IResult<INodeSequence>>.IsAny))
-                .Returns(new TryRecognizeNodeSequence((
-                    TokenReader reader,
-                    ProductionPath? path,
-                    ILanguageContext context,
-                    out IResult<INodeSequence> result) =>
-                {
-                    result = Result.Of<INodeSequence>(new Exception());
                     return false;
                 }));
 
@@ -199,59 +176,52 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
             var cardinality = Cardinality.Occurs(1, 1);
             var recognized = cardinality.TryRepeat(
                 "stuff",
-                ProductionPath.Of("root"),
+                SymbolPath.Of("root"),
                 null!,
                 passingElementMock.Object,
                 out var result);
-            Assert.AreEqual(1, result.Resolve().Count);
+            Assert.IsTrue(result.Is(out INodeSequence nseq));
+            Assert.AreEqual(1, nseq.Count);
 
             cardinality = Cardinality.Occurs(1, 21);
             recognized = cardinality.TryRepeat(
                 "stuff",
-                ProductionPath.Of("root"),
+                SymbolPath.Of("root"),
                 null!,
                 passingElementMock.Object,
                 out result);
-            Assert.AreEqual(21, result.Resolve().Count);
+            Assert.IsTrue(result.Is(out nseq));
+            Assert.AreEqual(21, nseq.Count);
 
             cardinality = Cardinality.Occurs(1, 21);
             recognized = cardinality.TryRepeat(
                 "stuff",
-                ProductionPath.Of("root"),
+                SymbolPath.Of("root"),
                 null!,
                 failedRecognitionElementMock.Object,
                 out result);
-            Assert.IsTrue(result.IsErrorResult(out GroupRecognitionError ge));
+            Assert.IsTrue(result.Is(out GroupRecognitionError ge));
             Assert.AreEqual(0, ge.ElementCount);
-
-            cardinality = Cardinality.Occurs(1, 21);
-            recognized = cardinality.TryRepeat(
-                "stuff",
-                ProductionPath.Of("root"),
-                null!,
-                nonRecognitionErrorElementMock.Object,
-                out result);
-            Assert.IsTrue(result.IsErrorResult(out Exception _));
 
             cardinality = Cardinality.Occurs(0, 21);
             recognized = cardinality.TryRepeat(
                 "stuff",
-                ProductionPath.Of("root"),
+                SymbolPath.Of("root"),
                 null!,
                 failedRecognitionElementMock.Object,
                 out result);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual(0, result.Resolve().Count);
+            Assert.IsTrue(result.Is(out nseq));
+            Assert.AreEqual(0, nseq.Count);
 
             cardinality = Cardinality.Occurs(3, 21);
             passCount = 2;
             recognized = cardinality.TryRepeat(
                 "stuff",
-                ProductionPath.Of("root"),
+                SymbolPath.Of("root"),
                 null!,
                 conditionedFailureElementMock.Object,
                 out result);
-            Assert.IsTrue(result.IsErrorResult(out ge));
+            Assert.IsTrue(result.Is(out ge));
             Assert.AreEqual(2, ge.ElementCount);
         }
     }

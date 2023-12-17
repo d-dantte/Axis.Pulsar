@@ -247,6 +247,8 @@ public interface IAtomicRuleFactory
             null => throw new ArgumentNullException(nameof(obj)),
             _ => throw new InvalidOperationException($"Invalid argument type: {obj.GetType()}")
         };
+
+        public static ArgumentKeyComparer Default { get; } = new ArgumentKeyComparer();
     }
 
     /// <summary>

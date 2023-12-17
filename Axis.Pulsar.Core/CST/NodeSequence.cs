@@ -51,7 +51,7 @@ namespace Axis.Pulsar.Core.CST
         /// <summary>
         /// make these structs?
         /// </summary>
-        private class CollectionNodeSequence: INodeSequence
+        private readonly struct CollectionNodeSequence: INodeSequence
         {
             private readonly ICollection<ICSTNode> _nodes;
 
@@ -70,11 +70,11 @@ namespace Axis.Pulsar.Core.CST
         /// <summary>
         /// make these structs?
         /// </summary>
-        private class ConcatenatedNodeSequence: INodeSequence
+        private readonly struct ConcatenatedNodeSequence: INodeSequence
         {
             private readonly IEnumerable<ICSTNode> _nodes;
 
-            public int Count { get; private set; }
+            public int Count { get; }
 
             internal ConcatenatedNodeSequence(INodeSequence first, INodeSequence second)
             {

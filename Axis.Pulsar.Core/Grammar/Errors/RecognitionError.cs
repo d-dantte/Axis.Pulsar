@@ -1,5 +1,6 @@
 ﻿using Axis.Luna.Common.Segments;
 using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.Grammar;
 
 namespace Axis.Pulsar.Core;
 
@@ -10,7 +11,7 @@ public interface INodeRecognitionError
 {
     public Segment TokenSegment { get; }
 
-    public string Symbol { get; }
+    public SymbolPath Symbol { get; }
 }
 
 /// <summary>
@@ -20,10 +21,10 @@ public readonly struct FailedRecognitionError : INodeRecognitionError
 {
     public Segment TokenSegment { get; }
 
-    public string Symbol { get; }
+    public SymbolPath Symbol { get; }
 
     public FailedRecognitionError(
-        string symbol,
+        SymbolPath symbol,
         int position)
     {
         TokenSegment = Segment.Of(position);
@@ -31,7 +32,7 @@ public readonly struct FailedRecognitionError : INodeRecognitionError
     }
 
     public static FailedRecognitionError Of(
-        string symbol,
+        SymbolPath symbol,
         int position)
         => new(symbol, position);
 }
@@ -43,10 +44,10 @@ public readonly struct PartialRecognitionError : INodeRecognitionError
 {
     public Segment TokenSegment { get; }
 
-    public string Symbol { get; }
+    public SymbolPath Symbol { get; }
 
     public PartialRecognitionError(
-        string symbol,
+        SymbolPath symbol,
         int position,
         int length)
     {
@@ -55,13 +56,13 @@ public readonly struct PartialRecognitionError : INodeRecognitionError
     }
 
     public static PartialRecognitionError Of(
-        string symbol,
+        SymbolPath symbol,
         int position,
         int length)
         => new(symbol, position, length);
 
     public static PartialRecognitionError Of(
-        string symbol,
+        SymbolPath symbol,
         Segment segment)
         => new(symbol, segment.Offset, segment.Count);
 }
@@ -101,14 +102,14 @@ public readonly struct GroupRecognitionError//: IRecognitionError
         INodeRecognitionError cause)
         => new(cause, 0);
 
-    //public static GroupRecognitionError Of<TError>(
-    //    TError cause,
-    //    int elementCount)
-    //    where TError : INodeRecognitionError
-    //    => new(cause, elementCount);
+    public static GroupRecognitionError Of<TError>(
+        TError cause,
+        int elementCount)
+        where TError : INodeRecognitionError
+        => new(cause, elementCount);
 
-    //public static GroupRecognitionError Of<TError>(
-    //    TError cause)
-    //    where TError : INodeRecognitionError
-    //    => new(cause, 0);
+    public static GroupRecognitionError Of<TError>(
+        TError cause)
+        where TError : INodeRecognitionError
+        => new(cause, 0);
 }

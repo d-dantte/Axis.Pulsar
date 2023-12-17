@@ -1,5 +1,6 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Common.Utils;
+using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Nodes;
 using Axis.Pulsar.Core.Utils;
@@ -152,7 +153,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
         [TestMethod]
         public void TryRecognize_Tests()
         {
-            var path = ProductionPath.Of("a");
+            var path = SymbolPath.Of("a");
             var dstring = DelimitedString.Of(
                 "d",
                 true, "'", "'",
@@ -169,16 +170,16 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 path,
                 null!,
                 out var nodeResult);
-            Assert.IsTrue(success);
-            nodeResult.Consume(n => n.Tokens.Equals("'the \\\"quick\\\" brown fox, etc...'"));
+            Assert.IsTrue(nodeResult.Is(out ICSTNode node));
+            Assert.IsTrue(node.Tokens.Equals("'the \\\"quick\\\" brown fox, etc...'"));
 
             success = dstring.TryRecognize(
                 "'something wonderful this way avoids'",
                 path,
                 null!,
                 out nodeResult);
-            Assert.IsTrue(success);
-            nodeResult.Consume(n => n.Tokens.Equals("'something wonderful this way avoids'"));
+            Assert.IsTrue(nodeResult.Is(out node));
+            Assert.IsTrue(node.Tokens.Equals("'something wonderful this way avoids'"));
         }
 
         [TestMethod]
@@ -192,7 +193,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 Enumerable.Empty<CharRange>(),
                 Enumerable.Empty<CharRange>()));
 
-            var path = ProductionPath.Of("a");
+            var path = SymbolPath.Of("a");
             var dstring = DelimitedString.Of(
                 "d",
                 true, "//", null,
@@ -207,7 +208,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 null!,
                 out var result);
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult(out var node));
+            Assert.IsTrue(result.Is(out ICSTNode node));
             Assert.IsTrue(node.Tokens.Equals("//stuff that is commented out"));
 
             TokenReader r = "//stuff that is commented out\nstuff not commented out";
@@ -217,7 +218,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 null!,
                 out result);
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult(out node));
+            Assert.IsTrue(result.Is(out node));
             Assert.IsTrue(node.Tokens.Equals("//stuff that is commented out"));
         }
     }

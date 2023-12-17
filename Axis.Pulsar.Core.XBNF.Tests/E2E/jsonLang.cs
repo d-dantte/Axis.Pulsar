@@ -44,7 +44,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
             // }
             var result = _lang.Recognize("{\n    // comment\n}");
             Assert.IsNotNull(result);
-            Assert.IsTrue(result.IsDataResult(out var node));
+            Assert.IsTrue(result.Is(out ICSTNode node));
             Assert.AreEqual("json", node.Name);
             var obj = node.FindNodes("json-object/<{>").ToArray();
             Assert.AreEqual(1, obj.Length);
@@ -52,7 +52,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
             // {}
             result = _lang.Recognize("{}");
             Assert.IsNotNull(result);
-            Assert.IsTrue(result.IsDataResult(out node));
+            Assert.IsTrue(result.Is(out node));
             Assert.AreEqual("json", node.Name);
             Assert.IsTrue("{}".Equals(node.Tokens));
             obj = node.FindNodes("json-object/<{>").ToArray();
@@ -62,7 +62,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
             string input = "{\"abc\": 123, \"bleh\": true}";
             result = _lang.Recognize(input);
             Assert.IsNotNull(result);
-            Assert.IsTrue(result.IsDataResult(out node));
+            Assert.IsTrue(result.Is(out node));
             Assert.AreEqual("json", node.Name);
             obj = node.FindNodes("json-object/property/json-string/<\"bleh\">").ToArray();
             Assert.AreEqual(1, obj.Length);
@@ -71,7 +71,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
             input = "{\"abc\": 123, \"bleh\": [true, {}, null, \"me\"]}";
             result = _lang.Recognize(input);
             Assert.IsNotNull(result);
-            Assert.IsTrue(result.IsDataResult(out node));
+            Assert.IsTrue(result.Is(out node));
             Assert.AreEqual("json", node.Name);
             Assert.AreEqual(1, obj.Length);
 
@@ -81,13 +81,13 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
         public void List_Tests()
         {
             TokenReader input = "[true, {}, \"me\", null]";
-            var success = _lang.Grammar["json-list"].TryProcessRule(
+            var success = _lang.Grammar["json-list"].TryRecognize(
                 input,
                 "parent",
                 _lang,
                 out var result);
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
+            Assert.IsTrue(result.Is(out ICSTNode _));
 
         }
 
@@ -98,55 +98,54 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
             // this gives a partial recognition error when $scientific-decimal has a threshold of 2. The correct threshold is 4, however, the the partial recognition error
             // should report that it originates from the $scientific-decimal, not the $json-object. Investigate why this is happening - someone is possibly consuming the partial errors
             TokenReader input = "{\r\n    \"this\": \"is\",\r\n    \"json\": [\r\n        \"at\",\r\n        {\r\n            \"its\": true,\r\n            \"finest\": 10.5,\r\n            \"times\": []\r\n        }\r\n    ]\r\n}";
-            var success = _lang.Grammar["json-object"].TryProcessRule(
+            var success = _lang.Grammar["json-object"].TryRecognize(
                 input,
                 "parent",
                 _lang,
                 out var result);
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var node = result.Resolve();
+            Assert.IsTrue(result.Is(out ICSTNode node));
             Assert.AreEqual(1, node.FindNodes("property/json-value/json-list/json-value/json-object/property/json-value/json-number/decimal/regular-decimal<10.5>").ToArray().Length);
-            Assert.AreEqual(2, result.Resolve().FindNodes("property").ToArray().Length);
-            Assert.AreEqual(2, result.Resolve().FindNodes("property/json-value/json-string|json-list").ToArray().Length);
+            Assert.AreEqual(2, node.FindNodes("property").ToArray().Length);
+            Assert.AreEqual(2, node.FindNodes("property/json-value/json-string|json-list").ToArray().Length);
         }
 
         [TestMethod]
         public void Property_Tests()
         {
-            var success = _lang.Grammar["property"].TryProcessRule(
+            var success = _lang.Grammar["property"].TryRecognize(
                 @"""abc"": 123,   ",
                 "parent",
                 _lang,
                 out var result);
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual(1, result.Resolve().FindNodes("json-value/json-number/int/regular-int/<123>").ToArray().Length);
-            Assert.AreEqual(2, result.Resolve().FindNodes("json-value|json-string").ToArray().Length);
+            Assert.IsTrue(result.Is(out ICSTNode node));
+            Assert.AreEqual(1, node.FindNodes("json-value/json-number/int/regular-int/<123>").ToArray().Length);
+            Assert.AreEqual(2, node.FindNodes("json-value|json-string").ToArray().Length);
 
         }
 
         [TestMethod]
         public void Number_Tests()
         {
-            var success = _lang.Grammar["json-number"].TryProcessRule(
+            var success = _lang.Grammar["json-number"].TryRecognize(
                 @"123",
                 "parent",
                 _lang,
                 out var result);
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual(1, result.Resolve().FindNodes("int/regular-int/<123>").ToArray().Length);
+            Assert.IsTrue(result.Is(out ICSTNode node));
+            Assert.AreEqual(1, node.FindNodes("int/regular-int/<123>").ToArray().Length);
 
 
-            success = _lang.Grammar["json-number"].TryProcessRule(
+            success = _lang.Grammar["json-number"].TryRecognize(
                 @"123    ",
                 "parent",
                 _lang,
                 out result);
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            Assert.AreEqual(1, result.Resolve().FindNodes("int/regular-int/<123>").ToArray().Length);
+            Assert.IsTrue(result.Is(out node));
+            Assert.AreEqual(1, node.FindNodes("int/regular-int/<123>").ToArray().Length);
         }
 
         [TestMethod]

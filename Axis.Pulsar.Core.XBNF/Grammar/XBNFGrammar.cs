@@ -6,14 +6,14 @@ namespace Axis.Pulsar.Core.XBNF;
 
 public class XBNFGrammar : IGrammar
 {
-    private readonly Dictionary<string, IProduction> _productions;
+    private readonly Dictionary<string, Production> _productions;
     private readonly string _root;
 
     public string Root => _root;
 
     public IEnumerable<string> ProductionSymbols => _productions.Keys;
 
-    internal XBNFGrammar(string root, IEnumerable<IProduction> productions)
+    internal XBNFGrammar(string root, IEnumerable<Production> productions)
     {
         _root = root.ThrowIf(
             string.IsNullOrWhiteSpace,
@@ -29,18 +29,18 @@ public class XBNFGrammar : IGrammar
 
     public static IGrammar Of(
         string root,
-        IEnumerable<IProduction> productions)
+        IEnumerable<Production> productions)
         => new XBNFGrammar(root, productions);
 
     public bool ContainsProduction(string symbolName) => _productions.ContainsKey(symbolName);
 
-    public IProduction GetProduction(string name) => this[name];
+    public Production GetProduction(string name) => this[name];
 
     public int ProductionCount => _productions.Count;
 
-    public IProduction this[string name] => _productions[name];
+    public Production this[string name] => _productions[name];
 
-    public bool TryGetProduction(string name, out IProduction? production)
+    public bool TryGetProduction(string name, out Production? production)
     {
         if (!ContainsProduction(name))
         {

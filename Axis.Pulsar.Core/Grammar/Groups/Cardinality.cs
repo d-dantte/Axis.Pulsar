@@ -1,5 +1,4 @@
 ﻿using Axis.Luna.Common;
-using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Results;
@@ -124,7 +123,6 @@ namespace Axis.Pulsar.Core.Grammar.Groups
         {
             ArgumentNullException.ThrowIfNull(reader);
             ArgumentNullException.ThrowIfNull(element);
-            ArgumentNullException.ThrowIfNull(symbolPath);
 
             var occurence = 0;
             var position = reader.Position;

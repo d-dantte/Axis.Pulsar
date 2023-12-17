@@ -1,4 +1,5 @@
 ﻿using Axis.Luna.Common.Results;
+using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Nodes;
 
@@ -31,33 +32,33 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
 
             var success = xterRanges.TryRecognize(
                 "b",
-                ProductionPath.Of("xyz"),
+                SymbolPath.Of("xyz"),
                 null!,
                 out var result);
             Assert.IsTrue(success);
             Assert.IsTrue(
-                result.IsDataResult(out var data)
+                result.Is(out ICSTNode data)
                 && "xter".Equals(data.Name)
                 && data.Tokens.Equals("b"));
 
             success = xterRanges.TryRecognize(
                 "2",
-                ProductionPath.Of("xyz"),
+                SymbolPath.Of("xyz"),
                 null!,
                 out result);
             Assert.IsTrue(success);
             Assert.IsTrue(
-                result.IsDataResult(out data)
+                result.Is(out data)
                 && "xter".Equals(data.Name)
                 && data.Tokens.Equals("2"));
 
             success = xterRanges.TryRecognize(
                 "e",
-                ProductionPath.Of("xyz"),
+                SymbolPath.Of("xyz"),
                 null!,
                 out result);
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult(out FailedRecognitionError _));
+            Assert.IsTrue(result.Is(out FailedRecognitionError _));
         }
     }
 }

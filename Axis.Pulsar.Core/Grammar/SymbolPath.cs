@@ -92,15 +92,18 @@ namespace Axis.Pulsar.Core.Grammar
 
         public static bool TryParse(string path, out SymbolPath symbolPath)
         {
-            symbolPath = path
-                .ThrowIf(
-                    string.IsNullOrEmpty,
-                    _ => new ArgumentException($"Invalid path: null/empty"))
-                .Split('/')
-                .Select(s => s.Trim())
-                .Aggregate(default(SymbolPath), (path, name) => path.Next(name));
-
-            return !symbolPath.IsDefault;
+            symbolPath = path switch
+            {
+                null => SymbolPath.Default,
+                _ => path
+                    .ThrowIf(
+                        string.IsNullOrEmpty,
+                        _ => new ArgumentException($"Invalid path: null/empty"))
+                    .Split('/')
+                    .Select(s => s.Trim())
+                    .Aggregate(default(SymbolPath), (path, name) => path.Next(name))
+            };
+            return true;
         }
     }
 }

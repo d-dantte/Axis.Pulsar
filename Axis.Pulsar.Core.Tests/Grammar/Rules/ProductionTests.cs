@@ -1,15 +1,15 @@
-﻿using Axis.Luna.Common.Results;
-using Axis.Luna.Extensions;
+﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Nodes;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Grammar.Validation;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
 using Moq;
 using System.Collections.Immutable;
 
-namespace Axis.Pulsar.Core.XBNF.Tests.Grammar
+namespace Axis.Pulsar.Core.Tests.Grammar.Rules
 {
     [TestClass]
     public class ProductionTests
@@ -18,7 +18,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Grammar
         {
             var mockValidator = new Mock<IProductionValidator>();
             var setup = mockValidator.Setup(m => m.Validate(
-                It.IsAny<ProductionPath>(),
+                It.IsAny<SymbolPath>(),
                 It.IsAny<ILanguageContext>(),
                 It.IsAny<ICSTNode>()));
 
@@ -42,30 +42,30 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Grammar
             mockRule
                 .Setup(r => r.TryRecognize(
                     It.IsAny<TokenReader>(),
-                    It.IsAny<ProductionPath>(),
+                    It.IsAny<SymbolPath>(),
                     It.IsAny<ILanguageContext>(),
-                    out It.Ref<IResult<ICSTNode>>.IsAny))
+                    out It.Ref<NodeRecognitionResult>.IsAny))
                 .Returns(recognizer);
             return mockRule.Object;
         }
 
 
         [TestMethod]
-        public void TryProcessRule_Tests()
+        public void TryRecognize_Tests()
         {
-            var passingRuleMock = MockRule((TokenReader reader, ProductionPath? path, ILanguageContext cxt, out IResult<ICSTNode> x) =>
+            var passingRuleMock = MockRule((TokenReader reader, SymbolPath path, ILanguageContext cxt, out NodeRecognitionResult x) =>
             {
                 x = ICSTNode
                     .Of("symbol", "tokens")
-                    .ApplyTo(Result.Of<ICSTNode>);
+                    .ApplyTo(NodeRecognitionResult.Of);
                 return true;
             });
 
-            var failingRuleMock = MockRule((TokenReader reader, ProductionPath? path, ILanguageContext cxt, out IResult<ICSTNode> x) =>
+            var failingRuleMock = MockRule((TokenReader reader, SymbolPath path, ILanguageContext cxt, out NodeRecognitionResult x) =>
             {
                 x = FailedRecognitionError
                     .Of(path!, 2)
-                    .ApplyTo(Result.Of<ICSTNode>);
+                    .ApplyTo(NodeRecognitionResult.Of);
                 return false;
             });
 
@@ -80,53 +80,54 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Grammar
             });
 
             // no validator
-            var production = XBNFProduction.Of("symbol", passingRuleMock);
-            var success = production.TryProcessRule("some tokens", null, noValidatorContext, out var result);
+            var production = Production.Of("symbol", passingRuleMock);
+            var success = production.TryRecognize("some tokens", null!, noValidatorContext, out var result);
             Assert.IsTrue(success);
             Assert.IsNotNull(result);
-            Assert.IsTrue(result.IsDataResult());
+            Assert.IsTrue(result.Is(out ICSTNode _));
 
 
-            production = XBNFProduction.Of("symbol", failingRuleMock);
-            success = production.TryProcessRule("some tokens", null, noValidatorContext, out result);
+            production = Production.Of("symbol", failingRuleMock);
+            success = production.TryRecognize("some tokens", null!, noValidatorContext, out result);
             Assert.IsFalse(success);
             Assert.IsNotNull(result);
-            Assert.IsTrue(result.IsErrorResult());
+            Assert.IsTrue(result.Is(out FailedRecognitionError _));
 
             // passing validator
-            production = XBNFProduction.Of("symbol", passingRuleMock);
-            success = production.TryProcessRule("some tokens", null, passingValidatorContext, out result);
+            production = Production.Of("symbol", passingRuleMock);
+            success = production.TryRecognize("some tokens", null!, passingValidatorContext, out result);
             Assert.IsTrue(success);
             Assert.IsNotNull(result);
-            Assert.IsTrue(result.IsDataResult());
+            Assert.IsTrue(result.Is(out ICSTNode _));
 
 
-            production = XBNFProduction.Of("symbol", failingRuleMock);
-            success = production.TryProcessRule("some tokens", null, passingValidatorContext, out result);
+            production = Production.Of("symbol", failingRuleMock);
+            success = production.TryRecognize("some tokens", null!, passingValidatorContext, out result);
             Assert.IsFalse(success);
             Assert.IsNotNull(result);
-            Assert.IsTrue(result.IsErrorResult());
+            Assert.IsTrue(result.Is(out FailedRecognitionError _));
 
             // failing validator
-            production = XBNFProduction.Of("symbol", passingRuleMock);
-            success = production.TryProcessRule("some tokens", null, failingValidatorContext, out result);
-            Assert.IsFalse(success);
-            Assert.IsNotNull(result);
-            Assert.IsTrue(result.IsErrorResult(out FormatException _));
+            production = Production.Of("symbol", passingRuleMock);
+            Assert.ThrowsException<FormatException>(() => production.TryRecognize(
+                "some tokens",
+                null!,
+                failingValidatorContext,
+                out result));
 
 
-            production = XBNFProduction.Of("symbol", failingRuleMock);
-            success = production.TryProcessRule("some tokens", null, failingValidatorContext, out result);
+            production = Production.Of("symbol", failingRuleMock);
+            success = production.TryRecognize("some tokens", null!, failingValidatorContext, out result);
             Assert.IsFalse(success);
             Assert.IsNotNull(result);
-            Assert.IsTrue(result.IsErrorResult(out FailedRecognitionError _));
+            Assert.IsTrue(result.Is(out FailedRecognitionError _));
         }
 
         #region nested types
         //internal class PassingValidator : IProductionValidator
         //{
         //    public void Validate(
-        //        ProductionPath productionPath,
+        //        SymbolPath productionPath,
         //        ILanguageContext context,
         //        ICSTNode recogniedNode)
         //    {
@@ -136,7 +137,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Grammar
         //internal class FailingValidator : IProductionValidator
         //{
         //    public void Validate(
-        //        ProductionPath productionPath,
+        //        SymbolPath productionPath,
         //        ILanguageContext context,
         //        ICSTNode recogniedNode)
         //    {

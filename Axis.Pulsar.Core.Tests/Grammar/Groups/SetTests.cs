@@ -1,13 +1,12 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Groups;
-using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Utils;
 using Moq;
 using Axis.Luna.Extensions;
-using Axis.Pulsar.Core.Grammar.Errors;
-using Axis.Luna.Common.Segments;
 using Axis.Pulsar.Core.Lang;
+using Axis.Pulsar.Core.Grammar;
+using Axis.Pulsar.Core.Grammar.Results;
 
 namespace Axis.Pulsar.Core.Tests.Grammar.Groups
 {
@@ -27,16 +26,16 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 .With(mock => mock
                     .Setup(m => m.TryRecognize(
                         It.IsAny<TokenReader>(),
-                        It.IsAny<ProductionPath>(),
+                        It.IsAny<SymbolPath>(),
                         It.IsAny<ILanguageContext>(),
-                        out It.Ref<IResult<INodeSequence>>.IsAny))
+                        out It.Ref<GroupRecognitionResult>.IsAny))
                     .Returns(new TryRecognizeNodeSequence((
                         TokenReader reader,
-                        ProductionPath? path,
+                        SymbolPath path,
                         ILanguageContext languageContext,
-                        out IResult<INodeSequence> result) =>
+                        out GroupRecognitionResult result) =>
                     {
-                        result = Result.Of(INodeSequence.Of(ICSTNode.Of("dummy", Tokens.Of("source"))));
+                        result = GroupRecognitionResult.Of(INodeSequence.Of(ICSTNode.Of("dummy", Tokens.Of("source"))));
                         return true;
                     })));
 
@@ -48,16 +47,16 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 .With(mock => mock
                     .Setup(m => m.TryRecognize(
                         It.IsAny<TokenReader>(),
-                        It.IsAny<ProductionPath>(),
+                        It.IsAny<SymbolPath>(),
                         It.IsAny<ILanguageContext>(),
-                        out It.Ref<IResult<INodeSequence>>.IsAny))
+                        out It.Ref<GroupRecognitionResult>.IsAny))
                     .Returns(new TryRecognizeNodeSequence((
                         TokenReader reader,
-                        ProductionPath? path,
+                        SymbolPath path,
                         ILanguageContext languageContext,
-                        out IResult<INodeSequence> result) =>
+                        out GroupRecognitionResult result) =>
                     {
-                        result = Result.Of<INodeSequence>(
+                        result = GroupRecognitionResult.Of(
                             new GroupRecognitionError(
                                 elementCount: 0,
                                 cause: FailedRecognitionError.Of(
@@ -74,64 +73,19 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 .With(mock => mock
                     .Setup(m => m.TryRecognize(
                         It.IsAny<TokenReader>(),
-                        It.IsAny<ProductionPath>(),
+                        It.IsAny<SymbolPath>(),
                         It.IsAny<ILanguageContext>(),
-                        out It.Ref<IResult<INodeSequence>>.IsAny))
+                        out It.Ref<GroupRecognitionResult>.IsAny))
                     .Returns(new TryRecognizeNodeSequence((
                         TokenReader reader,
-                        ProductionPath? path,
+                        SymbolPath path,
                         ILanguageContext languageContext,
-                        out IResult<INodeSequence> result) =>
+                        out GroupRecognitionResult result) =>
                     {
-                        result = Result.Of<INodeSequence>(
+                        result = GroupRecognitionResult.Of(
                             new GroupRecognitionError(
                                 elementCount: 0,
-                                cause: PartialRecognitionError.Of(
-                                    "bleh",
-                                    10,
-                                    5)));
-                        return false;
-                    })));
-
-            var customErrorElementMock = new Mock<IGroupElement>();
-            customErrorElementMock
-                .With(mock => mock
-                    .Setup(m => m.Cardinality)
-                    .Returns(Cardinality.OccursOnly(1)))
-                .With(mock => mock
-                    .Setup(m => m.TryRecognize(
-                        It.IsAny<TokenReader>(),
-                        It.IsAny<ProductionPath>(),
-                        It.IsAny<ILanguageContext>(),
-                        out It.Ref<IResult<INodeSequence>>.IsAny))
-                    .Returns(new TryRecognizeNodeSequence((
-                        TokenReader reader,
-                        ProductionPath? path,
-                        ILanguageContext languageContext,
-                        out IResult<INodeSequence> result) =>
-                    {
-                        result = Result.Of<INodeSequence>(new CustomNodeError());
-                        return false;
-                    })));
-
-            var runtimeErrorElementMock = new Mock<IGroupElement>();
-            runtimeErrorElementMock
-                .With(mock => mock
-                    .Setup(m => m.Cardinality)
-                    .Returns(Cardinality.OccursOnly(1)))
-                .With(mock => mock
-                    .Setup(m => m.TryRecognize(
-                        It.IsAny<TokenReader>(),
-                        It.IsAny<ProductionPath>(),
-                        It.IsAny<ILanguageContext>(),
-                        out It.Ref<IResult<INodeSequence>>.IsAny))
-                    .Returns(new TryRecognizeNodeSequence((
-                        TokenReader reader,
-                        ProductionPath? path,
-                        ILanguageContext languageContext,
-                        out IResult<INodeSequence> result) =>
-                    {
-                        result = Result.Of<INodeSequence>(new Exception("non-IRecognitionError Exception"));
+                                cause: PartialRecognitionError.Of("bleh", 10, 5)));
                         return false;
                     })));
             #endregion
@@ -143,8 +97,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 passingElementMock.Object);
             var success = seq.TryRecognize("dummy", "dummy", null!, out var result);
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var nseq = result.Resolve();
+            Assert.IsTrue(result.Is(out INodeSequence nseq));
             Assert.AreEqual(2, nseq.Count);
 
             seq = Set.Of(
@@ -153,7 +106,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 unrecognizedElementMock.Object);
             success = seq.TryRecognize("dummy", "dummy", null!, out result);
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult(out GroupRecognitionError gre));
+            Assert.IsTrue(result.Is(out GroupRecognitionError gre));
             Assert.IsInstanceOfType<PartialRecognitionError>(gre.Cause);
             Assert.AreEqual(1, gre.ElementCount);
 
@@ -164,7 +117,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 unrecognizedElementMock.Object);
             success = seq.TryRecognize("dummy", "dummy", null!, out result);
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult(out gre));
+            Assert.IsTrue(result.Is(out gre));
             Assert.IsInstanceOfType<FailedRecognitionError>(gre.Cause);
             Assert.AreEqual(0, gre.ElementCount);
 
@@ -175,34 +128,9 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 partiallyRecognizedElementMock.Object);
             success = seq.TryRecognize("dummy", "dummy", null!, out result);
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult(out gre));
+            Assert.IsTrue(result.Is(out gre));
             Assert.IsInstanceOfType<PartialRecognitionError>(gre.Cause);
             Assert.AreEqual(0, gre.ElementCount);
-
-            seq = Set.Of(
-                Cardinality.OccursOnly(1),
-                1,
-                passingElementMock.Object,
-                customErrorElementMock.Object);
-            success = seq.TryRecognize("dummy", "dummy", null!, out result);
-            Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult(out CustomNodeError cne));
-
-            seq = Set.Of(
-                Cardinality.OccursOnly(1),
-                1,
-                passingElementMock.Object,
-                runtimeErrorElementMock.Object);
-            success = seq.TryRecognize("dummy", "dummy", null!, out result);
-            Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult(out Exception _));
-        }
-
-        internal class CustomNodeError : Exception, IRecognitionError__
-        {
-            public string Symbol => "custom-node-error-symbol";
-
-            Segment IRecognitionError__.TokenSegment => default;
         }
     }
 }

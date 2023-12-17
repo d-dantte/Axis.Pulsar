@@ -7,6 +7,7 @@ using Moq;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Lang;
+using Axis.Pulsar.Core.Grammar.Results;
 
 namespace Axis.Pulsar.Core.Tests.Grammar.Groups
 {
@@ -25,16 +26,16 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 .With(mock => mock
                     .Setup(m => m.TryRecognize(
                         It.IsAny<TokenReader>(),
-                        It.IsAny<ProductionPath>(),
+                        It.IsAny<SymbolPath>(),
                         It.IsAny<ILanguageContext>(),
-                        out It.Ref<IResult<INodeSequence>>.IsAny))
+                        out It.Ref<GroupRecognitionResult>.IsAny))
                     .Returns(new TryRecognizeNodeSequence((
                         TokenReader reader,
-                        ProductionPath? path,
+                        SymbolPath path,
                         ILanguageContext languageContext,
-                        out IResult<INodeSequence> result) =>
+                        out GroupRecognitionResult result) =>
                     {
-                        result = Result.Of(INodeSequence.Of(ICSTNode.Of("dummy", Tokens.Of("source"))));
+                        result = GroupRecognitionResult.Of(INodeSequence.Of(ICSTNode.Of("dummy", Tokens.Of("source"))));
                         return true;
                     })));
 
@@ -46,20 +47,20 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 .With(mock => mock
                     .Setup(m => m.TryRecognize(
                         It.IsAny<TokenReader>(),
-                        It.IsAny<ProductionPath>(),
+                        It.IsAny<SymbolPath>(),
                         It.IsAny<ILanguageContext>(),
-                        out It.Ref<IResult<INodeSequence>>.IsAny))
+                        out It.Ref<GroupRecognitionResult>.IsAny))
                     .Returns(new TryRecognizeNodeSequence((
                         TokenReader reader,
-                        ProductionPath? path,
+                        SymbolPath path,
                         ILanguageContext languageContext,
-                        out IResult<INodeSequence> result) =>
+                        out GroupRecognitionResult result) =>
                     {
-                        result = Result.Of<INodeSequence>(
+                        result = GroupRecognitionResult.Of(
                             new GroupRecognitionError(
                                 elementCount: 0,
                                 cause: FailedRecognitionError.Of(
-                                    ProductionPath.Of("bleh"),
+                                    SymbolPath.Of("bleh"),
                                     10)));
                         return false;
                     })));
@@ -72,43 +73,20 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 .With(mock => mock
                     .Setup(m => m.TryRecognize(
                         It.IsAny<TokenReader>(),
-                        It.IsAny<ProductionPath>(),
+                        It.IsAny<SymbolPath>(),
                         It.IsAny<ILanguageContext>(),
-                        out It.Ref<IResult<INodeSequence>>.IsAny))
+                        out It.Ref<GroupRecognitionResult>.IsAny))
                     .Returns(new TryRecognizeNodeSequence((
                         TokenReader reader,
-                        ProductionPath? path,
+                        SymbolPath path,
                         ILanguageContext languageContext,
-                        out IResult<INodeSequence> result) =>
+                        out GroupRecognitionResult result) =>
                     {
-                        result = Result.Of<INodeSequence>(
+                        result = GroupRecognitionResult.Of(
                             new GroupRecognitionError(
                                 elementCount: 0,
                                 cause: PartialRecognitionError.Of(
-                                    ProductionPath.Of("bleh"),
-                                    10,
-                                    5)));
-                        return false;
-                    })));
-
-            var nonRecognitionErrorElementMock = new Mock<IGroupElement>();
-            nonRecognitionErrorElementMock
-                .With(mock => mock
-                    .Setup(m => m.Cardinality)
-                    .Returns(Cardinality.OccursOnly(1)))
-                .With(mock => mock
-                    .Setup(m => m.TryRecognize(
-                        It.IsAny<TokenReader>(),
-                        It.IsAny<ProductionPath>(),
-                        It.IsAny<ILanguageContext>(),
-                        out It.Ref<IResult<INodeSequence>>.IsAny))
-                    .Returns(new TryRecognizeNodeSequence((
-                        TokenReader reader,
-                        ProductionPath? path,
-                        ILanguageContext languageContext,
-                        out IResult<INodeSequence> result) =>
-                    {
-                        result = Result.Of<INodeSequence>(new Exception("non-IRecognitionError"));
+                                    SymbolPath.Of("bleh"), 10, 5)));
                         return false;
                     })));
 
@@ -118,8 +96,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 passingElementMock.Object);
             var success = ch.TryRecognize("dummy", "dummy", null!, out var result);
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            var nseq = result.Resolve();
+            Assert.IsTrue(result.Is(out INodeSequence nseq));
             Assert.AreEqual(1, nseq.Count);
 
             ch = Choice.Of(
@@ -128,8 +105,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 passingElementMock.Object);
             success = ch.TryRecognize("dummy", "dummy", null!, out result);
             Assert.IsTrue(success);
-            Assert.IsTrue(result.IsDataResult());
-            nseq = result.Resolve();
+            Assert.IsTrue(result.Is(out nseq));
             Assert.AreEqual(1, nseq.Count);
 
             ch = Choice.Of(
@@ -138,16 +114,8 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 passingElementMock.Object);
             success = ch.TryRecognize("dummy", "dummy", null!, out result);
             Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult(out GroupRecognitionError ge));
+            Assert.IsTrue(result.Is(out GroupRecognitionError ge));
             Assert.AreEqual(0, ge.ElementCount);
-
-            ch = Choice.Of(
-                Cardinality.OccursOnly(1),
-                nonRecognitionErrorElementMock.Object,
-                passingElementMock.Object);
-            success = ch.TryRecognize("dummy", "dummy", null!, out result);
-            Assert.IsFalse(success);
-            Assert.IsTrue(result.IsErrorResult(out Exception _));
         }
     }
 }

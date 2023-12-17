@@ -2,6 +2,7 @@
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Grammar.Validation;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.XBNF.Parsers;
@@ -44,9 +45,9 @@ namespace Axis.Pulsar.Core.XBNF.Lang
                     def => def.Value.Validator);
         }
 
-        public IResult<ICSTNode> Recognize(string inputTokens)
+        public NodeRecognitionResult Recognize(string inputTokens)
         {
-            _ = Grammar[Grammar.Root].TryProcessRule(inputTokens, null, this, out var result);
+            _ = Grammar[Grammar.Root].TryRecognize(inputTokens, SymbolPath.Default, this, out var result);
 
             return result;
         }

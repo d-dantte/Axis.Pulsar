@@ -2,8 +2,6 @@
 using Axis.Pulsar.Core.Grammar.Groups;
 using Axis.Pulsar.Core.Grammar.Nodes;
 using Axis.Pulsar.Core.Lang;
-using Axis.Pulsar.Core.Lang;
-using Axis.Pulsar.Core.XBNF.Definitions;
 using System.Text;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
@@ -25,7 +23,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
                 .ToString();
         }
 
-        internal static string WriteProduction(IProduction production, XBNFLanguageContext context)
+        internal static string WriteProduction(Production production, XBNFLanguageContext context)
         {
             ArgumentNullException.ThrowIfNull(production);
 
