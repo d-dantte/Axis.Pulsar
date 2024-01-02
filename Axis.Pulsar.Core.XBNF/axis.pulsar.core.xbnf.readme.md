@@ -1,4 +1,4 @@
-# Axis.Pulsar.Core
+# Axis.Pulsar.Core.XBNF
 > Data representation specification and implementation, supporting both textual (human readable) and binary formats.
 
 

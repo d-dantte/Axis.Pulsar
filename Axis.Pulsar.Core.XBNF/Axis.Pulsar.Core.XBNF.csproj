@@ -4,12 +4,27 @@
     <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Version>0.0.1</Version>
+    <LangVersion>latest</LangVersion>
+    <Description>eXtended BNF implementation of the Axis.Pulsar.Core grammar recognizer</Description>
+    <PackageReleaseNotes></PackageReleaseNotes>
+    <RepositoryUrl>https://github.com/d-dantte/Axis.Pulsar</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/d-dantte/Axis.Pulsar</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Company>Axiis</Company>
+    <Authors>Dantte</Authors>
+    <PackageReadmeFile>axis.pulsar.core.xbnf.readme.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Writers\**" />
-    <EmbeddedResource Remove="Writers\**" />
-    <None Remove="Writers\**" />
+    <None Include="axis.pulsar.core.xbnf.readme.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
