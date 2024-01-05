@@ -5,12 +5,11 @@
 ## Contents
 1. [Introduction](#Introduction)
 2. [Production](#Production)
-3. [Atom Symbols](#Atoms)
-4. [Composite Symbols](#Composites)
-5. [Syntax Validation](#Validation)
+3. [Atom Symbols](#Atomic-Symbols)
+4. [Composite Symbols](#Composite-and-Group-Symbols)
+5. [Syntax Validation](#Syntax-Validation)
 6. [Recognition](#Recognition)
 6. [Language IO](#Language-IO)
-
 
 ## Introduction
 <a id="Introduction"></a>
@@ -33,6 +32,7 @@ all elements of the context-free grammar's 4-element tuple as rules.
 
 
 ### Tokens
+<a id="Tokens"></a>
 A good time to mention the `Tokens` structure is now. Strings are ingested into `Pulsar.Core` in the form of token instances, represented
 internally by the `Axis.Pulsar.Core.Utils.Tokens` struct. This is akin to the `ReadOnlySpan<char>` struct type, without the restriction of being
 a `ref struct`, and with the addition that the `Tokens` instance publicly holds on to the original input string. This affords 
@@ -40,11 +40,13 @@ a `ref struct`, and with the addition that the `Tokens` instance publicly holds 
 operations, the `Tokens` are passed around, much like `ReadOnlySpan<char>` instances.
 
 
-### <a id="Symbol"></a> Symbol
+### Symbol
+<a id="Symbol"></a>
 A symbol is a string that conforms to the pattern: `^[a-zA-Z]([a-zA-Z0-9-])*\\z`. 
 
 
 ### Concrete Syntax Trees (CST)
+<a id="Concrete-Syntax-Trees-(CST)"></a>
 The result of recognizing a string as a product of a grammar, is an instance of `Pulsar.Core`'s implimentation of a concrete syntax tree.
 The Tree is made of nodes which can be one of two types:
 1. `Atom` Node: a successfully recognized terminal.
@@ -55,6 +57,7 @@ input string that was recognized by the terminal; while `Composites` hold a refe
 of it's designated symbol. See [composites](#Composites) for more details.
 
 #### Walking the Concrete Syntax Tree
+<a id="Walking-the-Concrete-Syntax-Tree"></a>
 `Pulsar.Core` provides a minimalistic API for searching for nodes within the CST. Rather than using a _Tree Walking/Visiting_ implementation,
 Interaction with the `CST` is achieved by calling:
 1. `FindNodes(...)`: This takes a `NodePath` instance, which is converted from it's `Node Query Language` string representation. If the query
@@ -62,6 +65,7 @@ succeeds, all nodes matching the query are returned.
 2. `FindAllNodes(...)`: This takes a string representing the node symbol. And the entire tree is searched for all nodes with the given symbol.
 
 #### Node Query Langauage (NQL)
+<a id="Node-Query-Language-(NQL)"></a>
 NQL is an extremely simple query language used to describe conditions to match nodes against. Considering it is used against a tree of nodes to
 retrieve nodes that match conditions, it is expressed in heirarchical segments, each segment describing conditions for nodes at that level to
 meet. It is akin to the file-path format, where each file name can be thought of as a node symbol name, or, conditions that nodes at that level
@@ -79,6 +83,7 @@ In the example above, the string `"node-a/node-b/node-c"` is implicitly converte
 search operation is run using the instance.
 
 ##### NQL Syntax
+<a id="NQL-Syntax"></a>
 `NQL` can be visualized as a `Path`, which consists of  `Segment` instances, each of which in turn consists of `Filter` instances.
 
 * `Path`: A path is the overall query expression. It contains one or more `Segment` instances, separated by a `/` character. Paths represent
@@ -117,11 +122,13 @@ include:
   * `<protected>`, or `@u<protected>` - matches any node with the token `protected`.
 
 
-## <a id="Production"></a> Production
+## Production
+<a id="Production"></a>
 A production is, simply put, a rule that maps from a symbol name, to either an `AtomicRule`, or a `CompositeRule`.
 
 
-## <a id="Atoms"></a> Atomic Symbols
+## Atomic Symbols
+<a id="Atomic-Symbols"></a>
 An atom is a symbol whose rule matches the ingested `Tokens` to an internally encapsulated pattern. `Pulsar.Core` comes with
 5 Atom symbols/rules out of the box, all of which are located in the `Axis.Pulsar.Core.Grammar.Atomic` namespace:
 1. `EOF`: This matches the end of the input `Tokens` - meaning, an attempt to read another character from the input will
@@ -155,7 +162,8 @@ The point of extension is the `Axis.Pulsar.Core.Grammar.Atomic.IAtomicRule` inte
 while building up the `Grammer` via the `Axis.Pulsar.Core.Lang.ILanguageImporter` API.
 
 
-## <a id="Composites"></a> Composite and Group Symbols
+## Composite and Group Symbols
+<a id="Composite-and-Group-Symbols"></a>
 A composite symbol is a rule that recognizes one or more rules according to a specified order. Composite rules are `Pulsar.Core`'s
 implementation of __Non-Terminal__ symbols, and as such, there is only one implementation of the `ICompositeRule` interface, the
 `Axis.Pulsar.Core.Grammar.Composite.NonTerminal` class.
@@ -163,6 +171,7 @@ implementation of __Non-Terminal__ symbols, and as such, there is only one imple
 The non-terminal simply delegates recognition responsibilities to it's encapculated `IGroupRule` instance.
 
 ### Group Symbols
+<a id="Group-Symbols"></a>
 Group symbols are what implement the specialized ordering of encapsulated symbols; they each contain one or more `Group Element`.
 Each element possesses a `Cardinality` property that facilitates recognizing repetitions of the element. `Pulsar.Core` comes with 5
 types of groups:
@@ -178,18 +187,21 @@ inside other symbols, constituting the composition of symbols to make a producti
 symbols appearing as the single symbol of a production, atoms can be placed right within a composite rule.
 
 #### Cardinality
+<a id="Cardinality"></a>
 `Cardinality` expresses the number of occurences expected for a `Group Element`. Cardinality provides two values, a `min occurence`,
 and a `max occurence` value. Obviously, the min cannot be greater than the max. However, the max value can also indicate "infinity",
 signifying a situation where no limit is specified. This is modeled similar to cardinality in regular expressions.
 
 
-## <a id="Validation"></a> Syntax Validation
+## Syntax Validation
+<a id="Syntax-Validation"></a>
 A simple validation API is provided by `Pulsar.Core`, enabling users plug into the recognition execution and provide validation
 services. Valitation is triggered after every `Production` is successfully recognized, and the recognized `CST Node` is passed into
 the validation function, for which any exceptions thrown signals a an invalid recognition.
 
 
-## <a id="Recognition"></a> Recognition
+## Recognition
+<a id="Recognition"></a>
 Recognition within `Pulsar.Core` is a process where every `Rule` reads a sufficient number of characters from the `TokenBuffer`
 that conforms to the rules internal expectations. The following assumptions/invariants MUST always be true for every recognition
 operation:
