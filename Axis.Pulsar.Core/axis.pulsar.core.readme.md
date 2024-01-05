@@ -9,10 +9,11 @@
 4. [Composite Symbols](#Composites)
 5. [Syntax Validation](#Validation)
 6. [Recognition](#Recognition)
-6. [Language IO](#LangIO)
+6. [Language IO](#Language-IO)
 
 
-## <a id="Introduction"></a> Introduction
+## Introduction
+<a id="Introduction"></a>
 `Pulsar.Core` is at it's core a grammar recognition library. It does it's business in two steps:
 1. It presents units that when assembled together, can define _any_ context-free grammar. Each of these units
    represents specific recognition logic, to be applied according to the assembling order.
@@ -208,7 +209,8 @@ operation:
       rest of the expected characters weren't found.
 
 
-## <a id="LangIO"></a> Language IO
+## Language IO
+<a id="Language-IO"></a>
 `Pular.Core` only facilitates building grammars with the programatic structures described above, as such, it has no language of
 its own to enable the declaritive expression of context-free grammar. It however provides an extension point for any
 grammar-expression language to plug into it's APIs. This happens through the interfaces in the `Axis.Pulsar.Core.Lang` namespace.
