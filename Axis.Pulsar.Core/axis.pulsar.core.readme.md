@@ -1,8 +1,6 @@
 # Axis.Pulsar.Core
 > `Pulsar.Core` is a library built to recognize context-free grammars.
 
-Skip straight to the [Getting Started](#GettingStarted) section to get started with code.
-
 
 ## Contents
 1. [Introduction](#Introduction)
