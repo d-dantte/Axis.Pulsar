@@ -1,5 +1,5 @@
 ﻿using System.Text.RegularExpressions;
-using static Axis.Pulsar.Core.Grammar.Nodes.DelimitedString;
+using static Axis.Pulsar.Core.Grammar.Atomic.DelimitedString;
 
 namespace Axis.Pulsar.Core.Utils.EscapeMatchers
 {

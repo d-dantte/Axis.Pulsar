@@ -2,7 +2,7 @@
 using Axis.Luna.Common.Unions;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar;
-using Axis.Pulsar.Core.Grammar.Nodes;
+using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Utils;
 

@@ -1,9 +1,11 @@
 ﻿using Axis.Luna.Extensions;
-using Axis.Pulsar.Core.Grammar.Groups;
-using Axis.Pulsar.Core.Grammar.Nodes;
+using Axis.Pulsar.Core.Grammar;
+using Axis.Pulsar.Core.Grammar.Composite;
+using Axis.Pulsar.Core.Grammar.Atomic;
 using Axis.Pulsar.Core.Lang;
 using System.Text;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
+using Axis.Pulsar.Core.Grammar.Composite.Group;
 
 namespace Axis.Pulsar.Core.XBNF.Lang
 {
@@ -34,7 +36,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
                 .ToString();
         }
 
-        internal static string WriteRule(INodeRule rule, XBNFLanguageContext context)
+        internal static string WriteRule(IRule rule, XBNFLanguageContext context)
         {
             ArgumentNullException.ThrowIfNull(rule);
 
@@ -135,7 +137,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
             return $"{rt}{WriteElement(nonTerminal.Element, context)}";
         }
 
-        internal static string WriteElement(IGroupElement element, XBNFLanguageContext context)
+        internal static string WriteElement(IGroupRule element, XBNFLanguageContext context)
         {
             ArgumentNullException.ThrowIfNull(element);
 

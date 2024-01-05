@@ -5,12 +5,12 @@ using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
 using System.Text.RegularExpressions;
 
-namespace Axis.Pulsar.Core.Grammar.Nodes
+namespace Axis.Pulsar.Core.Grammar
 {
     /// <summary>
     /// 
     /// </summary>
-    public class Production: INodeRule
+    public class Production : IRule
     {
         /// <summary>
         /// The symbol name pattern
@@ -27,9 +27,9 @@ namespace Axis.Pulsar.Core.Grammar.Nodes
         /// <summary>
         /// 
         /// </summary>
-        public INodeRule Rule { get; }
+        public IRule Rule { get; }
 
-        public Production(string symbol, INodeRule rule)
+        public Production(string symbol, IRule rule)
         {
             Rule = rule ?? throw new ArgumentNullException(nameof(rule));
             Symbol = symbol.ThrowIfNot(
@@ -37,7 +37,7 @@ namespace Axis.Pulsar.Core.Grammar.Nodes
                 s => new ArgumentException($"Invalid {nameof(symbol)}: {s}"));
         }
 
-        public static Production Of(string symbol, INodeRule rule) => new(symbol, rule);
+        public static Production Of(string symbol, IRule rule) => new(symbol, rule);
 
         /// <summary>
         /// Processes the production by applying the encapsulated recognition rule, then calling the symbols validator,

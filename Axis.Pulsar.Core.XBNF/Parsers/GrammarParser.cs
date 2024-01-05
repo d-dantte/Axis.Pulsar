@@ -1,7 +1,7 @@
 ﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar;
-using Axis.Pulsar.Core.Grammar.Groups;
-using Axis.Pulsar.Core.Grammar.Nodes;
+using Axis.Pulsar.Core.Grammar.Composite;
+using Axis.Pulsar.Core.Grammar.Atomic;
 using Axis.Pulsar.Core.Utils;
 using Axis.Pulsar.Core.XBNF.Parsers.Models;
 using Axis.Pulsar.Core.XBNF.Parsers.Results;
@@ -10,6 +10,8 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
+using Axis.Pulsar.Core.Grammar.Composite.Group;
+using Axis.Pulsar.Core.Grammar.Errors;
 
 namespace Axis.Pulsar.Core.XBNF.Parsers;
 
@@ -129,8 +131,8 @@ internal static class GrammarParser
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, productionPath, context);
 
         var accummulator = NodeRecognitionAccumulator
-            .Of<KeyValuePair<string, INodeRule>, SymbolPath, ParserContext>(
-                KeyValuePair.Create<string, INodeRule>(null!, null!))
+            .Of<KeyValuePair<string, IRule>, SymbolPath, ParserContext>(
+                KeyValuePair.Create<string, IRule>(null!, null!))
 
             // symbol name
             .ThenTry<string, XBNFResult<string>>(
@@ -160,7 +162,7 @@ internal static class GrammarParser
             .ThenTry<ICompositeRule, XBNFResult<ICompositeRule>>(
                 TryParseCompositeRule,
                 accumulatorArgs,
-                (kvp, rule) => kvp.Key.ValuePair((INodeRule)rule));
+                (kvp, rule) => kvp.Key.ValuePair((IRule)rule));
 
         result = accummulator.MapAll(
             prod => Production
@@ -301,8 +303,8 @@ internal static class GrammarParser
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, compositeRulePath, context);
 
         result = NodeRecognitionAccumulator
-            .Of<KeyValuePair<uint, IGroupElement>, SymbolPath, ParserContext>(
-                KeyValuePair.Create(0u, default(IGroupElement)!))
+            .Of<KeyValuePair<uint, IGroupRule>, SymbolPath, ParserContext>(
+                KeyValuePair.Create(0u, default(IGroupRule)!))
 
             // optional recognition threshold
             .ThenTry<uint, XBNFResult<uint>>(
@@ -312,7 +314,7 @@ internal static class GrammarParser
                 (kvp, err) => 1u.ValuePair(kvp.Value))
 
             // required group element
-            .ThenTry<IGroupElement, XBNFResult<IGroupElement>>(
+            .ThenTry<IGroupRule, XBNFResult<IGroupRule>>(
                 TryParseGroupElement,
                 accumulatorArgs,
                 (kvp, element) => kvp.Key.ValuePair(element))
@@ -381,14 +383,14 @@ internal static class GrammarParser
         TokenReader reader,
         SymbolPath path,
         ParserContext context,
-        out XBNFResult<IGroupElement> result)
+        out XBNFResult<IGroupRule> result)
     {
         var position = reader.Position;
         var elementPath = path.Next("group-element");
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, elementPath, context);
 
         result = NodeRecognitionAccumulator
-            .Of<IGroupElement, SymbolPath, ParserContext>(default!)
+            .Of<IGroupRule, SymbolPath, ParserContext>(default!)
 
             // atomic rule ref
             .ThenTry<AtomicRuleRef, XBNFResult<AtomicRuleRef>>(
@@ -410,11 +412,11 @@ internal static class GrammarParser
 
             // map
             .MapAll(
-                XBNFResult<IGroupElement>.Of,
-                (fre, _) => XBNFResult<IGroupElement>.Of(fre),
-                (pre, _) => XBNFResult<IGroupElement>.Of(pre));
+                XBNFResult<IGroupRule>.Of,
+                (fre, _) => XBNFResult<IGroupRule>.Of(fre),
+                (pre, _) => XBNFResult<IGroupRule>.Of(pre));
 
-        if (!result.Is(out IGroupElement _))
+        if (!result.Is(out IGroupRule _))
         {
             reader.Reset(position);
             return false;
@@ -581,11 +583,11 @@ internal static class GrammarParser
 
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, setPath, context);
         result = NodeRecognitionAccumulator
-            .Of<(IGroupElement[] list, Cardinality cardinality), SymbolPath, ParserContext>(
-                (list: default(IGroupElement[])!, cardinality: default(Cardinality)))
+            .Of<(IGroupRule[] list, Cardinality cardinality), SymbolPath, ParserContext>(
+                (list: default(IGroupRule[])!, cardinality: default(Cardinality)))
 
             // required element list
-            .ThenTry<IGroupElement[], XBNFResult<IGroupElement[]>>(
+            .ThenTry<IGroupRule[], XBNFResult<IGroupRule[]>>(
                 TryParseElementList,
                 accumulatorArgs,
                 (info, list) => (list, info.cardinality))
@@ -644,11 +646,11 @@ internal static class GrammarParser
 
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, choicePath, context);
         result = NodeRecognitionAccumulator
-            .Of<(IGroupElement[] list, Cardinality cardinality), SymbolPath, ParserContext>(
-                (list: default(IGroupElement[])!, cardinality: default(Cardinality)))
+            .Of<(IGroupRule[] list, Cardinality cardinality), SymbolPath, ParserContext>(
+                (list: default(IGroupRule[])!, cardinality: default(Cardinality)))
 
             // required element list
-            .ThenTry<IGroupElement[], XBNFResult<IGroupElement[]>>(
+            .ThenTry<IGroupRule[], XBNFResult<IGroupRule[]>>(
                 TryParseElementList,
                 accumulatorArgs,
                 (info, list) => (list, info.cardinality))
@@ -701,11 +703,11 @@ internal static class GrammarParser
 
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, sequencePath, context);
         result = NodeRecognitionAccumulator
-            .Of<(IGroupElement[] list, Cardinality cardinality), SymbolPath, ParserContext>(
-                (list: default(IGroupElement[])!, cardinality: default(Cardinality)))
+            .Of<(IGroupRule[] list, Cardinality cardinality), SymbolPath, ParserContext>(
+                (list: default(IGroupRule[])!, cardinality: default(Cardinality)))
 
             // required element list
-            .ThenTry<IGroupElement[], XBNFResult<IGroupElement[]>>(
+            .ThenTry<IGroupRule[], XBNFResult<IGroupRule[]>>(
                 TryParseElementList,
                 accumulatorArgs,
                 (info, list) => (list, info.cardinality))
@@ -817,7 +819,7 @@ internal static class GrammarParser
         TokenReader reader,
         SymbolPath path,
         ParserContext context,
-        out XBNFResult<IGroupElement[]> result)
+        out XBNFResult<IGroupRule[]> result)
     {
         var position = reader.Position;
         var elementListPath = path.Next("element-list");
@@ -825,7 +827,7 @@ internal static class GrammarParser
         // open bracket
         if (!reader.TryGetTokens("[", out var openBracket))
         {
-            result = XBNFResult<IGroupElement[]>.Of(FailedRecognitionError.Of(
+            result = XBNFResult<IGroupRule[]>.Of(FailedRecognitionError.Of(
                 elementListPath,
                 position));
             reader.Reset(position);
@@ -834,7 +836,7 @@ internal static class GrammarParser
 
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, elementListPath, context);
         var accumulator = NodeRecognitionAccumulator
-            .Of<List<IGroupElement>, SymbolPath, ParserContext>(new List<IGroupElement>())
+            .Of<List<IGroupRule>, SymbolPath, ParserContext>(new List<IGroupRule>())
 
             // optional whitespace
             .ThenTry<SilentBlock, XBNFResult<SilentBlock>>(
@@ -844,7 +846,7 @@ internal static class GrammarParser
                 (group, _) => group)
 
             // required element
-            .ThenTry<IGroupElement, XBNFResult<IGroupElement>>(
+            .ThenTry<IGroupRule, XBNFResult<IGroupRule>>(
                 TryParseGroupElement,
                 accumulatorArgs,
                 (group, element) => group.AddItem(element));
@@ -861,7 +863,7 @@ internal static class GrammarParser
                     (group, _) => group)
 
                 // required element
-                .ThenTry<IGroupElement, XBNFResult<IGroupElement>>(
+                .ThenTry<IGroupRule, XBNFResult<IGroupRule>>(
                     TryParseGroupElement,
                     accumulatorArgs,
                     (group, element) => group.AddItem(element));
@@ -883,15 +885,15 @@ internal static class GrammarParser
             
             // map
             .MapAll(
-                data => XBNFResult<IGroupElement[]>.Of(data.ToArray()),
+                data => XBNFResult<IGroupRule[]>.Of(data.ToArray()),
                 (fre, _) => PartialRecognitionError
                     .Of(elementListPath,
                         position,
                         reader.Position - position)
-                    .ApplyTo(XBNFResult<IGroupElement[]>.Of),
-                (pre, _) => XBNFResult<IGroupElement[]>.Of(pre));
+                    .ApplyTo(XBNFResult<IGroupRule[]>.Of),
+                (pre, _) => XBNFResult<IGroupRule[]>.Of(pre));
 
-        if (!result.Is(out IGroupElement[] _))
+        if (!result.Is(out IGroupRule[] _))
         {
             reader.Reset(position);
             return false;

@@ -1,6 +1,6 @@
-﻿using Axis.Pulsar.Core.Grammar.Groups;
+﻿using Axis.Pulsar.Core.Grammar.Composite.Group;
 
-namespace Axis.Pulsar.Core.Grammar.Nodes
+namespace Axis.Pulsar.Core.Grammar.Composite
 {
     /// <summary>
     /// Rules that comprise groupings of other rules.
@@ -10,12 +10,12 @@ namespace Axis.Pulsar.Core.Grammar.Nodes
     /// tokens, e.g a CLASSIC c# string literal. The recognition threshold will be 1, because if the initial double-quote
     /// is recognized, we are fairly certain we are meant to recognize a string literal.
     /// </summary>
-    public interface ICompositeRule : INodeRule
+    public interface ICompositeRule : IRule
     {
         /// <summary>
         /// The primary group
         /// </summary>
-        IGroupElement Element { get; }
+        IGroupRule Element { get; }
 
         /// <summary>
         /// The recognition threshold.

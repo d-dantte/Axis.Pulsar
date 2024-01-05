@@ -1,21 +1,22 @@
 ﻿using Axis.Luna.Common;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
 
-namespace Axis.Pulsar.Core.Grammar.Groups
+namespace Axis.Pulsar.Core.Grammar.Composite.Group
 {
     /// <summary>
     /// Defines the number of times a group can occur.
     /// <para>
     /// Note: Within Pulsar, rules with cardinalities having a <see cref="MinOccurence"/> of zero, are greedy recognizers,
     /// meaning if recognition fails, the recognizer will report it as a success - i.e, the rule was absent, and create a 
-    /// <see cref="CST.ICSTNode.NonTerminal"/> instance with zero child-nodes.
+    /// <see cref="ICSTNode.Composite"/> instance with zero child-nodes.
     /// </para>
     /// </summary>
-    public readonly struct Cardinality:
+    public readonly struct Cardinality :
         IEquatable<Cardinality>,
         IDefaultValueProvider<Cardinality>
     {
@@ -118,7 +119,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             TokenReader reader,
             SymbolPath symbolPath,
             ILanguageContext context,
-            IGroupElement element,
+            IGroupRule element,
             out GroupRecognitionResult result)
         {
             ArgumentNullException.ThrowIfNull(reader);

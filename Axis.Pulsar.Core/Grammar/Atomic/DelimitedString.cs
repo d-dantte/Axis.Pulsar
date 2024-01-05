@@ -1,11 +1,12 @@
 ﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
 using System.Collections.Immutable;
 
-namespace Axis.Pulsar.Core.Grammar.Nodes
+namespace Axis.Pulsar.Core.Grammar.Atomic
 {
     /// <summary>
     /// Represents parsing tokens with the following properties:

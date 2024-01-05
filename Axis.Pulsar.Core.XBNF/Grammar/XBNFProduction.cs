@@ -3,7 +3,7 @@ using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Results;
-using Axis.Pulsar.Core.Grammar.Nodes;
+using Axis.Pulsar.Core.Grammar.Atomic;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.XBNF;

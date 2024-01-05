@@ -2,11 +2,12 @@
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Results;
-using Axis.Pulsar.Core.Grammar.Nodes;
+using Axis.Pulsar.Core.Grammar.Atomic;
 using Axis.Pulsar.Core.Utils;
 using Axis.Pulsar.Core.Lang;
+using Axis.Pulsar.Core.Grammar.Errors;
 
-namespace Axis.Pulsar.Core.Grammar.Groups
+namespace Axis.Pulsar.Core.Grammar.Composite.Group
 {
     public class AtomicRuleRef : INodeRef<IAtomicRule>
     {

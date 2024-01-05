@@ -1,5 +1,5 @@
 ﻿using Axis.Luna.Extensions;
-using Axis.Pulsar.Core.Grammar.Nodes;
+using Axis.Pulsar.Core.Grammar;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
 namespace Axis.Pulsar.Core.XBNF.Definitions

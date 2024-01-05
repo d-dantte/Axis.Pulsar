@@ -7,19 +7,19 @@ using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
 using System.Collections.Immutable;
 
-namespace Axis.Pulsar.Core.Grammar.Groups
+namespace Axis.Pulsar.Core.Grammar.Composite.Group
 {
     /// <summary>
     /// 
     /// </summary>
     public class Sequence : IGroup
     {
-        public ImmutableArray<IGroupElement> Elements { get; }
+        public ImmutableArray<IGroupRule> Elements { get; }
 
         public Cardinality Cardinality { get; }
 
 
-        public Sequence(Cardinality cardinality, params IGroupElement[] elements)
+        public Sequence(Cardinality cardinality, params IGroupRule[] elements)
         {
             Cardinality = cardinality;
             Elements = elements
@@ -31,7 +31,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
 
         public static Sequence Of(
             Cardinality cardinality,
-            params IGroupElement[] elements)
+            params IGroupRule[] elements)
             => new(cardinality, elements);
 
         public bool TryRecognize(

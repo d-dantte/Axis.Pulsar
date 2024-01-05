@@ -1,22 +1,23 @@
 ﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
 using System.Collections.Immutable;
 
-namespace Axis.Pulsar.Core.Grammar.Groups
+namespace Axis.Pulsar.Core.Grammar.Composite.Group
 {
     /// <summary>
     /// 
     /// </summary>
     public class Choice : IGroup
     {
-        public ImmutableArray<IGroupElement> Elements { get; }
+        public ImmutableArray<IGroupRule> Elements { get; }
 
         public Cardinality Cardinality { get; }
 
 
-        public Choice(Cardinality cardinality, params IGroupElement[] elements)
+        public Choice(Cardinality cardinality, params IGroupRule[] elements)
         {
             Cardinality = cardinality;
             Elements = elements
@@ -28,7 +29,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
 
         public static Choice Of(
             Cardinality cardinality,
-            params IGroupElement[] elements)
+            params IGroupRule[] elements)
             => new(cardinality, elements);
 
         public bool TryRecognize(
@@ -41,7 +42,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
             ArgumentNullException.ThrowIfNull(symbolPath);
 
             var position = reader.Position;
-            foreach(var element in Elements)
+            foreach (var element in Elements)
             {
                 if (element.Cardinality.TryRepeat(reader, symbolPath, context, element, out result))
                     return true;
@@ -51,7 +52,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
                 if (result.Is(out GroupRecognitionError gre)
                     && gre.Cause is FailedRecognitionError)
                     continue;
-                
+
                 else return false;
             }
 

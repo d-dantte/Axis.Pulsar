@@ -2,8 +2,8 @@
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
-using Axis.Pulsar.Core.Grammar.Groups;
-using Axis.Pulsar.Core.Grammar.Nodes;
+using Axis.Pulsar.Core.Grammar.Composite;
+using Axis.Pulsar.Core.Grammar.Atomic;
 using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
@@ -14,6 +14,8 @@ using Axis.Pulsar.Core.XBNF.Parsers.Models;
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
+using Axis.Pulsar.Core.Grammar.Composite.Group;
+using Axis.Pulsar.Core.Grammar.Errors;
 
 namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 {
@@ -841,7 +843,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.Is(out IGroupElement element));
+            Assert.IsTrue(result.Is(out IGroupRule element));
             Assert.AreEqual(Cardinality.OccursOnlyOnce(), element.Cardinality);
             Assert.IsInstanceOfType<AtomicRuleRef>(element);
 
@@ -876,7 +878,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.Is(out IGroupElement[] options));
+            Assert.IsTrue(result.Is(out IGroupRule[] options));
             Assert.AreEqual(2, options.Length);
 
 
@@ -909,7 +911,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.Is(out IGroupElement[] elements));
+            Assert.IsTrue(result.Is(out IGroupRule[] elements));
             Assert.AreEqual(0, elements.Length);
         }
 

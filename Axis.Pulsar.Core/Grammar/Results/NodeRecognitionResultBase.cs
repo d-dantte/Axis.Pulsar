@@ -1,4 +1,5 @@
 ﻿using Axis.Luna.Common.Unions;
+using Axis.Pulsar.Core.Grammar.Errors;
 
 namespace Axis.Pulsar.Core.Grammar.Results
 {

@@ -1,6 +1,7 @@
 ﻿using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
-using Axis.Pulsar.Core.Grammar.Groups;
+using Axis.Pulsar.Core.Grammar.Composite.Group;
+using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
@@ -89,7 +90,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
         public void Recognition_WithNullArgs_Tests()
         {
             // setup
-            var mockElement = Mock.Of<IGroupElement>();
+            var mockElement = Mock.Of<IGroupRule>();
 
             var cardinality = Cardinality.Occurs(1, 1);
 
@@ -104,7 +105,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
         public void Recognition_WithValidArgs_Tests()
         {
             // setup
-            var passingElementMock = new Mock<IGroupElement>();
+            var passingElementMock = new Mock<IGroupRule>();
             passingElementMock
                 .Setup(m => m.TryRecognize(
                     It.IsAny<TokenReader>(),
@@ -121,7 +122,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                     return true;
                 }));
 
-            var failedRecognitionElementMock = new Mock<IGroupElement>();
+            var failedRecognitionElementMock = new Mock<IGroupRule>();
             failedRecognitionElementMock
                 .Setup(m => m.TryRecognize(
                     It.IsAny<TokenReader>(),
@@ -144,7 +145,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                 }));
 
             var passCount = 0;
-            var conditionedFailureElementMock = new Mock<IGroupElement>();
+            var conditionedFailureElementMock = new Mock<IGroupRule>();
             conditionedFailureElementMock
                 .Setup(m => m.TryRecognize(
                     It.IsAny<TokenReader>(),

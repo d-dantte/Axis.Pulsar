@@ -1,18 +1,19 @@
 ﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
 using System.Collections.Immutable;
 
-namespace Axis.Pulsar.Core.Grammar.Groups
+namespace Axis.Pulsar.Core.Grammar.Composite.Group
 {
     /// <summary>
     /// 
     /// </summary>
     public class Set : IGroup
     {
-        public ImmutableArray<IGroupElement> Elements { get; }
+        public ImmutableArray<IGroupRule> Elements { get; }
 
         public Cardinality Cardinality { get; }
 
@@ -23,7 +24,7 @@ namespace Axis.Pulsar.Core.Grammar.Groups
         public int MinRecognitionCount { get; }
 
 
-        public Set(Cardinality cardinality, int minRecognitionCount, params IGroupElement[] elements)
+        public Set(Cardinality cardinality, int minRecognitionCount, params IGroupRule[] elements)
         {
             Cardinality = cardinality;
             MinRecognitionCount = minRecognitionCount;
@@ -37,12 +38,12 @@ namespace Axis.Pulsar.Core.Grammar.Groups
         public static Set Of(
             Cardinality cardinality,
             int minRecognitionCount,
-            params IGroupElement[] elements)
+            params IGroupRule[] elements)
             => new(cardinality, minRecognitionCount, elements);
 
         public static Set Of(
             Cardinality cardinality,
-            params IGroupElement[] elements)
+            params IGroupRule[] elements)
             => new(cardinality, elements.Length, elements);
 
         public bool TryRecognize(

@@ -1,7 +1,8 @@
 ﻿using Axis.Luna.Extensions;
-using Axis.Pulsar.Core.Grammar.Groups;
-using Axis.Pulsar.Core.Grammar.Nodes;
+using Axis.Pulsar.Core.Grammar.Composite;
+using Axis.Pulsar.Core.Grammar.Atomic;
 using System.Collections.Immutable;
+using Axis.Pulsar.Core.Grammar.Composite.Group;
 
 namespace Axis.Pulsar.Core.Grammar
 {
@@ -44,7 +45,7 @@ namespace Axis.Pulsar.Core.Grammar
         }
 
         private static void TraverseRule(
-            INodeRule rule,
+            IRule rule,
             TraversalContext context,
             out bool isLeftTerminated)
         {
@@ -59,7 +60,7 @@ namespace Axis.Pulsar.Core.Grammar
         }
 
         private static void TraverseElement(
-            IGroupElement element,
+            IGroupRule element,
             TraversalContext context,
             out bool isLeftTerminated)
         {

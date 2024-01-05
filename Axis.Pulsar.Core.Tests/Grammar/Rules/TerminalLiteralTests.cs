@@ -1,8 +1,9 @@
-﻿using Axis.Pulsar.Core.Grammar.Nodes;
+﻿using Axis.Pulsar.Core.Grammar.Atomic;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Utils;
 using Axis.Luna.Common.Results;
 using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Grammar.Errors;
 
 namespace Axis.Pulsar.Core.Tests.Grammar.Rules
 {
@@ -21,7 +22,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out ICSTNode node));
-            Assert.AreEqual("t", node.Name);
+            Assert.AreEqual("t", node.Symbol);
             Assert.AreEqual(Tokens.Of("stuff"), node.Tokens);
 
             success = literal.TryRecognize(

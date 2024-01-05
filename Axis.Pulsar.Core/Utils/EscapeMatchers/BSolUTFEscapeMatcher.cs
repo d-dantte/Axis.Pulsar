@@ -2,7 +2,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Axis.Luna.Extensions;
-using static Axis.Pulsar.Core.Grammar.Nodes.DelimitedString;
+using static Axis.Pulsar.Core.Grammar.Atomic.DelimitedString;
 
 namespace Axis.Pulsar.Core.Utils.EscapeMatchers
 {

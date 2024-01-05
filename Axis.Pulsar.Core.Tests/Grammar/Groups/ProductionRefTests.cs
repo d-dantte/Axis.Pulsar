@@ -1,8 +1,8 @@
 ﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
-using Axis.Pulsar.Core.Grammar.Groups;
-using Axis.Pulsar.Core.Grammar.Nodes;
+using Axis.Pulsar.Core.Grammar.Composite.Group;
+using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Grammar.Validation;
 using Axis.Pulsar.Core.Lang;
@@ -49,7 +49,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
             bool executionStatus,
             NodeRecognitionResult executionResult)
         {
-            var mock = new Mock<INodeRule>();
+            var mock = new Mock<IRule>();
 
             mock
                 .Setup(m => m.TryRecognize(

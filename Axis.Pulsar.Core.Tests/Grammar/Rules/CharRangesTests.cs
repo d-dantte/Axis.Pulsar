@@ -1,7 +1,8 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
-using Axis.Pulsar.Core.Grammar.Nodes;
+using Axis.Pulsar.Core.Grammar.Atomic;
+using Axis.Pulsar.Core.Grammar.Errors;
 
 namespace Axis.Pulsar.Core.Tests.Grammar.Rules
 {
@@ -38,7 +39,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             Assert.IsTrue(success);
             Assert.IsTrue(
                 result.Is(out ICSTNode data)
-                && "xter".Equals(data.Name)
+                && "xter".Equals(data.Symbol)
                 && data.Tokens.Equals("b"));
 
             success = xterRanges.TryRecognize(
@@ -49,7 +50,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             Assert.IsTrue(success);
             Assert.IsTrue(
                 result.Is(out data)
-                && "xter".Equals(data.Name)
+                && "xter".Equals(data.Symbol)
                 && data.Tokens.Equals("2"));
 
             success = xterRanges.TryRecognize(

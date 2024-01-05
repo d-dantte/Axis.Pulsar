@@ -1,24 +1,24 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Grammar.Composite.Group;
 using Axis.Pulsar.Core.Grammar.Errors;
-using Axis.Pulsar.Core.Grammar.Groups;
 using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
 
-namespace Axis.Pulsar.Core.Grammar.Nodes
+namespace Axis.Pulsar.Core.Grammar.Composite
 {
     /// <summary>
     /// 
     /// </summary>
     public class NonTerminal : ICompositeRule
     {
-        public IGroupElement Element { get; }
+        public IGroupRule Element { get; }
 
         public uint RecognitionThreshold { get; }
 
-        public NonTerminal(uint recognitionThreshold, IGroupElement ruleGroup)
+        public NonTerminal(uint recognitionThreshold, IGroupRule ruleGroup)
         {
             Element = ruleGroup ?? throw new ArgumentNullException(nameof(ruleGroup));
             RecognitionThreshold = recognitionThreshold;
@@ -26,11 +26,11 @@ namespace Axis.Pulsar.Core.Grammar.Nodes
 
         public static NonTerminal Of(
             uint recognitionThreshold,
-            IGroupElement element)
+            IGroupRule element)
             => new(recognitionThreshold, element);
 
         public static NonTerminal Of(
-            IGroupElement element)
+            IGroupRule element)
             => new(1, element);
 
         public bool TryRecognize(
@@ -66,7 +66,7 @@ namespace Axis.Pulsar.Core.Grammar.Nodes
                         : PartialRecognitionError
                             .Of(symbolPath,
                                 position,
-                                fre.TokenSegment.EndOffset - position  - 1)
+                                fre.TokenSegment.EndOffset - position - 1)
                             .ApplyTo(NodeRecognitionResult.Of),
                     _ => throw new InvalidOperationException(
                         $"Invalid group result cause: {gre.Cause?.GetType()}")

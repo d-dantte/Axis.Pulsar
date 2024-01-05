@@ -1,8 +1,7 @@
 ﻿using Axis.Luna.Common.Segments;
 using Axis.Luna.Extensions;
-using Axis.Pulsar.Core.Grammar;
 
-namespace Axis.Pulsar.Core;
+namespace Axis.Pulsar.Core.Grammar.Errors;
 
 /// <summary>
 /// 

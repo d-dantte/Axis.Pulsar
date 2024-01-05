@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using Axis.Luna.Common;
 using Axis.Luna.Extensions;
-using Axis.Pulsar.Core.Grammar.Nodes;
+using Axis.Pulsar.Core.Grammar.Atomic;
 using Axis.Pulsar.Core.XBNF.Lang;
 
 namespace Axis.Pulsar.Core.XBNF;

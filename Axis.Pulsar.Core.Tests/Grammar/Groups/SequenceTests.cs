@@ -1,6 +1,5 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Pulsar.Core.CST;
-using Axis.Pulsar.Core.Grammar.Groups;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Utils;
 using Moq;
@@ -8,6 +7,7 @@ using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Grammar.Results;
+using Axis.Pulsar.Core.Grammar.Composite.Group;
 
 namespace Axis.Pulsar.Core.Tests.Grammar.Groups
 {
@@ -18,7 +18,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
         public void TryRecognize_Tests()
         {
             // setup
-            var passingElementMock = new Mock<IGroupElement>();
+            var passingElementMock = new Mock<IGroupRule>();
             passingElementMock
                 .With(mock => mock
                     .Setup(m => m.Cardinality)
@@ -39,7 +39,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                         return true;
                     })));
 
-            var unrecognizedElementMock = new Mock<IGroupElement>();
+            var unrecognizedElementMock = new Mock<IGroupRule>();
             unrecognizedElementMock
                 .With(mock => mock
                     .Setup(m => m.Cardinality)
@@ -65,7 +65,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                         return false;
                     })));
 
-            var partiallyRecognizedElementMock = new Mock<IGroupElement>();
+            var partiallyRecognizedElementMock = new Mock<IGroupRule>();
             partiallyRecognizedElementMock
                 .With(mock => mock
                     .Setup(m => m.Cardinality)

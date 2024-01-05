@@ -1,5 +1,4 @@
-﻿using Axis.Luna.Common.Results;
-using Axis.Luna.Extensions;
+﻿using Axis.Luna.Extensions;
 using System.Collections.Immutable;
 using System.Text;
 
@@ -135,12 +134,12 @@ namespace Axis.Pulsar.Core.CST
         Unspecified = 'U',
 
         /// <summary>
-        /// NonTerminal - Indicates that the node type being sought is a <see cref="ICSTNode.NonTerminal"/> 
+        /// NonTerminal - Indicates that the node type being sought is a <see cref="ICSTNode.Composite"/> 
         /// </summary>
         NonTerminal = 'N',
 
         /// <summary>
-        /// Terminal - Indicates that the node type being sought is a <see cref="ICSTNode.Terminal"/> 
+        /// Terminal - Indicates that the node type being sought is a <see cref="ICSTNode.Atom"/> 
         /// </summary>
         Terminal = 'T'
     }
@@ -200,8 +199,8 @@ namespace Axis.Pulsar.Core.CST
         {
             var isNodeTypeMatch = NodeType == NodeType.Unspecified || node switch
             {
-                ICSTNode.NonTerminal => NodeType.NonTerminal.Equals(NodeType),
-                ICSTNode.Terminal => NodeType.Terminal.Equals(NodeType),
+                ICSTNode.Composite => NodeType.NonTerminal.Equals(NodeType),
+                ICSTNode.Atom => NodeType.Terminal.Equals(NodeType),
                 _ => throw new InvalidOperationException($"Invalid ICSTNode type: '{node?.GetType()}'")
             };
 
@@ -214,8 +213,8 @@ namespace Axis.Pulsar.Core.CST
         {
             return SymbolName is null || node switch
             {
-                ICSTNode.NonTerminal nt => SymbolName.Equals(nt.Name),
-                ICSTNode.Terminal t => SymbolName.Equals(t.Name),
+                ICSTNode.Composite nt => SymbolName.Equals(nt.Symbol),
+                ICSTNode.Atom t => SymbolName.Equals(t.Symbol),
                 _ => false
             };
         }

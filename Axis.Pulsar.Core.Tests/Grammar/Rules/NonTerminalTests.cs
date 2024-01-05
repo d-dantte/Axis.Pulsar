@@ -1,8 +1,9 @@
 ﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
-using Axis.Pulsar.Core.Grammar.Groups;
-using Axis.Pulsar.Core.Grammar.Nodes;
+using Axis.Pulsar.Core.Grammar.Composite;
+using Axis.Pulsar.Core.Grammar.Composite.Group;
+using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
@@ -13,12 +14,12 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
     [TestClass]
     public class NonTerminalTests
     {
-        internal static IGroupElement MockElement(
+        internal static IGroupRule MockElement(
             Cardinality cardinality,
             bool recognitionStatus,
             GroupRecognitionResult recognitionResult)
         {
-            var mock = new Mock<IGroupElement>();
+            var mock = new Mock<IGroupRule>();
 
             mock.Setup(m => m.Cardinality).Returns(cardinality);
             mock.Setup(m => m.TryRecognize(

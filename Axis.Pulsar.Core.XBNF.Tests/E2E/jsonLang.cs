@@ -45,7 +45,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
             var result = _lang.Recognize("{\n    // comment\n}");
             Assert.IsNotNull(result);
             Assert.IsTrue(result.Is(out ICSTNode node));
-            Assert.AreEqual("json", node.Name);
+            Assert.AreEqual("json", node.Symbol);
             var obj = node.FindNodes("json-object/<{>").ToArray();
             Assert.AreEqual(1, obj.Length);
 
@@ -53,7 +53,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
             result = _lang.Recognize("{}");
             Assert.IsNotNull(result);
             Assert.IsTrue(result.Is(out node));
-            Assert.AreEqual("json", node.Name);
+            Assert.AreEqual("json", node.Symbol);
             Assert.IsTrue("{}".Equals(node.Tokens));
             obj = node.FindNodes("json-object/<{>").ToArray();
             Assert.AreEqual(1, obj.Length);
@@ -63,7 +63,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
             result = _lang.Recognize(input);
             Assert.IsNotNull(result);
             Assert.IsTrue(result.Is(out node));
-            Assert.AreEqual("json", node.Name);
+            Assert.AreEqual("json", node.Symbol);
             obj = node.FindNodes("json-object/property/json-string/<\"bleh\">").ToArray();
             Assert.AreEqual(1, obj.Length);
 
@@ -72,7 +72,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
             result = _lang.Recognize(input);
             Assert.IsNotNull(result);
             Assert.IsTrue(result.Is(out node));
-            Assert.AreEqual("json", node.Name);
+            Assert.AreEqual("json", node.Symbol);
             Assert.AreEqual(1, obj.Length);
 
         }

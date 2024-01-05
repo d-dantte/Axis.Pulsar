@@ -17,12 +17,12 @@ namespace Axis.Pulsar.Core.CST
         /// <summary>
         /// The symbol name of this node
         /// </summary>
-        string Name { get; }
+        string Symbol { get; }
 
         #region Of
 
         /// <summary>
-        /// Creates an instance of a <see cref="NonTerminal"/> node
+        /// Creates an instance of a <see cref="Composite"/> node
         /// </summary>
         /// <param name="name">The node name</param>
         /// <param name="nodes">The list of comprising nodes</param>
@@ -30,10 +30,10 @@ namespace Axis.Pulsar.Core.CST
         public static ICSTNode Of(
             string name,
             params ICSTNode[] nodes)
-            => new NonTerminal(name, INodeSequence.Of(nodes));
+            => new Composite(name, INodeSequence.Of(nodes));
 
         /// <summary>
-        /// Creates an instance of a <see cref="NonTerminal"/> node
+        /// Creates an instance of a <see cref="Composite"/> node
         /// </summary>
         /// <param name="name">The node name</param>
         /// <param name="nodes">The list of comprising nodes</param>
@@ -41,7 +41,7 @@ namespace Axis.Pulsar.Core.CST
         public static ICSTNode Of(
             string name,
             INodeSequence nodes)
-            => new NonTerminal(name, nodes);
+            => new Composite(name, nodes);
 
         /// <summary>
         /// 
@@ -52,16 +52,16 @@ namespace Axis.Pulsar.Core.CST
         public static ICSTNode Of(
             string name,
             Tokens tokens)
-            => new Terminal(name, tokens);
+            => new Atom(name, tokens);
 
         #endregion
 
         /// <summary>
         /// Non-Terminal symbol node
         /// </summary>
-        public readonly struct NonTerminal :
+        public readonly struct Composite :
             ICSTNode,
-            IDefaultValueProvider<NonTerminal>
+            IDefaultValueProvider<Composite>
         {
             private readonly string _name;
             private readonly INodeSequence _nodes;
@@ -69,12 +69,12 @@ namespace Axis.Pulsar.Core.CST
             private readonly DeferredValue<Tokens> _tokens;
 
             #region DefaultValueProvider
-            public static NonTerminal Default => default;
+            public static Composite Default => default;
 
             public bool IsDefault => Default.Equals(this);
             #endregion
 
-            public string Name => _name;
+            public string Symbol => _name;
 
             /// <summary>
             /// The list of composing nodes
@@ -83,7 +83,7 @@ namespace Axis.Pulsar.Core.CST
 
             public Tokens Tokens => _tokens.Value;
 
-            public NonTerminal(string name, INodeSequence nodes)
+            public Composite(string name, INodeSequence nodes)
             {
                 _name = name.ThrowIf(
                     string.IsNullOrWhiteSpace,
@@ -118,25 +118,25 @@ namespace Axis.Pulsar.Core.CST
         /// <summary>
         /// Terminal symbol node
         /// </summary>
-        public readonly struct Terminal :
+        public readonly struct Atom :
             ICSTNode,
-            IDefaultValueProvider<Terminal>,
-            IEquatable<Terminal>
+            IDefaultValueProvider<Atom>,
+            IEquatable<Atom>
         {
             private readonly Tokens _tokens;
             private readonly string _name;
 
             #region DefaultValueProvider
-            public static Terminal Default => default;
+            public static Atom Default => default;
 
             public bool IsDefault => _tokens.IsDefault && _name is null;
             #endregion
 
             public Tokens Tokens => _tokens;
 
-            public string Name => _name;
+            public string Symbol => _name;
 
-            public Terminal(string name, Tokens tokens)
+            public Atom(string name, Tokens tokens)
             {
                 _tokens = tokens;
 
@@ -145,16 +145,16 @@ namespace Axis.Pulsar.Core.CST
                     _ => new ArgumentException($"Invalid {nameof(name)}: '{name}'"));
             }
 
-            public static bool operator ==(Terminal left, Terminal right) => left.Equals(right);
+            public static bool operator ==(Atom left, Atom right) => left.Equals(right);
 
-            public static bool operator !=(Terminal left, Terminal right) => !left.Equals(right);
+            public static bool operator !=(Atom left, Atom right) => !left.Equals(right);
 
             public override bool Equals(object? obj)
             {
-                return obj is Terminal other && Equals(other);
+                return obj is Atom other && Equals(other);
             }
 
-            public bool Equals(Terminal other)
+            public bool Equals(Atom other)
             {
                 return _tokens.Equals(other.Tokens)
                     && EqualityComparer<string>.Default.Equals(_name, other._name);
@@ -162,7 +162,7 @@ namespace Axis.Pulsar.Core.CST
 
             public override int GetHashCode() => HashCode.Combine(_tokens, _name);
 
-            public override string ToString() => $"[@T Name: {Name}; Tokens: {Tokens}]";
+            public override string ToString() => $"[@T Name: {Symbol}; Tokens: {Tokens}]";
         }
     }
 }

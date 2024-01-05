@@ -1,4 +1,4 @@
-﻿using Axis.Pulsar.Core.Grammar.Nodes;
+﻿using Axis.Pulsar.Core.Grammar.Atomic;
 using Axis.Pulsar.Core.XBNF.Lang;
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;

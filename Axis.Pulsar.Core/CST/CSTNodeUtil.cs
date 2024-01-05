@@ -16,7 +16,7 @@ namespace Axis.Pulsar.Core.CST
                 return seq
                     .SelectMany(node => node switch
                     {
-                        ICSTNode.NonTerminal ntn => ntn.Nodes,
+                        ICSTNode.Composite ntn => ntn.Nodes,
                         _ => INodeSequence.Empty
                     })
                     .Where(segment.Matches)
@@ -39,14 +39,14 @@ namespace Axis.Pulsar.Core.CST
 
         private static void FindAllChildNodes(ICSTNode node, string name, List<ICSTNode> nodes)
         {
-            if (node is ICSTNode.NonTerminal nt)
+            if (node is ICSTNode.Composite nt)
             {
                 foreach (var child in nt.Nodes)
                 {
-                    if (child is ICSTNode.NonTerminal ntchild && ntchild.Name.Equals(name))
+                    if (child is ICSTNode.Composite ntchild && ntchild.Symbol.Equals(name))
                         nodes.Add(child);
 
-                    if (child is ICSTNode.Terminal ctchild && ctchild.Name.Equals(name))
+                    if (child is ICSTNode.Atom ctchild && ctchild.Symbol.Equals(name))
                         nodes.Add(child);
 
                     FindAllChildNodes(child, name, nodes);
