@@ -54,7 +54,7 @@ The Tree is made of nodes which can be one of two types:
 
 Each Node holds at a minimum, the symbol it is designated to. Individually, `Atoms` hold a reference to the `Tokens` instance, a section of the
 input string that was recognized by the terminal; while `Composites` hold a reference to all the other nodes that were recognized by the rule
-of it's designated symbol. See [composites](#Composites) for more details.
+of it's designated symbol. See [composites](#Composite-and-Group-Symbols) for more details.
 
 #### Walking the Concrete Syntax Tree
 <a id="Walking-the-Concrete-Syntax-Tree"></a>
