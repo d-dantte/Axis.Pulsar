@@ -27,7 +27,7 @@ namespace Axis.Pulsar.Grammar.Builders
 
             _symbol = symbol.ThrowIf(
                 string.IsNullOrWhiteSpace,
-                new ArgumentException($"Invalid {nameof(symbol)}: {symbol}"));
+                _ => new ArgumentException($"Invalid {nameof(symbol)}: {symbol}"));
 
             return this;
         }
@@ -79,7 +79,7 @@ namespace Axis.Pulsar.Grammar.Builders
 
             _recognitionThreshold = recognitionThreshold.ThrowIf(
                 v => v < 1,
-                new ArgumentException($"Invalid {nameof(recognitionThreshold)}: {recognitionThreshold}"));
+                _ => new ArgumentException($"Invalid {nameof(recognitionThreshold)}: {recognitionThreshold}"));
 
             return this;
         }

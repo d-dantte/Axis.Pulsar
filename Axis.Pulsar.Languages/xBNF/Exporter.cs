@@ -186,7 +186,7 @@ namespace Axis.Pulsar.Languages.xBNF
             {
                 UniqueName = uniqueName.ThrowIf(
                     string.IsNullOrWhiteSpace,
-                    new ArgumentException($"Invalid {nameof(uniqueName)}"));
+                    _ => new ArgumentException($"Invalid {nameof(uniqueName)}"));
 
                 Filter = filter ?? throw new ArgumentNullException(nameof(filter));
 

@@ -78,9 +78,7 @@ namespace Axis.Pulsar.Grammar.CST
 
                 else
                 {
-                    var errorResult = segment.AsError();
-                    path = Result.Of<Path>(errorResult.ParseException());
-
+                    path = segment.MapAs<Path>();
                     return false;
                 }
 
@@ -107,10 +105,9 @@ namespace Axis.Pulsar.Grammar.CST
                     if (TryParseSegment(reader, out segment))
                         segments.Add(segment.Resolve());
 
-                    else
+                    else if(segment.IsErrorResult(out var error))
                     {
-                        var errorResult = segment.AsError();
-                        path = errorResult.ParseError() switch
+                        path = error switch
                         {
                             Errors.RuntimeError e => Result.Of<Path>(e),
                             Errors.PartiallyRecognizedTokens
@@ -120,7 +117,7 @@ namespace Axis.Pulsar.Grammar.CST
                                     position,
                                     reader.Position - position)),
                             _ => throw new InvalidOperationException(
-                                $"Invalid Error type: '{errorResult.ParseError()?.GetType()}'")
+                                $"Invalid Error type: '{error?.GetType()}'")
                         };
 
                         return false;
@@ -162,9 +159,7 @@ namespace Axis.Pulsar.Grammar.CST
 
                 else
                 {
-                    var errorResult = filter.AsError();
-                    segment = Result.Of<Segment>(errorResult.ParseException());
-
+                    segment = filter.MapAs<Segment>();
                     return false;
                 }
 
@@ -188,10 +183,9 @@ namespace Axis.Pulsar.Grammar.CST
                     if (TryParseFilter(reader, out filter))
                         filters.Add(filter.Resolve());
 
-                    else
+                    else if (filter.IsErrorResult(out var error))
                     {
-                        var errorResult = filter.AsError();
-                        segment = errorResult.ParseError() switch
+                        segment = error switch
                         {
                             Errors.RuntimeError e => Result.Of<Segment>(e),
                             Errors.PartiallyRecognizedTokens
@@ -201,7 +195,7 @@ namespace Axis.Pulsar.Grammar.CST
                                     position,
                                     reader.Position - position)),
                             _ => throw new InvalidOperationException(
-                                $"Invalid Error type: '{errorResult.ParseError()?.GetType()}'")
+                                $"Invalid Error type: '{error?.GetType()}'")
                         };
 
                         return false;
@@ -237,26 +231,29 @@ namespace Axis.Pulsar.Grammar.CST
             try
             {
                 if (!TryParseFilterType(reader, out var filterType)
-                    && filterType.AsError().ParseError() is not Errors.UnrecognizedTokens
-                    && filterType.AsError().ParseError() is not Errors.EndOfStream)
+                    && filterType.IsErrorResult(out var error)
+                    && error is not Errors.UnrecognizedTokens
+                    && error is not Errors.EndOfStream)
                 {
-                    filter = Result.Of<NodeFilter>(filterType.AsError().ParseException());
+                    filter = filterType.MapAs<NodeFilter>();
                     return false;
                 }
 
                 if (!TryParseSymbolName(reader, out var symbolName)
-                    && symbolName.AsError().ParseError() is not Errors.UnrecognizedTokens
-                    && symbolName.AsError().ParseError() is not Errors.EndOfStream)
+                    && symbolName.IsErrorResult(out error)
+                    && error is not Errors.UnrecognizedTokens
+                    && error is not Errors.EndOfStream)
                 {
-                    filter = Result.Of<NodeFilter>(symbolName.AsError().ParseException());
+                    filter = symbolName.MapAs<NodeFilter>();
                     return false;
                 }
 
                 if (!TryParseTokens(reader, out var tokens)
-                    && tokens.AsError().ParseError() is not Errors.UnrecognizedTokens
-                    && tokens.AsError().ParseError() is not Errors.EndOfStream)
+                    && tokens.IsErrorResult(out error)
+                    && error is not Errors.UnrecognizedTokens
+                    && error is not Errors.EndOfStream)
                 {
-                    filter = Result.Of<NodeFilter>(tokens.AsError().ParseException());
+                    filter = tokens.MapAs<NodeFilter>();
                     return false;
                 }
 
@@ -492,20 +489,5 @@ namespace Axis.Pulsar.Grammar.CST
                 return false;
             }
         }
-
-
-        #region Extensions
-        internal static Errors.IParseError ParseError<TResult>(
-            this IResult<TResult>.ErrorResult errorResult)
-        {
-            return errorResult.Cause().InnerException as Errors.IParseError;
-        }
-
-        internal static Exception ParseException<TResult>(
-            this IResult<TResult>.ErrorResult errorResult)
-        {
-            return errorResult.Cause().InnerException;
-        }
-        #endregion
     }
 }

@@ -44,7 +44,7 @@ namespace Axis.Pulsar.Grammar.Recognizers.Results
             {
                 ExpectedTokens = expectedTokens.ThrowIf(
                     string.IsNullOrWhiteSpace,
-                    new ArgumentException($"Invalid {nameof(expectedTokens)}"));
+                    _ => new ArgumentException($"Invalid {nameof(expectedTokens)}"));
             }
 
             public static implicit operator TokenMisMatch(string expectedTokens) => new(expectedTokens);

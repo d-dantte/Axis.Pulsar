@@ -44,7 +44,7 @@ namespace Axis.Pulsar.Grammar.Recognizers.CustomTerminals
 
         public DelimitedStringRecognizer(DelimitedString rule, Language.Grammar grammar)
         {
-            _rule = rule.ThrowIfDefault(new ArgumentException(nameof(rule)));
+            _rule = rule.ThrowIfDefault(_ => new ArgumentException($"Invalid {nameof(rule)}: default"));
             Grammar = grammar ?? throw new ArgumentNullException(nameof(grammar));
         }
 

@@ -20,8 +20,8 @@ namespace Axis.Pulsar.Grammar.CST
         public Path(IEnumerable<Segment> segments)
         {
             _segments = segments
-                .ThrowIfNull(new ArgumentNullException(nameof(segments)))
-                .ThrowIfAny(f => f is null, new ArgumentException($"Invalid element: null"))
+                .ThrowIfNull(() => new ArgumentNullException(nameof(segments)))
+                .ThrowIfAny(f => f is null, _ => new ArgumentException($"Invalid element: null"))
                 .ApplyTo(ImmutableArray.CreateRange);
         }
 
@@ -74,8 +74,8 @@ namespace Axis.Pulsar.Grammar.CST
         public Segment(params NodeFilter[] filters)
         {
             _filters = filters
-                .ThrowIfNull(new ArgumentNullException(nameof(filters)))
-                .ThrowIfAny(f => f is null, new ArgumentException($"Invalid element: null"))
+                .ThrowIfNull(() => new ArgumentNullException(nameof(filters)))
+                .ThrowIfAny(f => f is null, _ => new ArgumentException($"Invalid element: null"))
                 .ApplyTo(ImmutableArray.CreateRange);
         }
 

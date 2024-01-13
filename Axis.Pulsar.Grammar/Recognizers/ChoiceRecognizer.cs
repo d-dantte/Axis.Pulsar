@@ -23,7 +23,7 @@ namespace Axis.Pulsar.Grammar.Recognizers
 
         public ChoiceRecognizer(Choice choice, Language.Grammar grammar)
         {
-            _rule = choice.ThrowIfDefault(new ArgumentException($"Invalid {nameof(choice)}: {choice}"));
+            _rule = choice.ThrowIfDefault(_ => new ArgumentException($"Invalid {nameof(choice)}: {choice}"));
             Grammar = grammar ?? throw new ArgumentNullException(nameof(grammar));
             _recognizers = choice.Rules
                 .Select(rule => rule.ToRecognizer(Grammar))

@@ -34,7 +34,7 @@ namespace Axis.Pulsar.Grammar.Recognizers
 
         public SetRecognizer(Set set, Language.Grammar grammar)
         {
-            _rule = set.ThrowIfDefault(new ArgumentException($"Invalid {nameof(set)}: {set}"));
+            _rule = set.ThrowIfDefault(_ => new ArgumentException($"Invalid {nameof(set)}: {set}"));
             Grammar = grammar ?? throw new ArgumentNullException(nameof(grammar));
             _recognizers = set.Rules
                 .Select(rule => rule.ToRecognizer(Grammar))

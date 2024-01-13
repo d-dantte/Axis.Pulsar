@@ -217,7 +217,9 @@ namespace Axis.Pulsar.Grammar
         /// </summary>
         /// <param name="offset">The offset. This should be a positive number - if it is negative, an exception is thrown</param>
         public BufferedTokenReader Back(int offset)
-            => Reset(Position - offset.ThrowIf(Extensions.IsNegative, new ArgumentException("Negative offsets are invalid")));
+            => Reset(Position - offset.ThrowIf(
+                Extensions.IsNegative,
+                _ => new ArgumentException("Negative offsets are invalid")));
 
         /// <summary>
         /// Moves the position backwards by one space

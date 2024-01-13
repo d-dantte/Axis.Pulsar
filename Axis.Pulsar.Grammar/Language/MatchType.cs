@@ -48,7 +48,7 @@ namespace Axis.Pulsar.Grammar.Language
             {
                 MaxMismatch = maxMismatch.ThrowIf(
                         v => v < 1,
-                        new ArgumentException($"Invariant error: {nameof(Open.MaxMismatch)} < 1"));
+                        _ => new ArgumentException($"Invariant error: {nameof(Open.MaxMismatch)} < 1"));
                 AllowsEmptyTokens = allowsEmptyTokens;
             }
 
@@ -90,11 +90,11 @@ namespace Axis.Pulsar.Grammar.Language
             {
                 MinMatch = minMatch.ThrowIf(
                     v => v < 1,
-                    new ArgumentException($"Invariant error: {nameof(Closed.MinMatch)} < 1"));
+                    _ => new ArgumentException($"Invariant error: {nameof(Closed.MinMatch)} < 1"));
 
                 MaxMatch = maxMatch.ThrowIf(
                     v => v < 1,
-                    new ArgumentException($"Invariant error: {nameof(Closed.MaxMatch)} < 1"));
+                    _ => new ArgumentException($"Invariant error: {nameof(Closed.MaxMatch)} < 1"));
 
                 if (MinMatch > MaxMatch)
                     throw new ArgumentException($"Invariant error: {nameof(Closed.MaxMatch)} < {nameof(Closed.MinMatch)}");

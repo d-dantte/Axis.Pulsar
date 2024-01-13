@@ -19,7 +19,7 @@ namespace Axis.Pulsar.Grammar.Recognizers
 
         public LiteralRecognizer(Literal literalRule, Language.Grammar grammar)
         {
-            _rule = literalRule.ThrowIfDefault(new ArgumentException(nameof(literalRule)));
+            _rule = literalRule.ThrowIfDefault(_ => new ArgumentException($"Invalid {nameof(literalRule)}: default"));
             Grammar = grammar ?? throw new ArgumentNullException(nameof(grammar));
         }
 

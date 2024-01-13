@@ -74,11 +74,11 @@ namespace Axis.Pulsar.Grammar.CST
             {
                 SymbolName = symbolName.ThrowIf(
                     string.IsNullOrWhiteSpace,
-                    new ArgumentException("Invalid symbol name"));
+                    _ => new ArgumentException("Invalid symbol name"));
 
                 Tokens = tokens.ThrowIf(
                     Extensions.IsNull,
-                    new ArgumentException("Invalid tokens"));
+                    _ => new ArgumentException("Invalid tokens"));
 
                 TerminalType = terminalType.ThrowIfNot(
                     Enum.IsDefined,
@@ -125,12 +125,18 @@ namespace Axis.Pulsar.Grammar.CST
             {
                 SymbolName = symbolName.ThrowIf(
                     string.IsNullOrWhiteSpace,
-                    new ArgumentException("Invalid symbol name"));
+                    _ => new ArgumentException("Invalid symbol name"));
 
                 _nodes = nodes
-                    .ThrowIf(Extensions.IsNull, new ArgumentNullException(nameof(nodes)))
-                    .ThrowIf(Extensions.ContainsNull, new ArgumentException("Symbol array must not contain null elements"))
-                    .ThrowIf(ContainsInvalidNodeType, new ArgumentException($"Symbol array contains an invalid node type (neither '{nameof(LeafNode)}' nor '{nameof(BranchNode)}')"))
+                    .ThrowIf(
+                        Extensions.IsNull,
+                        _ => new ArgumentNullException(nameof(nodes)))
+                    .ThrowIf(
+                        Extensions.ContainsNull,
+                        _ => new ArgumentException("Symbol array must not contain null elements"))
+                    .ThrowIf(
+                        ContainsInvalidNodeType,
+                        _ => new ArgumentException($"Invalid {nameof(nodes)}: neither '{nameof(LeafNode)}' nor '{nameof(BranchNode)}'"))
                     .ToArray();
 
                 _aggregatedTokens = new Lazy<string>(() => nodes

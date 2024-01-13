@@ -1,31 +1,30 @@
 # Axis.Pulsar.Core.XBNF
-> Data representation specification and implementation, supporting both textual (human readable) and binary formats.
+> `Pulsar.Core.XBNF` is a derivative of the BNF notation system, used in expressing context-free grammars, and
+converting the grammar elements into `Pulsar.Core` constructs.
 
 
 ## Contents
 1. [Introduction](#Introduction)
-2. [Production](#Production)
-3. [Groups](#Groups)
-4. [Atoms](#Atoms)
-5. [Examples](#Examples)
+1. [Syntax](#Syntax)
+   1. [Production](#Production)
+   1. [Symbol](#Symbol)
+   1. [NonTermianl](#NonTerma)
+      1. [Choice](#Choice)
+      1. [Sequence](#Sequence)
+      1. [Set](#Set)
+      1. [Production Ref](#Production-Ref)
+      1. [Atomic Ref](#Atomic-Ref)
+   1. [Ternimal](#Terminal)
+
+1. [Configuration](#Configuration)
+   1. [Atomic Rule Definitions](#Atomic-Rule-Definitions)
+   1. [Default Definitions](#Default-Definitions)
+   1. [Production Validation Definitions](#Production-Validation-Definitions)
+   1. [Rule Factories](#Rule-Factories)
+1. [Examples](#Examples)
 
 
-## <a id="Introduction"></a> Introduction
-lorem ipsum
-
-
-## <a id="Produciton"></a> Production
-lorem ipsum
-
-
-## <a id="Groups"></a> Groups
-lorem ipsum
-
-
-## <a id="Atoms"></a> Atoms
-lorem ipsum
-
-
-## <a id="Examples"></a> Exmaples
+## Introduction
+<a id="Introduction"></a>
 lorem ipsum
 

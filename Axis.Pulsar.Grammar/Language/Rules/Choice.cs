@@ -33,15 +33,15 @@ namespace Axis.Pulsar.Grammar.Language.Rules
             Cardinality = cardinality;
             
             _rules = rules
-                .ThrowIfNull(new ArgumentNullException(nameof(rules)))
-                .ThrowIf(Extensions.IsEmpty, new ArgumentException($"{nameof(rules)} is empty"))
-                .WithEach(r => r.ThrowIfNull(new ArgumentException("Cannot contain null rules")))
+                .ThrowIfNull(() => new ArgumentNullException(nameof(rules)))
+                .ThrowIf(Extensions.IsEmpty, _ => new ArgumentException($"{nameof(rules)} is empty"))
+                .WithEach(r => r.ThrowIfNull(() => new ArgumentException("Cannot contain null rules")))
                 .WithEach(r => r.ThrowIf(
                     Extensions.Is<ProductionRule>,
-                    new ArgumentException($"Cannot contain {typeof(ProductionRule).FullName} rules")))
+                    _ => new ArgumentException($"Cannot contain {typeof(ProductionRule).FullName} rules")))
                 .WithEach(r => r.ThrowIfNot(
                     Extensions.IsTerminal,
-                    new ArgumentException($"Cannot contain non-terminating rules")))
+                    _ => new ArgumentException($"Cannot contain non-terminating rules")))
                 .ToArray();
         }
 

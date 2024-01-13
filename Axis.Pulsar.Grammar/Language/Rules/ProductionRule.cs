@@ -59,17 +59,17 @@ namespace Axis.Pulsar.Grammar.Language.Rules
 
             RecognitionThreshold = recognitionThreshold.ThrowIf(
                 v => v < 1,
-                new ArgumentException($"Invalid {nameof(recognitionThreshold)}: {recognitionThreshold}"));
+                _ => new ArgumentException($"Invalid {nameof(recognitionThreshold)}: {recognitionThreshold}"));
 
             SymbolName = symbolName.ThrowIfNot(
                 SymbolHelper.IsValidSymbolName,
-                new ArgumentException($"Invalid symbol name: {symbolName}"));
+                _ => new ArgumentException($"Invalid symbol name: {symbolName}"));
 
             Rule = rule
-                .ThrowIfNull(new ArgumentNullException(nameof(rule)))
+                .ThrowIfNull(() => new ArgumentNullException(nameof(rule)))
                 .ThrowIf(
                     Extensions.Is<ProductionRule>,
-                    new ArgumentException($"Cannot encapsulate a {typeof(ProductionRule).FullName}"));
+                    _ => new ArgumentException($"Cannot encapsulate a {typeof(ProductionRule).FullName}"));
         }
 
         public override string ToString()

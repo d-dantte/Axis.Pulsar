@@ -1,4 +1,5 @@
-﻿using Axis.Pulsar.Grammar.Language;
+﻿using Axis.Luna.Common.Results;
+using Axis.Pulsar.Grammar.Language;
 using Axis.Pulsar.Grammar.Language.Rules;
 using System;
 using System.Collections.Generic;
@@ -125,6 +126,21 @@ namespace Axis.Pulsar.Grammar
                 return predicate.Invoke(first, second);
 
             return false;
+        }
+
+
+        internal static IResult<T3> Combine<T1, T2, T3>(this
+            IResult<T1> t1Result,
+            IResult<T2> t2Result,
+            Func<T1, T2, T3> combiner)
+        {
+            ArgumentNullException.ThrowIfNull(t1Result);
+            ArgumentNullException.ThrowIfNull(t2Result);
+            ArgumentNullException.ThrowIfNull(combiner);
+
+            return Result
+                .Of(() => (t1Result.Resolve(), t2Result.Resolve()))
+                .Map(tuple => combiner.Invoke(tuple.Item1, tuple.Item2));
         }
         #endregion
 

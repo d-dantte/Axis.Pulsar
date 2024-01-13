@@ -34,8 +34,8 @@ namespace Axis.Pulsar.Grammar.Language.Rules
         {
             IsCaseSensitive = isCaseSensitive;
             Value = value
-                .ThrowIf(Extensions.IsNull, new ArgumentNullException(nameof(value)))
-                .ThrowIf(t => t.Length == 0, new ArgumentException($"Invalid value length: {value.Length}"));
+                .ThrowIf(Extensions.IsNull, _ => new ArgumentNullException(nameof(value)))
+                .ThrowIf(t => t.Length == 0, _ => new ArgumentException($"Invalid value length: {value.Length}"));
         }
 
         public override int GetHashCode() => HashCode.Combine(Value, IsCaseSensitive);

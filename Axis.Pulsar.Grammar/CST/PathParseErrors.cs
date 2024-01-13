@@ -50,11 +50,11 @@ namespace Axis.Pulsar.Grammar.CST
             {
                 Position = position.ThrowIf(
                     p => p < 0,
-                    new ArgumentException($"Invalid position: {position}"));
+                    _ => new ArgumentException($"Invalid position: {position}"));
 
                 Length = length.ThrowIf(
                     p => p <= 0,
-                    new ArgumentException($"Invalid length: {length}"));
+                    _ => new ArgumentException($"Invalid length: {length}"));
 
                 PartialTokens = partialTokens;
             }

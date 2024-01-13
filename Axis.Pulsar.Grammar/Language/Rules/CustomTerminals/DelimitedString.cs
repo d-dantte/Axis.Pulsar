@@ -101,15 +101,15 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
         {
             StartDelimiter = startDelimiter.ThrowIf(
                 string.IsNullOrEmpty,
-                new ArgumentException("Null or empty string", nameof(startDelimiter)));
+                _ => new ArgumentException("Null or empty string", nameof(startDelimiter)));
 
             EndDelimiter = endDelimiter.ThrowIf(
                 string.IsNullOrEmpty,
-                new ArgumentException("Null or empty string", nameof(endDelimiter)));
+                _ => new ArgumentException("Null or empty string", nameof(endDelimiter)));
 
             SymbolName = symbolName.ThrowIfNot(
                 SymbolHelper.IsValidSymbolName,
-                new ArgumentException($"Invalid symbol name: {symbolName}", nameof(symbolName)));
+                _ => new ArgumentException($"Invalid symbol name: {symbolName}", nameof(symbolName)));
 
             _illegalSequences = illegalSequences?.ToArray();
             _legalSequences = legalSequences?.ToArray();
@@ -117,7 +117,7 @@ namespace Axis.Pulsar.Grammar.Language.Rules.CustomTerminals
             var matchers = _escapeMatchers = new Dictionary<string, IEscapeSequenceMatcher>();
 
             escapeMatchers
-                .ThrowIfNull(new ArgumentNullException(nameof(escapeMatchers)))
+                .ThrowIfNull(() => new ArgumentNullException(nameof(escapeMatchers)))
                 .ForAll(transformer =>
                 {
                     if (!matchers.TryAdd(transformer.EscapeDelimiter, transformer))

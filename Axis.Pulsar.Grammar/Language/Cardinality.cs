@@ -27,11 +27,11 @@ namespace Axis.Pulsar.Grammar.Language
         {
             MaxOccurence = max.ThrowIf(
                 Extensions.IsNegative,
-                new ArgumentException($"{nameof(max)} cannot be negative"));
+                _ => new ArgumentException($"{nameof(max)} cannot be negative"));
 
             MinOccurence = min.ThrowIf(
                 Extensions.IsNegative,
-                new ArgumentException($"{nameof(min)} cannot be negative"));
+                _ => new ArgumentException($"{nameof(min)} cannot be negative"));
 
             Validate();
         }

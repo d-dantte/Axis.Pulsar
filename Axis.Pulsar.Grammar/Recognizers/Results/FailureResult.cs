@@ -23,7 +23,7 @@ namespace Axis.Pulsar.Grammar.Recognizers.Results
             Reason = reason ?? throw new ArgumentNullException(nameof(reason));
             Position = inputPosition.ThrowIf(
                 Extensions.IsNegative,
-                new ArgumentException($"Invalid {nameof(inputPosition)}"));
+                _ => new ArgumentException($"Invalid {nameof(inputPosition)}"));
         }
     }
 }

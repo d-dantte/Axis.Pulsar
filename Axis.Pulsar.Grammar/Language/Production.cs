@@ -23,7 +23,7 @@ namespace Axis.Pulsar.Grammar.Language
         public Production(ProductionRule productionRule)
         {
             Rule = productionRule.ThrowIfDefault(
-                new ArgumentNullException(nameof(productionRule)));
+                _ => new ArgumentNullException(nameof(productionRule)));
         }
 
         public override int GetHashCode() => HashCode.Combine(Symbol, Rule);

@@ -23,7 +23,7 @@ namespace Axis.Pulsar.Grammar.Recognizers
 
         public ProductionRuleRecognizer(ProductionRule rule, Language.Grammar grammar)
         {
-            _rule = rule.ThrowIfDefault(new ArgumentException(nameof(rule)));
+            _rule = rule.ThrowIfDefault(_ => new ArgumentException($"Invalid {nameof(rule)}: default"));
             Grammar = grammar;
             _recognizer = rule.Rule.ToRecognizer(Grammar);
         }

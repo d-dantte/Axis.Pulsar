@@ -23,7 +23,7 @@ namespace Axis.Pulsar.Grammar.Recognizers
             ProductionRef @ref,
             Language.Grammar grammar)
         {
-            _rule = @ref.ThrowIfDefault(new ArgumentException(nameof(@ref)));
+            _rule = @ref.ThrowIfDefault(_ => new ArgumentException($"Invalid {nameof(@ref)}: default"));
             Grammar = grammar ?? throw new ArgumentNullException(nameof(grammar));
         }
 

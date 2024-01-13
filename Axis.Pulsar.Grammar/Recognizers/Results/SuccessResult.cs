@@ -30,7 +30,7 @@ namespace Axis.Pulsar.Grammar.Recognizers.Results
             Symbol = symbol ?? throw new ArgumentNullException(nameof(symbol));
             Position = inputPosition.ThrowIf(
                 Extensions.IsNegative,
-                new ArgumentException($"Invalid {nameof(inputPosition)}"));
+                _ => new ArgumentException($"Invalid {nameof(inputPosition)}"));
         }
     }
 }

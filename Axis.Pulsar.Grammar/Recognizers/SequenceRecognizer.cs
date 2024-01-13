@@ -27,7 +27,7 @@ namespace Axis.Pulsar.Grammar.Recognizers
 
         public SequenceRecognizer(Sequence sequence, Language.Grammar grammar)
         {
-            _rule = sequence.ThrowIfDefault(new ArgumentException($"Invalid {nameof(sequence)}: {sequence}"));
+            _rule = sequence.ThrowIfDefault(_ => new ArgumentException($"Invalid {nameof(sequence)}: {sequence}"));
             Grammar = grammar ?? throw new ArgumentNullException(nameof(grammar));
             _recognizers = sequence.Rules
                 .Select(rule => rule.ToRecognizer(Grammar))
