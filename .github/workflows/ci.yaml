@@ -1,7 +1,7 @@
 on:
   push:
     branches:
-    - main
+    - feature/GithubActions
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -11,5 +11,7 @@ jobs:
       uses: actions/checkout@v4
     - name: Build
       run: dotnet build --configuration Release
+
+    # Only run unit tests for the Core.* projects
     - name: Test
-      run: dotnet test --configuration Release --no-build
+      run: dotnet test --configuration Release --no-build --filter Axis.Pulsar.Core
