@@ -1,4 +1,5 @@
 ﻿using Axis.Luna.Common.Results;
+
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Utils;
@@ -36,6 +37,29 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
                         out GroupRecognitionResult result) =>
                     {
                         result = GroupRecognitionResult.Of(INodeSequence.Of(ICSTNode.Of("dummy", Tokens.Of("source"))));
+                        return true;
+                    })));
+
+            var passingOptionalElementMock = new Mock<IGroupRule>();
+            passingOptionalElementMock
+                .With(mock => mock
+                    .Setup(m => m.Cardinality)
+                    .Returns(Cardinality.OccursOnly(1)))
+                .With(mock => mock
+                    .Setup(m => m.TryRecognize(
+                        It.IsAny<TokenReader>(),
+                        It.IsAny<SymbolPath>(),
+                        It.IsAny<ILanguageContext>(),
+                        out It.Ref<GroupRecognitionResult>.IsAny))
+                    .Returns(new TryRecognizeNodeSequence((
+                        TokenReader reader,
+                        SymbolPath path,
+                        ILanguageContext languageContext,
+                        out GroupRecognitionResult result) =>
+                    {
+                        result = GroupRecognitionResult.Of(INodeSequence.Of(
+                            ICSTNode.Of("dummy", Tokens.Of("source")),
+                            true));
                         return true;
                     })));
 
@@ -119,6 +143,31 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Groups
             Assert.IsFalse(success);
             Assert.IsTrue(result.Is(out ge));
             Assert.AreEqual(1, ge.ElementCount);
+
+            seq = Sequence.Of(
+                Cardinality.OccursOnly(1),
+                passingElementMock.Object,
+                passingOptionalElementMock.Object,
+                passingOptionalElementMock.Object,
+                passingElementMock.Object);
+            success = seq.TryRecognize("dummy", "dummy", null!, out result);
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.Is(out nseq));
+            Assert.IsFalse(nseq.IsOptional);
+            Assert.AreEqual(4, nseq.Count);
+            Assert.AreEqual(2, nseq.RequiredNodeCount);
+
+            seq = Sequence.Of(
+                Cardinality.OccursOnly(1),
+                passingElementMock.Object,
+                passingOptionalElementMock.Object,
+                passingOptionalElementMock.Object,
+                passingElementMock.Object,
+                unrecognizedElementMock.Object);
+            success = seq.TryRecognize("dummy", "dummy", null!, out result);
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out ge));
+            Assert.AreEqual(2, ge.ElementCount);
         }
     }
 }

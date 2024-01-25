@@ -54,7 +54,7 @@ namespace Axis.Pulsar.Core.Grammar.Composite.Group
                         throw new InvalidOperationException(
                             $"Invalid result: Expected sequence, found - {elementResult}");
 
-                    nodeSequence = nodeSequence.Append(elementSequence);
+                    nodeSequence = nodeSequence.ConcatSequence(elementSequence);
                 }
                 else
                 {
@@ -66,12 +66,28 @@ namespace Axis.Pulsar.Core.Grammar.Composite.Group
             result = elementResult.MapMatch(
 
                 // last element was recognized
-                _ => GroupRecognitionResult.Of(nodeSequence),
+                _ => GroupRecognitionResult.Of(Cardinality.IsZeroMinOccurence switch
+                {
+                    false => nodeSequence,
+                    true => !nodeSequence.IsOptional
+                        ? INodeSequence.Of(nodeSequence, true)
+                        : nodeSequence
+                }),
 
                 // GroupRecognitionError
-                gre => GroupRecognitionError
-                    .Of(gre.Cause, gre.ElementCount + nodeSequence.Count)
-                    .ApplyTo(GroupRecognitionResult.Of));
+                gre => gre.Cause switch
+                {
+                    FailedRecognitionError => GroupRecognitionError
+                        .Of(gre.Cause, nodeSequence.RequiredNodeCount + gre.ElementCount)
+                        .ApplyTo(GroupRecognitionResult.Of),
+
+                    PartialRecognitionError => GroupRecognitionError
+                        .Of(gre.Cause, nodeSequence.Count + gre.ElementCount)
+                        .ApplyTo(GroupRecognitionResult.Of),
+
+                    _ => throw new InvalidOperationException(
+                        $"Invalid cause: '{gre.Cause?.GetType()}'")
+                });
 
             return result.Is(out INodeSequence _);
         }

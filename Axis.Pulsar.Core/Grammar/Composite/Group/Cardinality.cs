@@ -34,6 +34,14 @@ namespace Axis.Pulsar.Core.Grammar.Composite.Group
         public bool IsOpen => MaxOccurence is null;
 
         public bool IsClosed => !IsOpen;
+
+        public bool IsOptional => MinOccurence == 0 && MaxOccurence == 1;
+
+        public bool IsProbable => MinOccurence == 0 && MaxOccurence is null;
+
+        public bool IsAny => MinOccurence == 1 && MaxOccurence >= 1;
+
+        public bool IsZeroMinOccurence => MinOccurence == 0;
         #endregion
 
         #region DefaultValueProvider
@@ -143,7 +151,7 @@ namespace Axis.Pulsar.Core.Grammar.Composite.Group
                         throw new InvalidOperationException(
                             $"Invalid result: Expected sequence, found - {elementResult}");
 
-                    nodeSequence = nodeSequence.Append(elementSequence);
+                    nodeSequence = nodeSequence.ConcatSequence(elementSequence);
                     occurence++;
                 }
                 else
@@ -166,13 +174,23 @@ namespace Axis.Pulsar.Core.Grammar.Composite.Group
                     // data, but since the range wasn't valid...
                     _ => FailedRecognitionError
                         .Of(symbolPath, position)
-                        .ApplyTo(error => GroupRecognitionError.Of(error, nodeSequence.Count))
+                        .ApplyTo(error => GroupRecognitionError.Of(error, nodeSequence))
                         .ApplyTo(GroupRecognitionResult.Of),
 
                     // GroupRecognitionError
-                    gre => GroupRecognitionError
-                        .Of(gre.Cause, nodeSequence.Count + gre.ElementCount)
-                        .ApplyTo(GroupRecognitionResult.Of));
+                    gre => gre.Cause switch
+                    {
+                        FailedRecognitionError => GroupRecognitionError
+                            .Of(gre.Cause, nodeSequence.RequiredNodeCount + gre.ElementCount)
+                            .ApplyTo(GroupRecognitionResult.Of),
+
+                        PartialRecognitionError => GroupRecognitionError
+                            .Of(gre.Cause, nodeSequence.Count + gre.ElementCount)
+                            .ApplyTo(GroupRecognitionResult.Of),
+
+                        _ => throw new InvalidOperationException(
+                            $"Invalid cause: '{gre.Cause?.GetType()}'")
+                    });
 
                 return false;
             }

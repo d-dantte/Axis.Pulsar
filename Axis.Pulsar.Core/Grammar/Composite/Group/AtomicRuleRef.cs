@@ -44,7 +44,7 @@ namespace Axis.Pulsar.Core.Grammar.Composite.Group
 
                 // data
                 data => INodeSequence
-                    .Of(data)
+                    .Of(data, Cardinality.IsZeroMinOccurence)
                     .ApplyTo(GroupRecognitionResult.Of),
 
                 // FailedRecognitionError

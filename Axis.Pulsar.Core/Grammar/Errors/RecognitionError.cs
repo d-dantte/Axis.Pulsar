@@ -1,5 +1,6 @@
 ﻿using Axis.Luna.Common.Segments;
 using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.CST;
 
 namespace Axis.Pulsar.Core.Grammar.Errors;
 
@@ -69,11 +70,27 @@ public readonly struct PartialRecognitionError : INodeRecognitionError
 /// <summary>
 /// 
 /// </summary>
-public readonly struct GroupRecognitionError//: IRecognitionError
+public readonly struct GroupRecognitionError
 {
     public INodeRecognitionError Cause { get; }
 
     public int ElementCount { get; }
+
+
+    public GroupRecognitionError(
+        INodeRecognitionError cause,
+        INodeSequence nodeSequence)
+    {
+        ArgumentNullException.ThrowIfNull(nodeSequence);
+
+        (Cause, ElementCount) = cause switch
+        {
+            FailedRecognitionError => (cause, nodeSequence.RequiredNodeCount),
+            PartialRecognitionError => (cause, nodeSequence.Count),
+            _ => throw new InvalidOperationException(
+                $"Invalid cause: {cause?.GetType()}")
+        };
+    }
 
     public GroupRecognitionError(
         INodeRecognitionError cause,
@@ -111,4 +128,15 @@ public readonly struct GroupRecognitionError//: IRecognitionError
         TError cause)
         where TError : INodeRecognitionError
         => new(cause, 0);
+
+    public static GroupRecognitionError Of(
+        INodeRecognitionError cause,
+        INodeSequence sequence)
+        => new(cause, sequence);
+
+    public static GroupRecognitionError Of<TError>(
+        TError cause,
+        INodeSequence sequence)
+        where TError : INodeRecognitionError
+        => new(cause, sequence);
 }

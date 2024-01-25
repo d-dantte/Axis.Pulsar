@@ -61,6 +61,7 @@ namespace Axis.Pulsar.Core.CST
         /// </summary>
         public readonly struct Composite :
             ICSTNode,
+            IEquatable<Composite>,
             IDefaultValueProvider<Composite>
         {
             private readonly string _name;
@@ -83,12 +84,17 @@ namespace Axis.Pulsar.Core.CST
 
             public Tokens Tokens => _tokens.Value;
 
-            public Composite(string name, INodeSequence nodes)
+            public Composite(
+                string name,
+                INodeSequence nodes)
             {
+
                 _name = name.ThrowIf(
                     string.IsNullOrWhiteSpace,
                     _ => new ArgumentNullException(nameof(name)));
-                _nodes = nodes.ThrowIfNull(() => new ArgumentNullException(nameof(nodes)));
+
+                _nodes = nodes.ThrowIfNull(
+                    () => new ArgumentNullException(nameof(nodes)));
 
                 var tokenProvider = _tokens = new DeferredValue<Tokens>(() =>
                 {
@@ -108,11 +114,29 @@ namespace Axis.Pulsar.Core.CST
                         ? $"{tokenProvider.Value[..20]}..."
                         : tokenProvider.Value.ToString();
 
-                    return $"[@N name: {name}; NodeCount: {nodes.Count}; Tokens: {tokenString}]";
+                    return $"[@N name: {name}; NodeCount: {nodes.Count}; Tokens: {tokenString};]";
                 });
             }
 
             public override string ToString() => _text?.Value!;
+
+            public static bool operator ==(Composite left, Composite right) => left.Equals(right);
+
+            public static bool operator !=(Composite left, Composite right) => !left.Equals(right);
+
+            public override bool Equals(object? obj)
+            {
+                return obj is Composite other && Equals(other);
+            }
+
+            public bool Equals(Composite other)
+            {
+                return _nodes.NullOrEquals(other._nodes)
+                    && Common.NullOrEquals(_tokens?.Value, other._tokens?.Value)
+                    && EqualityComparer<string>.Default.Equals(_name, other._name);
+            }
+
+            public override int GetHashCode() => HashCode.Combine(_tokens, _name, _nodes);
         }
 
         /// <summary>
@@ -162,7 +186,7 @@ namespace Axis.Pulsar.Core.CST
 
             public override int GetHashCode() => HashCode.Combine(_tokens, _name);
 
-            public override string ToString() => $"[@T Name: {Symbol}; Tokens: {Tokens}]";
+            public override string ToString() => $"[@T Name: {_name}; Tokens: {_tokens};]";
         }
     }
 }

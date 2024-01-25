@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.2.32630.192
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{911699DD-A84E-45FE-BF7D-FF0FF2B336DE}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".solution Items", ".solution Items", "{911699DD-A84E-45FE-BF7D-FF0FF2B336DE}"
 	ProjectSection(SolutionItems) = preProject
 		axis.pulsar.grammar.readme.md = axis.pulsar.grammar.readme.md
 		axis.pulsar.languages.readme.md = axis.pulsar.languages.readme.md
-		NOTES.txt = NOTES.txt
+		BackLog.txt = BackLog.txt
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{1FF108D1-A5A3-440E-A034-1EE03D1D80B7}"

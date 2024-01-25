@@ -50,7 +50,7 @@ namespace Axis.Pulsar.Core.Grammar.Composite.Group
 
                 // data
                 node => INodeSequence
-                    .Of(node)
+                    .Of(node, Cardinality.IsZeroMinOccurence)
                     .ApplyTo(GroupRecognitionResult.Of),
 
                 // FailedRecognitionError

@@ -98,3 +98,5 @@ TODO
 4. Include support for importing languages from other sources, and referencing their productions via some namespace
 
 
+2024-01-22 =================================================================
+Going forward, backlogs, issues, proposals, tasks, etc, have been moved to the github project (https://github.com/users/d-dantte/projects/8/views/1).

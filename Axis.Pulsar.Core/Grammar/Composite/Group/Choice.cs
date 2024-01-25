@@ -1,4 +1,5 @@
 ﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Lang;
@@ -44,16 +45,29 @@ namespace Axis.Pulsar.Core.Grammar.Composite.Group
             var position = reader.Position;
             foreach (var element in Elements)
             {
-                if (element.Cardinality.TryRepeat(reader, symbolPath, context, element, out result))
+                if (element.Cardinality.TryRepeat(reader, symbolPath, context, element, out var grr)
+                    && grr.Is(out INodeSequence nodeSequence))
+                {
+                    if (Cardinality.IsZeroMinOccurence)
+                        nodeSequence = !nodeSequence.IsOptional
+                            ? INodeSequence.Of(nodeSequence, true)
+                            : nodeSequence;
+
+                    result = GroupRecognitionResult.Of(nodeSequence);
                     return true;
+                }
 
                 reader.Reset(position);
 
-                if (result.Is(out GroupRecognitionError gre)
+                if (grr.Is(out GroupRecognitionError gre)
                     && gre.Cause is FailedRecognitionError)
                     continue;
 
-                else return false;
+                else
+                {
+                    result = grr;
+                    return false;
+                }
             }
 
             reader.Reset(position);
