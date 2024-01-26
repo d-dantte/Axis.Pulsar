@@ -361,6 +361,18 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out args));
             Assert.AreEqual(4, args.Length);
+
+            // args / value
+            success = GrammarParser.TryParseAtomicRuleArguments(
+                "{arg-name :'value\\''}",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.Is(out args));
+            Assert.AreEqual(1, args.Length);
+            Assert.AreEqual("value'", args[0].Value);
         }
 
         [TestMethod]
@@ -428,7 +440,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out Parameter info));
             Assert.AreEqual(ContentArgumentDelimiter.Quote, info.Argument.As<ContentArgument>().Delimiter);
-            Assert.IsTrue(info.Value!.Equals("the content\\'"));
+            Assert.IsTrue(info.Value!.Equals("the content\'"));
 
             // double quote
             success = GrammarParser.TryParseAtomicContent(

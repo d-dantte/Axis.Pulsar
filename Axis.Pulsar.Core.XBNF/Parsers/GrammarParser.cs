@@ -1088,18 +1088,24 @@ internal static class GrammarParser
                 return false;
             }
             // else
-            content = contentResult.Is(out Tokens contentTokens)
-                ? content.Append(contentTokens)
-                : content;
+            content = !contentResult.Is(out Tokens contentTokens)
+                ? content
+                : contentTokens
+                    .ToString()!
+                    .Replace("\\'", "'")
+                    .ApplyTo(content.Append);
 
             // optional segments
             var tryParseAdditionalContentSegment = AdditionalDelimitedContentSegmentParserDelegate(tryParseDelimitedContentSegment);
 
             while (tryParseAdditionalContentSegment(reader, delimContentPath, context, out contentResult))
             {
-                content = contentResult.Is(out contentTokens)
-                    ? content.Append(contentTokens)
-                    : content;
+                content = !contentResult.Is(out contentTokens)
+                    ? content
+                    : contentTokens
+                        .ToString()!
+                        .Replace("\\'", "'")
+                        .ApplyTo(content.Append);
             }
 
             result = !contentResult.Is(out PartialRecognitionError pre)
