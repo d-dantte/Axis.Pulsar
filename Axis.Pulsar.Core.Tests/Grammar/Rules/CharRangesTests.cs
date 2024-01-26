@@ -1,5 +1,4 @@
-﻿using Axis.Luna.Common.Results;
-using Axis.Pulsar.Core.CST;
+﻿using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Atomic;
 using Axis.Pulsar.Core.Grammar.Errors;
@@ -22,6 +21,11 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             Assert.AreEqual('x', ranges[2].UpperBound);
             Assert.AreEqual('y', ranges[3].LowerBound);
             Assert.AreEqual('y', ranges[3].UpperBound);
+
+            ranges = CharacterRanges.ParseRanges("+, \\x2d");
+            Assert.AreEqual(2, ranges.Length);
+            Assert.IsFalse(ranges[0].IsRange);
+            Assert.IsFalse(ranges[1].IsRange);
         }
 
         [TestMethod]

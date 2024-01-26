@@ -82,16 +82,17 @@ public class PatternRuleFactory : IAtomicRuleFactory
 
             if (parts.Length == 2)
             {
-                if ("*".Equals(parts[1]))
+                var part1 = parts[1].Trim();
+                if ("*".Equals(part1))
                     return IMatchType.Of(lhs, true);
 
-                if ("+".Equals(parts[1]))
+                if ("+".Equals(part1))
                     return IMatchType.Of(lhs, false);
 
-                if(string.Empty.Equals(parts[1]))
+                if(string.Empty.Equals(part1))
                     return IMatchType.Of(lhs, -1);
 
-                else if(int.TryParse(parts[1], out var rhs) && rhs > 0)
+                else if(int.TryParse(part1, out var rhs) && rhs > 0)
                     return IMatchType.Of(lhs, rhs);
             }
         }

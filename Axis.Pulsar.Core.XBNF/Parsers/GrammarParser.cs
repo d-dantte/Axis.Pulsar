@@ -9,9 +9,9 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
-using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 using Axis.Pulsar.Core.Grammar.Composite.Group;
 using Axis.Pulsar.Core.Grammar.Errors;
+using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
 namespace Axis.Pulsar.Core.XBNF.Parsers;
 
@@ -1076,76 +1076,41 @@ internal static class GrammarParser
             var position = reader.Position;
             var delimContentPath = path.Next("delimited-content");
             var tryParseDelimitedContentSegment = DelimitedContentSegmentParserDelegate(startDelimiter, endDelimiter);
-            int tempPosition;
-            var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, delimContentPath, context);
+            var content = new StringBuilder();
 
-            var accumulator = NodeRecognitionAccumulator.Of<List<Tokens>, SymbolPath, ParserContext>(
-                new List<Tokens>())
-
-                // first content segment
-                .ThenTry(
-                    tryParseDelimitedContentSegment,
-                    accumulatorArgs,
-                    (segmentList, segment) => segmentList.AddItem(segment));
-
-            do
-            {
-                tempPosition = reader.Position;
-                accumulator = accumulator
-
-                    // optional silent block
-                    .ThenTry<SilentBlock, XBNFResult<SilentBlock>>(
-                        TryParseSilentBlock,
-                        accumulatorArgs,
-                        (contentSegments, _) => contentSegments,
-                        (contentSegments, _) => contentSegments)
-
-                    // mandatory concatenation operator
-                    .ThenTry<ContentConcatenationOperator, XBNFResult<ContentConcatenationOperator>>(
-                        TryParseContentConcatenationOperator,
-                        accumulatorArgs,
-                        (contentSegments, _) => contentSegments.AddItem(default(Tokens)))
-
-                    // optional silent block
-                    .ThenTry<SilentBlock, XBNFResult<SilentBlock>>(
-                        TryParseSilentBlock,
-                        accumulatorArgs,
-                        (contentSegments, _) => contentSegments,
-                        (contentSegments, _) => contentSegments)
-
-                    // mandatory segment
-                    .ThenTry(
-                        tryParseDelimitedContentSegment,
-                        accumulatorArgs,
-                        (contentSegments, segment) => contentSegments.With(x => x[^1] = segment));
-            }
-            while (accumulator.CanTryRequired);
-
-            result = accumulator.MapAll(
-                dataMapper: list => XBNFResult<string>.Of(list.Flatten()),
-                partialRecognitionMapper: (pre, list) => XBNFResult<string>.Of(pre),
-                failedRecognitionMapper: (fre, list) => list.Count switch
-                {
-                    0 => XBNFResult<string>.Of(fre),
-                    _ => list[^1].Source switch
-                    {
-                        string => XBNFResult<string>
-                            .Of(list.Flatten())
-                            .With(_ => reader.Reset(tempPosition)),
-                       null
-                       or  _ => PartialRecognitionError
-                            .Of(delimContentPath, tempPosition, reader.Position - tempPosition)
-                            .ApplyTo(XBNFResult<string>.Of)
-                    }
-                });
-
-            if (!result.Is(out string _))
+            if (!tryParseDelimitedContentSegment(reader, delimContentPath, context, out var contentResult))
             {
                 reader.Reset(position);
+                result = contentResult.MapMatch(
+                    tokens => throw new InvalidOperationException("Invalid contentResult: should be error"),
+                    XBNFResult<string>.Of,
+                    XBNFResult<string>.Of);
                 return false;
             }
+            // else
+            content = contentResult.Is(out Tokens contentTokens)
+                ? content.Append(contentTokens)
+                : content;
 
-            return true;
+            // optional segments
+            var tryParseAdditionalContentSegment = AdditionalDelimitedContentSegmentParserDelegate(tryParseDelimitedContentSegment);
+
+            while (tryParseAdditionalContentSegment(reader, delimContentPath, context, out contentResult))
+            {
+                content = contentResult.Is(out contentTokens)
+                    ? content.Append(contentTokens)
+                    : content;
+            }
+
+            result = !contentResult.Is(out PartialRecognitionError pre)
+                ? XBNFResult<string>.Of(content.ToString())
+                : XBNFResult<string>.Of(pre);
+
+            if (result.Is(out string _))
+                return true;
+
+            reader.Reset(position);
+            return false;
         };
     }
 
@@ -1200,6 +1165,61 @@ internal static class GrammarParser
             }
 
             result = XBNFResult<Tokens>.Of(contentTokens);
+            return true;
+        };
+    }
+
+    internal static NodeRecognitionAccumulator.TryParse<XBNFResult<Tokens>, Tokens, SymbolPath, ParserContext> AdditionalDelimitedContentSegmentParserDelegate(
+        NodeRecognitionAccumulator.TryParse<XBNFResult<Tokens>, Tokens, SymbolPath, ParserContext> tryParseSegment)
+    {
+        return (TokenReader reader, SymbolPath path, ParserContext context, out XBNFResult<Tokens> result) =>
+        {
+            int position = reader.Position;
+            var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, path, context);
+            var segmentTokens = Tokens.Default;
+
+            result = NodeRecognitionAccumulator
+                .Of<Tokens, SymbolPath, ParserContext>(segmentTokens)
+
+                // optional silent block
+                .ThenTry<SilentBlock, XBNFResult<SilentBlock>>(
+                    TryParseSilentBlock,
+                    accumulatorArgs,
+                    (contentSegments, _) => contentSegments,
+                    (contentSegments, _) => contentSegments)
+
+                // mandatory concatenation operator
+                .ThenTry<ContentConcatenationOperator, XBNFResult<ContentConcatenationOperator>>(
+                    TryParseContentConcatenationOperator,
+                    accumulatorArgs,
+                    (contentSegments, _) => contentSegments)
+
+                // optional silent block
+                .ThenTry<SilentBlock, XBNFResult<SilentBlock>>(
+                    TryParseSilentBlock,
+                    accumulatorArgs,
+                    (contentSegments, _) => contentSegments,
+                    (contentSegments, _) => contentSegments)
+
+                // mandatory segment
+                .ThenTry(
+                    tryParseSegment,
+                    accumulatorArgs,
+                    (contentSegments, segment) => segment)
+
+                // result
+                .MapAll(
+                    dataMapper: XBNFResult<Tokens>.Of,
+                    failedRecognitionMapper: (err, data) => XBNFResult<Tokens>.Of(err),
+                    partialRecognitionMapper: (err, data) => XBNFResult<Tokens>.Of(err));
+
+
+            if (!result.Is(out Tokens _))
+            {
+                reader.Reset(position);
+                return false;
+            }
+
             return true;
         };
     }

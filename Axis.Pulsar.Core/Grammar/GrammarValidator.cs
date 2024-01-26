@@ -139,7 +139,7 @@ namespace Axis.Pulsar.Core.Grammar
         internal class TraversalContext
         {
             /// <summary>
-            /// Refs that do not point ot any production in the grammar
+            /// Refs that do not point to any production in the grammar
             /// </summary>
             internal HashSet<string> OrphanedRefs { get; } = new HashSet<string>();
 

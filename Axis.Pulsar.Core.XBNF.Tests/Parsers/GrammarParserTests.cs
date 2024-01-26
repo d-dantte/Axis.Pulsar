@@ -822,6 +822,17 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.AreEqual(Cardinality.OccursOnly(2), @ref.Cardinality);
             Assert.IsInstanceOfType<TerminalPattern>(@ref.Ref);
 
+            success = GrammarParser.TryParseAtomicRuleRef(
+                "'+, \\x2d'",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.Is(out @ref));
+            Assert.AreEqual(Cardinality.OccursOnlyOnce(), @ref.Cardinality);
+            Assert.IsInstanceOfType<CharacterRanges>(@ref.Ref);
+
         }
 
         [TestMethod]
@@ -937,6 +948,18 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(result.Is(out Choice choice));
             Assert.AreEqual(2, choice.Elements.Length);
             Assert.AreEqual(Cardinality.Occurs(1, 5), choice.Cardinality);
+
+            success = GrammarParser.TryParseChoice(
+                @"?[ ""Z"" + ""T""
+        +[ 'x, y' ""bleh""] ].1,5",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.Is(out choice));
+            Assert.AreEqual(2, choice.Elements.Length);
+            Assert.AreEqual(Cardinality.Occurs(1, 5), choice.Cardinality);
         }
 
         [TestMethod]
@@ -973,6 +996,19 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out sequence));
             Assert.AreEqual(2, sequence.Elements.Length);
+            Assert.AreEqual(Cardinality.OccursOnlyOnce(), sequence.Cardinality);
+
+
+            success = GrammarParser.TryParseSequence(
+                @"+[
+    '+, \x2d' ]",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.Is(out sequence));
+            Assert.AreEqual(1, sequence.Elements.Length);
             Assert.AreEqual(Cardinality.OccursOnlyOnce(), sequence.Cardinality);
         }
 
