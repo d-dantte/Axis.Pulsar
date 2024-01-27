@@ -20,6 +20,6 @@ namespace Axis.Pulsar.Core.Grammar.Composite
         /// <summary>
         /// The recognition threshold.
         /// </summary>
-        uint RecognitionThreshold { get; }
+        uint? RecognitionThreshold { get; }
     }
 }

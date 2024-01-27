@@ -71,6 +71,20 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             Assert.IsNotNull(result);
             Assert.IsTrue(result.Is(out FailedRecognitionError ge));
 
+            // unrecognized element
+            element = MockElement(
+                Cardinality.OccursOnlyOnce(),
+                false,
+                FailedRecognitionError
+                    .Of(path, 0)
+                    .ApplyTo(err => GroupRecognitionError.Of(err, 5))
+                    .ApplyTo(GroupRecognitionResult.Of));
+            nt = NonTerminal.Of(null, element);
+            success = nt.TryRecognize("stuff", path, null!, out result);
+            Assert.IsFalse(success);
+            Assert.IsNotNull(result);
+            Assert.IsTrue(result.Is(out ge));
+
             // partially recognized element
             element = MockElement(
                 Cardinality.OccursOnlyOnce(),
@@ -93,7 +107,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                     .Of(path, 3)
                     .ApplyTo(e => GroupRecognitionError.Of(e, 2))
                     .ApplyTo(GroupRecognitionResult.Of));
-            nt = NonTerminal.Of(element);
+            nt = NonTerminal.Of(1, element);
             success = nt.TryRecognize("stuff", path, null!, out result);
             Assert.IsFalse(success);
             Assert.IsNotNull(result);

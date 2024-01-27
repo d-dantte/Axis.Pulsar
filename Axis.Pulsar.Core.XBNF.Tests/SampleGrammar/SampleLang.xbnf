@@ -1,5 +1,498 @@
 ﻿#
-# Add custom languages here
+# SPREE Grammar
+#
 #
 
-$root -> "root"
+# SPREE
+$spree -> +[
+	$boolean-exp
+	@EOF
+]
+
+
+
+# Boolean Expression
+$boolean-exp -> ?[
+	$relational-exp
+	$equality-exp
+	$conditional-exp
+	$boolean-unary-exp
+	$boolean-value-exp
+]
+
+
+
+
+# Relational Expression
+$relational-exp -> ?[
+	$relational-set-exp
+	$relational-scalar-exp
+]
+$relational-set-exp -> :3 +[
+	+[$set-exp $block-space "in" $block-space $set-exp]
+	+[$scalar-exp $block-space "in" $block-space $set-exp]
+	+[$set-exp $block-space "contains" $block-space $scalar-exp]
+]
+$relational-scalar-exp -> ?[
+	$numeric-relational-exp
+	$string-relational-exp
+	$timestamp-relational-exp
+	$duration-relational-exp
+]
+$numeric-relational-exp -> :3 +[
+	$numeric-exp
+	$block-space $relational-scalar-operator
+	$block-space $numeric-exp
+]
+$string-relational-exp -> :3 +[
+	$string-exp
+	$block-space $relational-scalar-operator
+	$block-space $string-exp
+]
+$timestamp-relational-exp -> :3 +[
+	$timestamp-exp
+	$block-space $relational-scalar-operator
+	$block-space $timestamp-exp
+]
+$duration-relational-exp -> :3 +[
+	$duration-exp
+	$block-space $relational-scalar-operator
+	$block-space $duration-exp
+]
+$relational-scalar-operator -> ?[
+	">" ">="
+	"<" "<="
+]
+
+
+
+
+# Equality Expression
+$equality-exp -> ?[
+	$set-equality-exp
+	$boolean-equality-exp
+	$numeric-equality-exp
+	$string-equality-exp
+	$timestamp-equality-exp
+	$duration-equality-exp
+]
+$equality-operator -> ?[
+	$equals
+	$not-equals
+]
+$equals -> ?[
+	"is equal to"
+	"="
+]
+$not-equals -> ?[
+	"is not equal to"
+	"!="
+]
+$set-equality-exp -> :3 +[
+	$set-exp
+	$block-space $equality-operator
+	$block-space $set-exp
+]
+$boolean-equality-exp -> :3 +[
+	?[$relational-exp $conditional-exp $boolean-unary-exp $boolean-value-exp]	
+	#$boolean-value-exp
+	$block-space $equality-operator
+	$block-space $boolean-exp
+]
+$numeric-equality-exp -> :3 +[
+	$numeric-exp
+	$block-space $equality-operator
+	$block-space $numeric-exp
+]
+$string-equality-exp -> :3 +[
+	$string-exp
+	$block-space $equality-operator
+	$block-space $string-exp
+]
+$timestamp-equality-exp -> :3 +[
+	$timestamp-exp
+	$block-space $equality-operator
+	$block-space $timestamp-exp
+]
+$duration-equality-exp -> :3 +[
+	$duration-exp
+	$block-space $equality-operator
+	$block-space $duration-exp
+]
+
+
+
+# Conditional Expression
+$conditional-exp -> :3 +[
+	?[$relational-exp $equality-exp $boolean-unary-exp $boolean-value-exp]
+	$block-space $conditional-operator
+	$block-space $boolean-exp
+]
+$conditional-operator -> ?[
+	"and"
+	"or"
+]
+
+
+
+
+# Boolean Unary Expression
+$boolean-unary-exp -> ?[
+	$not-exp
+	$present-exp
+	$absent-exp
+	$empty-exp
+]
+$not-exp -> +[
+	"not"
+	$block-space
+	$boolean-exp
+]
+$present-exp -> +[
+	$attribute-scalar-access-exp
+	$block-space "present"
+]
+$absent-exp -> +[
+	$attribute-scalar-access-exp
+	$block-space "absent"
+]
+$empty-exp -> +[
+	$set-exp
+	$block-space
+	?[
+		"is empty"
+		"is not empty"
+	]
+]
+
+
+
+
+# Boolean Value Expression
+$boolean-value-exp -> ?[
+	$boolean-constant-value
+	$attribute-scalar-access-exp
+	+[
+		"(" $block-space.?
+		?[$boolean-exp]
+		$block-space.? ")"
+	]
+]
+$boolean-constant-value -> ?[
+	"true"
+	"false"
+]
+
+
+
+
+# Scalar Expression
+$scalar-exp -> ?[
+	$string-exp
+	$character-exp
+	$timestamp-exp
+	$duration-exp
+	$character-exp
+	$numeric-exp
+]
+
+#Set Expression
+$set-exp -> ?[
+	$attribute-set-access-exp
+	$range-exp
+	$items-exp
+]
+$range-exp -> :3 +[
+	"["
+	$scalar-exp
+	".."
+	$scalar-exp
+	"]"
+]
+$items-exp -> :3 +[
+	"["
+	$block-space.? $scalar-exp
+	+[$block-space.? "," $block-space $scalar-exp].+
+	$block-space.? "]"
+]
+
+
+
+
+# String Expression
+$string-exp -> ?[
+	$string-substring-exp
+	$string-character-exp
+	$string-value-exp
+]
+$string-value-exp -> ?[
+	$string-constant-exp
+	$attribute-scalar-access-exp
+]
+$string-constant-exp -> @DelimitedString{
+	start: '"',
+	end: '"',
+	ranges: '^\n, ^\r',
+	escaped-delimiter: '\"'
+}
+$string-character-exp -> :3 +[
+	$string-value-exp
+	"[" $block-space.?
+	$index-exp
+	$block-space.? "]"
+]
+$index-exp -> +[
+	"^".?
+	$numeric-exp
+]
+$string-substring-exp -> :3 +[
+	$string-value-exp
+	"[" $block-space.?
+	$substring-args-exp
+	$block-space.? "]"
+]
+$substring-args-exp -> :2 +[
+	$numeric-exp
+	$block-space.? ","
+	$block-space.? $numeric-exp
+]
+
+
+
+
+
+# Character Expression
+$character-exp -> ?[
+	$character-constant-exp
+	$attribute-scalar-access-exp
+]
+$character-constant-exp -> @DelimitedString{
+	start: '\'',
+	end: '\'',
+	ranges: '^\n, ^\r',
+	escaped-delimiter: '\\''
+}
+
+
+
+
+# Timestamp Expression 'yyyy-MM-dd HH:mm:ss.fffffff zzz'
+$timestamp-exp -> ?[
+	$timestamp-constant-exp
+	$attribute-scalar-access-exp
+]
+$timestamp-constant-exp -> +[
+	"'T"
+	$year-component +[
+		$month-component +[
+			$day-component +[
+				$hour-component +[
+					$minute-component +[
+						$second-component +[
+							$tick-component
+						].?
+					].?
+				].?
+			].?
+		].?
+	].?
+	$timezone-component.?
+	"'"
+]
+$timezone-component -> +[
+	" " 
+	?[
+		"Z"
+		+[
+			'+, \x2d'
+			/(00|01|02|03|04|05|06|07|08|09|10|11):[0-5]\d/{
+				match-type: '5'
+			}
+		]
+	]
+]
+$tick-component -> +[
+	"."
+	/\d/{
+		match-type:'1, 7'
+	}
+]
+$second-component -> +[
+	":"
+	/[0-5]\d/{
+		match-type:'2'
+	}
+]
+$minute-component -> +[
+	":"
+	/[0-5]\d/{
+		match-type:'2'
+	}
+]
+$hour-component -> +[
+	" "
+	/(00|01|02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23)/{
+		match-type:'2'
+	}
+]
+$day-component -> +[
+	"-"
+	/(01|02|03|04|05|06|07|08|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31)/{
+		match-type:'2'
+	}
+]
+$month-component -> +[
+	"-"
+	/(01|02|03|04|05|06|07|08|09|10|11|12)/{
+		match-type:'2'
+	}
+]
+$year-component -> +[
+	" "
+	/\d+/{
+		match-type:'1,+'
+	}
+]
+
+
+
+
+# Duration Expression
+$duration-exp -> ?[
+	$duration-constant-exp
+	$attribute-scalar-access-exp
+]
+$duration-constant-exp -> +[
+	"'D "
+	$dday-component.?
+	$hour-component +[
+		$minute-component +[
+			$second-component +[
+				$tick-component
+			].?
+		].?
+	].?
+	"'"
+]
+$dday-component -> +[
+	/\d+/{
+		match-type:'1,+'
+	}
+	"."
+]
+
+
+
+########
+# Numeric Expression (flattened)
+$numeric-exp -> +[
+	$numeric-value-exp
+	+[
+		$block-space $numeric-operator
+		$block-space $numeric-value-exp
+	].*
+]
+$numeric-operator -> ?[
+	"^"
+	"<<" ">>"
+	"*" "/" "%"
+	"+" "-"
+]
+
+# Numeric value
+$numeric-value-exp -> ?[
+	$numeric-constant-value
+	$attribute-scalar-access-exp
+	+[
+		"(" $block-space.?
+		$numeric-exp
+		$block-space.? ")"
+	]
+]
+$numeric-constant-value -> ?[
+	$integer-constant-value
+	$real-constant-value
+	$decimal-constant-value
+]
+$integer-constant-value -> +[
+	"-".?
+	/^\d+$/
+	'i, I'
+]
+$real-constant-value -> +[
+	# integral part
+	"-".? /^\d+$/
+
+	# decimal part
+	"." /^\d+$/
+
+	# optional exponent part
+	+[
+		'e, E'
+		'+, \x2d' # escape the '-' because this is a char-range
+		/^\d+$/
+	].?
+
+	# suffix
+	"r"
+]
+$decimal-constant-value -> +[
+	# integral part
+	"-".? /^\d+$/
+
+	# decimal part
+	"." /^\d+$/
+
+	# optional exponent part
+	+[
+		'e, E'
+		'+, \x2d'
+		/^\d+$/
+	].?
+
+	# suffix
+	'd, D'
+]
+
+
+
+
+# Global Reference Expression
+$global-ref-exp -> ?[
+	"@subject"
+	"@resource"
+	"@intent"
+	"@environment"
+]
+$attribute-scalar-access-exp -> :2 +[
+	$global-ref-exp +[ 
+		"." ?[
+			$attribute-identifier
+			$attribute-name
+		]
+	].+
+]
+$attribute-set-access-exp -> :2 +[
+	$global-ref-exp "[" ?[
+		$attribute-name
+		$attribute-identifier
+	] "]"
+]
+$attribute-identifier -> /^[a-zA-Z]([a-zA-Z0-9-_])*$/{
+	match-type: '1,+'
+}
+$attribute-name -> @DelimitedString{
+	start: '\'',
+	end: '\'',
+	ranges: '^\n, ^\r',
+	escaped-delimiter: '\\''
+}
+
+
+
+# Whitespaces
+$block-space -> ?[$space $tab $line-feed $carriage-return].+
+$space -> '\s'
+$tab -> '\t'
+$line-feed -> "\n"
+$carriage-return -> '\r'

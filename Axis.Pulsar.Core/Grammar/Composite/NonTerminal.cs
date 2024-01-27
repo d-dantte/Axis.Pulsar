@@ -16,22 +16,22 @@ namespace Axis.Pulsar.Core.Grammar.Composite
     {
         public IGroupRule Element { get; }
 
-        public uint RecognitionThreshold { get; }
+        public uint? RecognitionThreshold { get; }
 
-        public NonTerminal(uint recognitionThreshold, IGroupRule ruleGroup)
+        public NonTerminal(uint? recognitionThreshold, IGroupRule ruleGroup)
         {
             Element = ruleGroup ?? throw new ArgumentNullException(nameof(ruleGroup));
             RecognitionThreshold = recognitionThreshold;
         }
 
         public static NonTerminal Of(
-            uint recognitionThreshold,
+            uint? recognitionThreshold,
             IGroupRule element)
             => new(recognitionThreshold, element);
 
         public static NonTerminal Of(
             IGroupRule element)
-            => new(1, element);
+            => new(null, element);
 
         public bool TryRecognize(
             TokenReader reader,
@@ -58,10 +58,11 @@ namespace Axis.Pulsar.Core.Grammar.Composite
                     .ApplyTo(NodeRecognitionResult.Of),
 
                 // group recognition error
-                gre => gre.Cause switch
+                gre => (gre.Cause, RecognitionThreshold) switch
                 {
-                    PartialRecognitionError pre => NodeRecognitionResult.Of(pre),
-                    FailedRecognitionError fre => gre.ElementCount < RecognitionThreshold
+                    (PartialRecognitionError pre, _) => NodeRecognitionResult.Of(pre),
+                    (FailedRecognitionError fre, null) => NodeRecognitionResult.Of(fre),
+                    (FailedRecognitionError fre, _) => gre.ElementCount < RecognitionThreshold
                         ? NodeRecognitionResult.Of(fre)
                         : PartialRecognitionError
                             .Of(symbolPath,

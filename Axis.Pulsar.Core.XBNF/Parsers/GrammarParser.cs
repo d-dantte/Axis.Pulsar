@@ -303,15 +303,15 @@ internal static class GrammarParser
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, compositeRulePath, context);
 
         result = NodeRecognitionAccumulator
-            .Of<KeyValuePair<uint, IGroupRule>, SymbolPath, ParserContext>(
-                KeyValuePair.Create(0u, default(IGroupRule)!))
+            .Of<KeyValuePair<uint?, IGroupRule>, SymbolPath, ParserContext>(
+                KeyValuePair.Create(default(uint?), default(IGroupRule)!))
 
             // optional recognition threshold
             .ThenTry<uint, XBNFResult<uint>>(
                 TryParseRecognitionThreshold,
                 accumulatorArgs,
-                (kvp, threshold) => threshold.ValuePair(kvp.Value),
-                (kvp, err) => 1u.ValuePair(kvp.Value))
+                (kvp, threshold) => KeyValuePair.Create((uint?)threshold, kvp.Value),
+                (kvp, err) => default(uint?).ValuePair(kvp.Value))
 
             // required group element
             .ThenTry<IGroupRule, XBNFResult<IGroupRule>>(
