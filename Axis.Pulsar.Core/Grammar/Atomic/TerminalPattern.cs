@@ -73,7 +73,7 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
             if (reader.TryGetTokens(matchType.MaxMatch, out var tokens))
             {
                 //var matchRange = matchType.MaxMatch - matchType.MinMatch;
-                for (int length = matchType.MaxMatch; length >= matchType.MinMatch; length--)
+                for (int length = tokens.Segment.Count; length >= matchType.MinMatch; length--)
                 {
                     var match = pattern.Match(
                         tokens.Source!,
@@ -81,9 +81,12 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
                         length);
 
                     if (match.Success && match.Length == length)
+                    {
+                        reader.Back(tokens.Segment.Count - length);
                         return ICSTNode
                             .Of(symbolPath.Symbol, tokens[..length])
                             .ApplyTo(NodeRecognitionResult.Of);
+                    }
                 }
             }
 
