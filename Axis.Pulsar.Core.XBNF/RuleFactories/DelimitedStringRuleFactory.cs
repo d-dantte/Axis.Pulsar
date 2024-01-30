@@ -119,9 +119,7 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
 
     internal static bool ParseAcceptsEmpty(ImmutableDictionary<IArgument, string> arguments)
     {
-        return arguments.TryGetValue(AcceptsEmptyArgument, out var value)
-            ? bool.Parse(value)
-            : true;
+        return !arguments.TryGetValue(AcceptsEmptyArgument, out var value) || bool.Parse(value);
     }
 
     internal static (IEnumerable<Tokens> Includes, IEnumerable<Tokens> Excludes) ParseSequences(string sequences)

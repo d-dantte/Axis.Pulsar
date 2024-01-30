@@ -1,6 +1,7 @@
 ﻿using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.XBNF.Lang;
 using System.Xml.Linq;
@@ -10,6 +11,34 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
     [TestClass]
     public class SampleLang
     {
+        private static ILanguageContext? Context;
+        private static object @lock = new object();
+
+        private static ILanguageContext GetContext()
+        {
+            if (Context is not null)
+                return Context;
+
+            lock(@lock)
+            {
+                if (Context is not null)
+                    return Context;
+
+                using var langDefStream = ResourceLoader.Load("SampleGrammar.SampleLang.xbnf");
+                var langText = new StreamReader(langDefStream!).ReadToEnd();
+
+                // build importer
+                var importer = XBNFImporter.Builder
+                    .NewBuilder()
+                    .WithDefaultAtomicRuleDefinitions()
+                    .Build();
+
+                // import
+                Context = importer.ImportLanguage(langText);
+                return Context;
+            }
+        }
+
         [TestMethod]
         public void SampleLangTest()
         {
@@ -38,6 +67,20 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
         [TestMethod]
         public void SampleRecognition_Tests()
         {
+            var context = GetContext()!;
+            var recognizer = context.Grammar.GetProduction("boolean-exp");
+            var success = false;
+            var result = default(NodeRecognitionResult);
+            var node = default(ICSTNode);
+
+            success = recognizer.TryRecognize(
+                $"true",
+                "root",
+                context,
+                out result);
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.Is(out node));
+            Assert.AreEqual($"true", node.Tokens.ToString());
         }
     }
 }
