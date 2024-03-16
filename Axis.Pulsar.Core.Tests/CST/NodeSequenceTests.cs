@@ -25,7 +25,7 @@ namespace Axis.Pulsar.Core.Tests.CST
             result = ns2.ConcatSequence(ns);
             Assert.IsNotNull(result);
             Assert.AreEqual(2, result.Count);
-            result.ForAll((i, n) =>
+            result.ForEvery((i, n) =>
             {
                 if (i == 1)
                     Assert.AreEqual("prev", n.Tokens.ToString());
@@ -38,7 +38,7 @@ namespace Axis.Pulsar.Core.Tests.CST
             result = ns.ConcatSequence(ns2);
             Assert.IsNotNull(result);
             Assert.AreEqual(2, result.Count);
-            result.ForAll((i, n) =>
+            result.ForEvery((i, n) =>
             {
                 if (i == 0)
                     Assert.AreEqual("prev", n.Tokens.ToString());

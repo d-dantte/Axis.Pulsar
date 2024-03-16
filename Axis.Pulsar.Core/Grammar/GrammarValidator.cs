@@ -1,8 +1,8 @@
-﻿using Axis.Luna.Extensions;
-using Axis.Pulsar.Core.Grammar.Composite;
+﻿using Axis.Pulsar.Core.Grammar.Composite;
 using Axis.Pulsar.Core.Grammar.Atomic;
 using System.Collections.Immutable;
 using Axis.Pulsar.Core.Grammar.Composite.Group;
+using Axis.Luna.Extensions;
 
 namespace Axis.Pulsar.Core.Grammar
 {

@@ -1,6 +1,6 @@
-﻿using Axis.Luna.Common.Results;
-using Axis.Luna.Common.Unions;
-using Axis.Luna.Extensions;
+﻿using Axis.Luna.Extensions;
+using Axis.Luna.Result;
+using Axis.Luna.Unions;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Results;

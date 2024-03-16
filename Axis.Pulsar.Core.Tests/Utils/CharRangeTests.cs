@@ -1,4 +1,4 @@
-﻿using Axis.Luna.Common.Utils;
+﻿using Axis.Luna.Common;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Tests.Utils

@@ -1,7 +1,4 @@
-﻿using Axis.Luna.Common.Results;
-using Axis.Luna.Extensions;
-
-namespace Axis.Pulsar.Core.XBNF;
+﻿namespace Axis.Pulsar.Core.XBNF;
 
 public static class Extensions
 {

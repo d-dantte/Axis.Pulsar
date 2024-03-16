@@ -1,11 +1,10 @@
-﻿using Axis.Luna.Common.Unions;
+﻿using Axis.Luna.Unions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar.Errors;
 
 namespace Axis.Pulsar.Core.Grammar.Results
 {
     using GroupError = GroupRecognitionError;
-    using PartialError = PartialRecognitionError;
 
     public readonly struct GroupRecognitionResult :
         IUnion<INodeSequence, GroupRecognitionError, GroupRecognitionResult>,

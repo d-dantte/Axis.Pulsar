@@ -28,7 +28,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Axis.Luna.Common" Version="6.0.29" />
+    <PackageReference Include="Axis.Luna.Common" Version="7.0.2" />
+    <PackageReference Include="Axis.Luna.Extensions" Version="7.0.2" />
+    <PackageReference Include="Axis.Luna.Result" Version="7.0.2" />
+    <PackageReference Include="Axis.Luna.Unions" Version="7.0.2" />
     <PackageReference Include="System.Collections.Immutable" Version="8.0.0" />
   </ItemGroup>
 

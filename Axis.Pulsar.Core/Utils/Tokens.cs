@@ -1,5 +1,5 @@
 ﻿using Axis.Luna.Common;
-using Axis.Luna.Common.Utils;
+using Axis.Luna.Common.Indexers;
 using Axis.Luna.Extensions;
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
@@ -353,7 +353,7 @@ namespace Axis.Pulsar.Core.Utils
 
                     // skip all matchers by match.delim.SourceSegment.Length characters
                     var skipCount = match.delim._segment.Count - 1;
-                    delimMatchers.ForAll(m => m.Advance(skipCount));
+                    delimMatchers.ForEvery(m => m.Advance(skipCount));
                     cnt += skipCount;
                 }
 
