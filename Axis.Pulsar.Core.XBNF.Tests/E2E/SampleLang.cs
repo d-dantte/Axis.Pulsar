@@ -66,7 +66,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
         public void SampleRecognition_Tests()
         {
             var context = GetContext()!;
-            var recognizer = context.Grammar.GetProduction("boolean-exp");
+            var recognizer = context.Grammar.GetProduction("boolean-value-exp");
             var success = false;
             var result = default(NodeRecognitionResult);
             var node = default(ICSTNode);
