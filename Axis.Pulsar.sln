@@ -25,8 +25,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Axis.Pulsar.Core.XBNF.Tests
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Axis.Pulsar.Core.Benchmarks", "Axis.Pulsar.Core.Benchmarks\Axis.Pulsar.Core.Benchmarks.csproj", "{DADEF664-EBC4-4923-BD9F-037674A4FD13}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Axis.Pulsar.Grammar.Benchmarks", "Axis.Pulsar.Grammar.Benchmarks\Axis.Pulsar.Grammar.Benchmarks.csproj", "{7F8A0A80-95C6-44A2-8F91-5FA69DB6A11A}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests.Benchmarks", "Tests.Benchmarks", "{8972F3E5-B15E-470C-8B27-E0ACDEF89CDE}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github.workflows", ".github.workflows", "{5214F836-9E95-4B41-999C-0156E6B139BF}"
@@ -62,10 +60,6 @@ Global
 		{DADEF664-EBC4-4923-BD9F-037674A4FD13}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DADEF664-EBC4-4923-BD9F-037674A4FD13}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DADEF664-EBC4-4923-BD9F-037674A4FD13}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7F8A0A80-95C6-44A2-8F91-5FA69DB6A11A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7F8A0A80-95C6-44A2-8F91-5FA69DB6A11A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7F8A0A80-95C6-44A2-8F91-5FA69DB6A11A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7F8A0A80-95C6-44A2-8F91-5FA69DB6A11A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -76,7 +70,6 @@ Global
 		{C0DA742D-DD9F-4B1F-A9DE-62E11980ADBD} = {EA81C491-927F-46E2-A283-8E64DD3A0704}
 		{54A3ED94-CED6-49B1-B95B-459A52FECC7E} = {1FF108D1-A5A3-440E-A034-1EE03D1D80B7}
 		{DADEF664-EBC4-4923-BD9F-037674A4FD13} = {8972F3E5-B15E-470C-8B27-E0ACDEF89CDE}
-		{7F8A0A80-95C6-44A2-8F91-5FA69DB6A11A} = {8972F3E5-B15E-470C-8B27-E0ACDEF89CDE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C6B54FB7-90D9-4D99-BC79-E903FFBDF3A9}
