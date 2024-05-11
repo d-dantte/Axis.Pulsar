@@ -30,5 +30,42 @@ namespace Axis.Pulsar.Core.Utils
 
             else return result;
         }
+
+        internal static int IndexOf(this
+            ReadOnlySpan<char> span,
+            ReadOnlySpan<char> pattern,
+            int offset,
+            StringComparison comparison)
+        {
+            if (offset < 0 || offset >= span.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return span[offset..].IndexOf(pattern, comparison);
+        }
+
+        internal static bool TryNextIndexOf(this
+            ReadOnlySpan<char> span,
+            ReadOnlySpan<char> pattern,
+            int offset,
+            StringComparison comparison,
+            out int index)
+        {
+            index = span.IndexOf(pattern, offset, comparison);
+            return index != -1;
+        }
+
+        internal static TList InsertItem<TList, TItem>(this
+            TList list, Index index, TItem item)
+            where TList: IList<TItem>
+        {
+            ArgumentNullException.ThrowIfNull(list);
+
+            list[index] = item;
+            return list;
+        }
+
+        internal static void NoOp<TIn>(TIn @in) { }
+
+        internal static TOut DefaultOp<TIn, TOut>(TIn _) => default!;
     }
 }

@@ -2,6 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using Axis.Luna.Common;
+using Axis.Luna.Common.StringEscape;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar.Atomic;
 using Axis.Pulsar.Core.XBNF.Lang;
@@ -43,19 +44,23 @@ public interface IAtomicRuleFactory
     #region Nested Types
 
     /// <summary>
-    /// Atomic Rule argument
+    /// Atomic Rule argument. Atomic rules take a list of key-value-pair representing parameters
+    /// used to configure themselves. <see cref="IArgument"/> instances are used to represent the
+    /// "keys" in the pair.
     /// </summary>
     public interface IArgument
     {
-        public static readonly Regex ArgumentPattern = new(
+        public static readonly Regex RegularArgumentPattern = new(
             "^[a-zA-Z_][a-zA-Z0-9-_]*\\z",
             RegexOptions.Compiled);
 
+        string Key { get; }
+
         /// <summary>
-        /// Creates a <see cref="Argument"/> instance.
+        /// Creates a <see cref="RegularArgument"/> instance.
         /// </summary>
         /// <param name="key">The argument key</param>
-        public static IArgument Of(string key) => new Argument(key);
+        public static IArgument Of(string key) => new RegularArgument(key);
 
         /// <summary>
         /// Creates a <see cref="ContentArgument"/> instance.
@@ -71,30 +76,32 @@ public interface IAtomicRuleFactory
     }
 
     /// <summary>
-    /// Regular argument
+    /// Regular argument, where the key adheres to the pattern: <see cref="IArgument.RegularArgumentPattern"/>
     /// </summary>
-    public readonly struct Argument :
+    public readonly struct RegularArgument :
         IArgument,
-        IEquatable<Argument>,
-        IDefaultValueProvider<Argument>
+        IEquatable<RegularArgument>,
+        IDefaultValueProvider<RegularArgument>
     {
         private readonly string _key;
 
-        public Argument(string key)
+        public string Key => _key;
+
+        public RegularArgument(string key)
         {
             _key = key.ThrowIfNot(
-                IArgument.ArgumentPattern.IsMatch,
+                IArgument.RegularArgumentPattern.IsMatch,
                 _ => new ArgumentException($"Invalid argument key: {key}"));
         }
 
-        public static Argument Of(string key) => new(key);
+        public static RegularArgument Of(string key) => new(key);
 
-        public static implicit operator Argument(string key) => new(key);
+        public static implicit operator RegularArgument(string key) => new(key);
 
         #region DefaultValueProvider
-        public static Argument Default => default;
+        public static RegularArgument Default => default;
 
-        public bool IsDefault => default(Argument).Equals(this);
+        public bool IsDefault => default(RegularArgument).Equals(this);
         #endregion
 
         public override string ToString() => _key;
@@ -106,7 +113,7 @@ public interface IAtomicRuleFactory
             return obj is IArgument arg && Equals(arg);
         }
 
-        public bool Equals(Argument arg)
+        public bool Equals(RegularArgument arg)
         {
             return EqualityComparer<string>.Default.Equals(_key, arg._key);
         }
@@ -116,12 +123,12 @@ public interface IAtomicRuleFactory
             return EqualityComparer<string>.Default.Equals(_key, key);
         }
 
-        public static bool operator ==(Argument left, Argument right)
+        public static bool operator ==(RegularArgument left, RegularArgument right)
         {
             return left.Equals(right);
         }
 
-        public static bool operator !=(Argument left, Argument right)
+        public static bool operator !=(RegularArgument left, RegularArgument right)
         {
             return !(left == right);
         }
@@ -166,14 +173,16 @@ public interface IAtomicRuleFactory
     }
 
     /// <summary>
-    /// Content Argument - special argument with the name "content", and a <see cref="ContentArgumentDelimiter"/>
+    /// Content Argument - special argument with "content" as the key, and a <see cref="ContentArgumentDelimiter"/>
     /// </summary>
     public readonly struct ContentArgument :
         IArgument,
         IEquatable<ContentArgument>,
         IDefaultValueProvider<ContentArgument>
     {
-        public static readonly string Key = "content";
+        public static readonly string KEY = "content";
+
+        public string Key => KEY;
 
         public ContentArgumentDelimiter Delimiter { get; }
 
@@ -194,7 +203,7 @@ public interface IAtomicRuleFactory
         public bool IsDefault => Delimiter == ContentArgumentDelimiter.None;
         #endregion
 
-        public override string ToString() => Key;
+        public override string ToString() => KEY;
 
         public override int GetHashCode() => HashCode.Combine(Delimiter);
 
@@ -232,18 +241,18 @@ public interface IAtomicRuleFactory
     {
         public bool Equals(IArgument? x, IArgument? y) =>  (x, y) switch
         {
-            (Argument argx, Argument argy) => argx.Equals(argy),
+            (RegularArgument argx, RegularArgument argy) => argx.Equals(argy),
             (ContentArgument, ContentArgument) => true,
-            (ContentArgument, Argument argy) => ContentArgument.Key.Equals(argy.ToString()),
-            (Argument argX, ContentArgument) => argX.ToString().Equals(ContentArgument.Key),
+            (ContentArgument, RegularArgument argy) => ContentArgument.KEY.Equals(argy.ToString()),
+            (RegularArgument argX, ContentArgument) => argX.ToString().Equals(ContentArgument.KEY),
             (null, null) => true,
             _ => false
         };
 
         public int GetHashCode([DisallowNull] IArgument obj) => obj switch
         {
-            Argument arg => arg.ToString().GetHashCode(),
-            ContentArgument => ContentArgument.Key.GetHashCode(),
+            RegularArgument arg => arg.ToString().GetHashCode(),
+            ContentArgument => ContentArgument.KEY.GetHashCode(),
             null => throw new ArgumentNullException(nameof(obj)),
             _ => throw new InvalidOperationException($"Invalid argument type: {obj.GetType()}")
         };
@@ -252,7 +261,10 @@ public interface IAtomicRuleFactory
     }
 
     /// <summary>
-    /// Combination of an <see cref="IArgument"/>, and it's optional value.
+    /// Combination of an <see cref="IArgument"/>, and its optional value.
+    /// <para/>
+    /// Note that the value is a raw copy of whatever is found between the delimiters of the argument; interpretation of this
+    /// raw value is left for the implementation of the factory.
     /// </summary>
     public readonly struct Parameter :
         IEquatable<Parameter>,
@@ -260,13 +272,28 @@ public interface IAtomicRuleFactory
     {
         public IArgument Argument { get; }
 
-        public string? Value { get; }
+        public string? EscapedValue { get; }
 
-        public Parameter(IArgument argument, string? value)
+        public Parameter(
+            IArgument argument,
+            string? escapedValue,
+            IStringEscaper? stringEscaper)
         {
             Argument = argument;
-            Value = value;
+            EscapedValue = escapedValue;
         }
+
+        public Parameter(
+            IArgument argument,
+            string? escapedValue)
+            : this(argument, escapedValue, null)
+        { }
+
+        public static Parameter Of(
+            IArgument argument,
+            string? value,
+            IStringEscaper? stringEscaper)
+            => new(argument, value, stringEscaper);
 
         public static Parameter Of(
             IArgument argument,
@@ -276,14 +303,14 @@ public interface IAtomicRuleFactory
         #region DefaultValueProvider
         public static Parameter Default => default;
 
-        public bool IsDefault => Argument is null && Value is null;
+        public bool IsDefault => Argument is null && EscapedValue is null;
         #endregion
 
         public bool Equals(Parameter other)
         {
             return 
                 EqualityComparer<IArgument>.Default.Equals(Argument, other.Argument)
-                && EqualityComparer<string>.Default.Equals(Value, other.Value);
+                && EqualityComparer<string>.Default.Equals(EscapedValue, other.EscapedValue);
         }
 
         public override bool Equals([NotNullWhen(true)] object? obj)
@@ -292,13 +319,13 @@ public interface IAtomicRuleFactory
                 && Equals(other);
         }
 
-        public override int GetHashCode() => HashCode.Combine(Argument, Value);
+        public override int GetHashCode() => HashCode.Combine(Argument, EscapedValue);
 
         public override string ToString()
         {
             return IsDefault
                 ? "{}"
-                : $"{{key: {Argument}, value: {Value}}}";
+                : $"{{key: {Argument}, value: {EscapedValue}}}";
         }
 
         public static bool operator ==(Parameter left, Parameter right)

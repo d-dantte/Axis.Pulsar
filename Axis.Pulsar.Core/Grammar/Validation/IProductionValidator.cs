@@ -10,8 +10,8 @@ namespace Axis.Pulsar.Core.Grammar.Validation
     {
         /// <summary>
         /// Validates the SUCCESSFULLY recognized tokens of the given production symbol, passed in as
-        /// a <see cref="ICSTNode"/>. The idea is, after a production is SUCCESSFULLY processed,
-        /// the <see cref="ICSTNode"/> instance is passed into the designated validator.
+        /// a <see cref="ISymbolNode"/>. The idea is, after a production is SUCCESSFULLY processed,
+        /// the <see cref="ISymbolNode"/> instance is passed into the designated validator.
         /// <para/>
         /// Validation fails if any exception is thrown from this method, or passes otherwise.
         /// <para/>
@@ -22,6 +22,6 @@ namespace Axis.Pulsar.Core.Grammar.Validation
         void Validate(
             SymbolPath symbolPath,
             ILanguageContext context,
-            ICSTNode recogniedNode);
+            ISymbolNode recogniedNode);
     }
 }

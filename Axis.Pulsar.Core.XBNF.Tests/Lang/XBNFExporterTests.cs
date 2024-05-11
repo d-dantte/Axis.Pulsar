@@ -13,7 +13,7 @@ public class XBNFExporterTests
         var langText = new StreamReader(langDefStream!).ReadToEnd();
 
         // build importer
-        var importer = XBNFImporter.Builder
+        var importer = XBNFImporter
             .NewBuilder()
             .WithDefaultAtomicRuleDefinitions()
             .Build();

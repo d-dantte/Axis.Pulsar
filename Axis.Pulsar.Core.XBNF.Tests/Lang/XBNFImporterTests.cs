@@ -9,7 +9,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Lang
         public void Construction_Tests()
         {
             // build importer
-            var importer = XBNFImporter.Builder
+            var importer = XBNFImporter
                 .NewBuilder()
                 .WithDefaultAtomicRuleDefinitions()
                 .Build();
@@ -25,7 +25,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Lang
             var langText = new StreamReader(langDefStream!).ReadToEnd();
 
             // build importer
-            var importer = XBNFImporter.Builder
+            var importer = XBNFImporter
                 .NewBuilder()
                 .WithDefaultAtomicRuleDefinitions()
                 .Build();

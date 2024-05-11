@@ -15,5 +15,5 @@ namespace Axis.Pulsar.Core.Tests.Grammar
         TokenReader reader,
         SymbolPath path,
         ILanguageContext context,
-        out GroupRecognitionResult result);
+        out SymbolAggregationResult result);
 }

@@ -43,7 +43,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
             return rule switch
             {
                 IAtomicRule ar => WriteAtomicRule(ar, context),
-                ICompositeRule cr => WriteCompositeRule(cr, context),
+                CompositeRule cr => WriteCompositeRule(cr, context),
                 _ => throw new InvalidOperationException($"Invalid rule type: {rule.GetType()}")
             };
         }
@@ -91,7 +91,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
 
             var contentText = args
                 .Where(arg => arg.Argument is ContentArgument)
-                .Select(arg => $"{@char}{arg.Value}{@char}")
+                .Select(arg => $"{@char}{arg.EscapedValue}{@char}")
                 .FirstOrDefault();
 
             var argsText = args
@@ -115,18 +115,18 @@ namespace Axis.Pulsar.Core.XBNF.Lang
                         .Append(_sb.Length == 1 ? "" : ",")
                         .Append(" ").Append(arg.Argument)
                         .Append(": ")
-                        .Append("'").Append(arg.Value).Append("'");
+                        .Append("'").Append(arg.EscapedValue).Append("'");
                 })
                 .Append(" }")
                 .ToString();
         }
 
-        internal static string WriteCompositeRule(ICompositeRule rule, XBNFLanguageContext context)
+        internal static string WriteCompositeRule(CompositeRule rule, XBNFLanguageContext context)
         {
             ArgumentNullException.ThrowIfNull(rule);
             ArgumentNullException.ThrowIfNull(context);
 
-            if (rule is not NonTerminal nonTerminal)
+            if (rule is not CompositeRule nonTerminal)
                 throw new InvalidOperationException(
                     $"Invalid composite rule: '{rule.GetType()}'");
 
@@ -137,7 +137,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
             return $"{rt}{WriteElement(nonTerminal.Element, context)}";
         }
 
-        internal static string WriteElement(IGroupRule element, XBNFLanguageContext context)
+        internal static string WriteElement(IAggregationElementRule element, XBNFLanguageContext context)
         {
             ArgumentNullException.ThrowIfNull(element);
 
@@ -169,7 +169,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
             return $"${prodRef.Ref}";
         }
 
-        internal static string WriteGroup(IGroup group, XBNFLanguageContext context)
+        internal static string WriteGroup(IAggregationRule group, XBNFLanguageContext context)
         {
             ArgumentNullException.ThrowIfNull(group);
             ArgumentNullException.ThrowIfNull(context);

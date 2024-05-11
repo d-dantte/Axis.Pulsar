@@ -1,5 +1,6 @@
 ﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar;
+using System.Collections.Immutable;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
 namespace Axis.Pulsar.Core.XBNF.Definitions
@@ -9,46 +10,55 @@ namespace Axis.Pulsar.Core.XBNF.Definitions
     /// </summary>
     public class AtomicRuleDefinition
     {
-        public string Id { get; }
+        public ImmutableHashSet<string> Symbols { get; }
 
         public IAtomicRuleFactory Factory { get; }
 
         public ContentArgumentDelimiter ContentDelimiterType { get; }
 
         public AtomicRuleDefinition(
-            string id,
             ContentArgumentDelimiter contentDelimiterType,
-            IAtomicRuleFactory factory)
-        {
+            IAtomicRuleFactory factory,
+            params string[] symbols)
+        {            
+            // Also does null check
+            if (symbols.IsEmpty())
+                throw new ArgumentException($"Invalid {nameof(symbols)}: empty");
+
             Factory = factory.ThrowIfNull(() => new ArgumentNullException(nameof(factory)));
             ContentDelimiterType = contentDelimiterType.ThrowIfNot(
                 Enum.IsDefined,
                 _ => new ArgumentException($"Invalid content delimiter type: '{contentDelimiterType}' is undefined"));
-            Id = id.ThrowIfNot(
-                Production.SymbolPattern.IsMatch,
-                _ => new FormatException($"Invalid {nameof(id)} format: '{id}'"));
+
+            Symbols = symbols
+                .ThrowIfAny(
+                    symbol => !Production.SymbolPattern.IsMatch(symbol),
+                    symbol => new FormatException($"Invalid {nameof(symbol)} format: '{symbol}'"))
+                .ThrowIfDuplicate(symbol => new InvalidOperationException(
+                    $"Invalid state: duplicate symbol found '{symbol}'"))
+                .ToImmutableHashSet();
         }
 
         public static AtomicRuleDefinition Of(
-            string symbol,
             ContentArgumentDelimiter contentDelimiterType,
-            IAtomicRuleFactory factory)
-            => new(symbol, contentDelimiterType, factory);
+            IAtomicRuleFactory factory,
+            params string[] symbols)
+            => new(contentDelimiterType, factory, symbols);
 
         public static AtomicRuleDefinition Of(
-            string symbol,
-            IAtomicRuleFactory factory)
-            => new(symbol, ContentArgumentDelimiter.None, factory);
+            IAtomicRuleFactory factory,
+            params string[] symbols)
+            => new(ContentArgumentDelimiter.None, factory, symbols);
 
         public static AtomicRuleDefinition Of<TFactory>(
-            string symbol,
-            ContentArgumentDelimiter contentDelimiterType)
+            ContentArgumentDelimiter contentDelimiterType,
+            params string[] symbols)
             where TFactory : IAtomicRuleFactory, new()
-            => new(symbol, contentDelimiterType, new TFactory());
+            => new(contentDelimiterType, new TFactory(), symbols);
 
         public static AtomicRuleDefinition Of<TFactory>(
-            string symbol)
+            params string[] symbols)
             where TFactory : IAtomicRuleFactory, new()
-            => new(symbol, ContentArgumentDelimiter.None, new TFactory());
+            => new(ContentArgumentDelimiter.None, new TFactory(), symbols);
     }
 }

@@ -1,6 +1,5 @@
-﻿using Axis.Pulsar.Core.Grammar.Atomic;
-using Axis.Pulsar.Core.Utils;
-using Axis.Pulsar.Core.Utils.EscapeMatchers;
+﻿using Axis.Luna.Common.StringEscape;
+using Axis.Pulsar.Core.Grammar.Atomic;
 using Axis.Pulsar.Core.XBNF.Lang;
 using System.Collections.Immutable;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
@@ -14,21 +13,24 @@ namespace Axis.Pulsar.Core.XBNF;
 /// </summary>
 public class LiteralRuleFactory : IAtomicRuleFactory
 {
+    private static readonly IStringEscaper Escaper = new CommonStringEscaper();
+
     #region Arguments
 
     /// <summary>
-    /// The content argument holds the literal string to be matched. The 
+    /// The content argument holds the literal string to be matched.
+    /// <para/>
+    /// - Escaping: all bsol-escape sequences within the 'literal' are unescaped. This means that the literal that gets passed
+    /// into the final <see cref="TerminalLiteral"/> instance will be the unescaped version of this argument.
     /// </summary>
     public static IArgument LiteralArgument => IAtomicRuleFactory.Content;
 
     /// <summary>
-    /// case insensitive flag
+    /// case sensitive flag
     /// </summary>
-    public static IArgument CaseInsensitiveArgument => IArgument.Of("case-insensitive");
+    public static IArgument CaseSensitiveArgument => IArgument.Of("case-sensitive");
 
     #endregion
-
-    private static readonly IEscapeTransformer _BasicEscapeTransformer = new BSolBasicEscapeMatcher(); 
 
     public IAtomicRule NewRule(
         string ruleId,
@@ -40,7 +42,7 @@ public class LiteralRuleFactory : IAtomicRuleFactory
         return TerminalLiteral.Of(
             ruleId,
             ParseLiteral(arguments[LiteralArgument]),
-            arguments.TryGetValue(CaseInsensitiveArgument, out _));
+            arguments.TryGetValue(CaseSensitiveArgument, out _));
     }
 
     /// <summary>
@@ -55,13 +57,7 @@ public class LiteralRuleFactory : IAtomicRuleFactory
             throw new ArgumentException($"Invalid arguments: '{LiteralArgument}' is missing");
     }
 
-    /// <summary>
-    /// Decodes basic escape sequences. See <see cref="BSolBasicEscapeMatcher"/>.
-    /// </summary>
-    /// <param name="literal"></param>
-    /// <returns></returns>
-    private static string ParseLiteral(string literal)
-    {
-        return _BasicEscapeTransformer.Decode(literal);
-    }
+    private static string ParseLiteral(
+        string value)
+        => Escaper.UnescapeString(value);
 }

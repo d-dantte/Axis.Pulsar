@@ -13,7 +13,9 @@ namespace Axis.Pulsar.Core.Utils
         public string Source => _source;
 
         /// <summary>
-        /// The current position. This always represents the position of the next token to be peeked/read/consumed
+        /// The current position. This always represents the position/index of the next token to be peeked/read/consumed.
+        /// For a completely consumed reader, the position/index will be equal to the length of the source, meaning the next token to
+        /// be read falls outside of the source.
         /// </summary>
         public int Position => _position;
 

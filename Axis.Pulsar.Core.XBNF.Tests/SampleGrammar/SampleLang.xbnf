@@ -6,7 +6,7 @@
 # SPREE
 $spree -> +[
 	$boolean-exp
-	@EOF
+	@eof
 ]
 
 
@@ -28,7 +28,7 @@ $relational-exp -> ?[
 	$relational-set-exp
 	$relational-scalar-exp
 ]
-$relational-set-exp -> :3 +[
+$relational-set-exp -> :3 ?[
 	+[$set-exp $block-space "in" $block-space $set-exp]
 	+[$scalar-exp $block-space "in" $block-space $set-exp]
 	+[$set-exp $block-space "contains" $block-space $scalar-exp]
@@ -284,9 +284,9 @@ $character-exp -> ?[
 ]
 $character-constant-exp -> +[
 	"'" ?[
-		"\0" "\a" "\b" "\f" "\n" "\r" "\t" "\v" "\'"
-		+[ "\x" /^[a-fA-F0-9]{2}$/{ match-type: '2'} ]
-		+[ "\u" /^[a-fA-F0-9]{4}$/{ match-type: '4'} ]
+		"\\0" "\\a" "\\b" "\\f" "\\n" "\\r" "\\t" "\\v" "\\'" "\\\""
+		+[ "\\x" /^[a-fA-F0-9]{2}$/{ match-type: '2'} ]
+		+[ "\\u" /^[a-fA-F0-9]{4}$/{ match-type: '4'} ]
 		/^.$/
 	]
 	"'"
@@ -519,7 +519,7 @@ $attribute-set-access-exp -> :2 +[
 $attribute-identifier -> /^[a-zA-Z]([a-zA-Z0-9-_])*$/{
 	match-type: '1,+'
 }
-$attribute-name -> @DelimitedString{
+$attribute-name -> @delimited-string{
 	start: '\'',
 	end: '\'',
 	ranges: '^\n, ^\r',

@@ -43,6 +43,7 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
     /// present, and the other for when they are absent. This is because when present, tokens are injested based on chunks
     /// of legal characters; and if absent, tokens are injested one character at a time.
     /// </summary>
+    [Obsolete("Use DelimitedContent instead")]
     public class DelimitedString : IAtomicRule
     {
         public string Id { get; }
@@ -185,7 +186,7 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
                 tokens += endDelimTokens;
             }
 
-            result = ICSTNode
+            result = ISymbolNode
                 .Of(delimPath.Symbol, tokens)
                 .ApplyTo(NodeRecognitionResult.Of);
             return true;
@@ -226,9 +227,7 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
                 : TryRecognizeStringWithLegalSequence(reader, out tokens);
         }
 
-        internal bool TryRecognizeStringWithoutLegalSequence(
-            TokenReader reader,
-            out Tokens tokens)
+        internal bool TryRecognizeStringWithoutLegalSequence(TokenReader reader, out Tokens tokens)
         {
             var position = reader.Position;
             tokens = Tokens.EmptyAt(reader.Source, position);

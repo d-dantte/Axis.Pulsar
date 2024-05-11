@@ -26,7 +26,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 null!,
                 out var result);
             Assert.IsTrue(success);
-            Assert.IsTrue(result.Is(out ICSTNode node));
+            Assert.IsTrue(result.Is(out ISymbolNode node));
             Assert.AreEqual("t", node.Symbol);
             Assert.AreEqual(Tokens.Of("abcd efgh"), node.Tokens);
 

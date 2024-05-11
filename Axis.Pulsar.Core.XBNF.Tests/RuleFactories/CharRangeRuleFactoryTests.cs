@@ -23,19 +23,17 @@
         [TestMethod]
         public void DecodeTests()
         {
-            var transformer = new CharRangeRuleFactory.RangesEscapeTransformer();
+            var unescaped = CharRangeRuleFactory.Unescape("a-z");
+            Assert.AreEqual("a-z", unescaped);
 
-            var decoded = transformer.Decode("a-z");
-            Assert.AreEqual("a-z", decoded);
+            unescaped = CharRangeRuleFactory.Unescape("a-\\^");
+            Assert.AreEqual("a-^", unescaped);
 
-            decoded = transformer.Decode("a-\\^");
-            Assert.AreEqual("a-^", decoded);
+            unescaped = CharRangeRuleFactory.Unescape("\0-\\'");
+            Assert.AreEqual("\0-'", unescaped);
 
-            decoded = transformer.Decode("\0-\\'");
-            Assert.AreEqual("\0-'", decoded);
-
-            decoded = transformer.Decode("\0-\\ ");
-            Assert.AreEqual("\0-\\x20", decoded);
+            unescaped = CharRangeRuleFactory.Unescape("\0-\\ ");
+            Assert.AreEqual("\0-\\x20", unescaped);
         }
     }
 }

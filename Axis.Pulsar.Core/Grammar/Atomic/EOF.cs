@@ -16,9 +16,12 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
 
         public EOF(string id)
         {
-            Id = id.ThrowIfNot(
-                Production.SymbolPattern.IsMatch,
-                _ => new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
+            Id = id
+                .ThrowIfNull(
+                    () => new ArgumentNullException(nameof(id)))
+                .ThrowIfNot(
+                    Production.SymbolPattern.IsMatch,
+                    _ => new ArgumentException($"Invalid {nameof(id)} format: '{id}'"));
         }
 
         public bool TryRecognize(
@@ -28,15 +31,14 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
             out NodeRecognitionResult result)
         {
             ArgumentNullException.ThrowIfNull(reader);
-            ArgumentNullException.ThrowIfNull(symbolPath);
 
             var position = reader.Position;
             var eofPath = symbolPath.Next(Id);
 
             if (!reader.TryGetToken(out _))
             {
-                result = ICSTNode
-                    .Of(eofPath.Symbol, default(Tokens))
+                result = ISymbolNode
+                    .Of(eofPath.Symbol, Tokens.EmptyAt(reader.Source, position))
                     .ApplyTo(NodeRecognitionResult.Of);
                 return true;
             }

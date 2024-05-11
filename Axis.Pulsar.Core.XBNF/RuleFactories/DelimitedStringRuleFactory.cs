@@ -1,7 +1,7 @@
-﻿using Axis.Luna.Extensions;
+﻿using Axis.Luna.Common.StringEscape;
+using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar.Atomic;
 using Axis.Pulsar.Core.Utils;
-using Axis.Pulsar.Core.Utils.EscapeMatchers;
 using Axis.Pulsar.Core.XBNF.Lang;
 using System.Collections.Immutable;
 using System.Globalization;
@@ -27,9 +27,15 @@ namespace Axis.Pulsar.Core.XBNF;
 /// RANGES - Syntax
 /// <para/>
 /// See <see cref="CharRangeRuleFactory"/>
+/// <para/>
+/// Start/End/Escaped-End Delimiters
+/// <para/>
+/// These are expected to be unicode-escaped string literals - meaning 
 /// </summary>
 public class DelimitedStringRuleFactory : IAtomicRuleFactory
 {
+    private static readonly CommonStringEscaper Escaper = new CommonStringEscaper();
+
     #region Arguments
 
     /// <summary>
@@ -43,12 +49,18 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
     public static IArgument SequencesArgument => IArgument.Of("sequences");
 
     /// <summary>
-    /// Start delimiter argument
+    /// Start delimiter argument.
+    /// <para/>
+    /// String containing escape-sequences. The factory is responsible for unescaping the sequences so the raw string
+    /// is passed into the <see cref="DelimitedString"/> instance.
     /// </summary>
     public static IArgument StartDelimArgument => IArgument.Of("start");
 
     /// <summary>
     /// End delimiter argument
+    /// <para/>
+    /// String containing escape-sequences. The factory is responsible for unescaping the sequences so the raw string
+    /// is passed into the <see cref="DelimitedString"/> instance.
     /// </summary>
     public static IArgument EndDelimArgument => IArgument.Of("end");
 
@@ -63,8 +75,6 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
     public static IArgument EscapedEndDelimiterArgument => IArgument.Of("escaped-delimiter");
 
     #endregion
-
-    private static readonly IEscapeTransformer Transformer = new SequencesEscapeTransformer();
 
     public IAtomicRule NewRule(
         string ruleId,
@@ -86,12 +96,14 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
         var escapedDelimiter = arguments.TryGetValue(EscapedEndDelimiterArgument, out var value)
             ? Tokens.Of(value)
             : Tokens.Default;
+        var unescapedStartDelimiter = Escaper.UnescapeString(delimiters.Start);
+        var unescapedEndDelimiter = Escaper.UnescapeString(delimiters.End!);
 
         return DelimitedString.Of(
             ruleId,
             acceptsEmpty,
-            delimiters.Start,
-            delimiters.End,
+            unescapedStartDelimiter,
+            unescapedEndDelimiter,
             sequences.Includes,
             sequences.Excludes,
             ranges.Includes,
@@ -107,7 +119,7 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
             throw new ArgumentException($"Invalid arguments: '{StartDelimArgument}' is missing");
     }
 
-    internal static (string Start, string End) ParseDelimiters(ImmutableDictionary<IArgument, string> arguments)
+    internal static (string Start, string? End) ParseDelimiters(ImmutableDictionary<IArgument, string> arguments)
     {
         var start = arguments[StartDelimArgument] ?? throw new FormatException("Invalid start delimiter: null");
         var end = arguments.TryGetValue(EndDelimArgument, out var delim)
@@ -136,12 +148,12 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
         return (
             primedSequences
                 .Where(sequence => !'^'.Equals(sequence[0]))
-                .Select(Transformer.Decode)
+                .Select(SequencesEscapeTransformer.Unescape)
                 .Select(sequence => Tokens.Of(sequence))
                 .ToArray(),
             primedSequences
                 .Where(sequence => '^'.Equals(sequence[0]))
-                .Select(Transformer.Decode)
+                .Select(SequencesEscapeTransformer.Unescape)
                 .Select(sequence => Tokens.Of(sequence[1..]))
                 .ToArray());
     }
@@ -149,8 +161,7 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
     #region Nested Types
 
     /// <summary>
-    /// Implementation is identical to <see cref="Axis.Pulsar.Core.Utils.EscapeMatchers.BSolUTFEscapeMatcher"/>, with
-    /// the addition of escaping the following characters:
+    /// Escapes and Unescapes regular ASCII escape characters, with the addition of escaping the following characters:
     /// <list type="number">
     /// <item> ' </item>
     /// <item> ^ </item>
@@ -161,14 +172,17 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
     /// <item> space </item>
     /// </list>
     /// </summary>
-    internal class SequencesEscapeTransformer : IEscapeTransformer
+    internal static class SequencesEscapeTransformer
     {
-        private static readonly HashSet<char> EscapeArgs = new()
-        {
-            '\'', '\\', '^', ',', ' '
-        };
+        private readonly static ImmutableHashSet<char> EscapeArgs = ImmutableHashSet.Create('\'', '\\', '^', ',', ' ');
+       
+        private readonly static ImmutableHashSet<int> UnprintableAsciiCharCodes = ImmutableHashSet.Create(
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+            11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+            21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+            31, 129, 143, 144, 157, 160, 173);
 
-        public string Decode(string escapedString)
+        internal static string Unescape(string escapedString)
         {
             if (escapedString is null)
                 return escapedString!;
@@ -232,7 +246,7 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
                 .JoinUsing("");
         }
 
-        public string Encode(string rawString)
+        internal static string Escape(string rawString)
         {
             if (rawString is null)
                 return rawString!;
@@ -257,7 +271,7 @@ public class DelimitedStringRuleFactory : IAtomicRuleFactory
                     };
                     substrings.Add(Tokens.Of($"\\{escapeArg}"));
                 }
-                else if (BSolAsciiEscapeMatcher.UnprintableAsciiCharCodes.Contains(rawString[index])
+                else if (UnprintableAsciiCharCodes.Contains(rawString[index])
                     || rawString[index] > 255)
                 {
                     var prev = Tokens.Of(rawString, offset, index - offset);

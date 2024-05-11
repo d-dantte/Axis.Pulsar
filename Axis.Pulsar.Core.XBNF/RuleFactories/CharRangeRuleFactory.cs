@@ -36,8 +36,6 @@ public class CharRangeRuleFactory : IAtomicRuleFactory
 
     #endregion
 
-    private static readonly IEscapeTransformer Transformer = new RangesEscapeTransformer();
-
     public IAtomicRule NewRule(
         string ruleId,
         LanguageMetadata context,
@@ -89,44 +87,30 @@ public class CharRangeRuleFactory : IAtomicRuleFactory
         return (
             primedRanges
                 .Where(sequence => !'^'.Equals(sequence[0]))
-                .Select(Transformer.Decode)
+                .Select(Unescape)
                 .Select(CharRange.Parse)
                 .ToArray(),
             primedRanges
                 .Where(sequence => '^'.Equals(sequence[0]))
                 .Select(range => range[1..])
-                .Select(Transformer.Decode)
+                .Select(Unescape)
                 .Select(CharRange.Parse)
                 .ToArray());
     }
 
-    #region Nested types
-
-    /// <summary>
-    /// Encodes the following characters
-    /// <list type="number">
-    /// <item> ' </item>
-    /// <item> ^ </item>
-    /// <item> space </item>
-    /// </list>
-    /// </summary>
-    internal class RangesEscapeTransformer : IEscapeTransformer
+    internal static string Unescape(string escapedRange)
     {
-        public string Decode(string escapedRange)
-        {
-            return escapedRange?
-                .Replace("\\'", "'")
-                .Replace("\\^", "^")
-                .Replace("\\ ", "\\x20")!;
-        }
-
-        public string Encode(string rawString)
-        {
-            return rawString?
-                .Replace("'", "\\'")
-                .Replace("^", "\\^")
-                .Replace(" ", "\\ ")!;
-        }
+        return escapedRange?
+            .Replace("\\'", "'")
+            .Replace("\\^", "^")
+            .Replace("\\ ", "\\x20")!;
     }
-    #endregion
+
+    internal static string Escape(string rawString)
+    {
+        return rawString?
+            .Replace("'", "\\'")
+            .Replace("^", "\\^")
+            .Replace(" ", "\\ ")!;
+    }
 }

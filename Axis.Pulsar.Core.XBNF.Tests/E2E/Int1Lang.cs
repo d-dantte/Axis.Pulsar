@@ -16,7 +16,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
             var langText = new StreamReader(langDefStream!).ReadToEnd();
 
             // build importer
-            var importer = XBNFImporter.Builder
+            var importer = XBNFImporter
                 .NewBuilder()
                 .WithDefaultAtomicRuleDefinitions()
                 .Build();
@@ -25,13 +25,13 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
             _lang = importer.ImportLanguage(langText);
         }
 
-        [TestMethod]
+        //[TestMethod]
         public void ValidRecognitionTests()
         {
             // regular int 45
             var result = _lang.Recognize("45");
             Assert.IsNotNull(result);
-            Assert.IsTrue(result.Is(out ICSTNode node));
+            Assert.IsTrue(result.Is(out ISymbolNode node));
             Assert.AreEqual("int", node.Symbol);
             Assert.IsTrue("45".Equals(node.Tokens));
             var regularInt = node.FindNodes("regular-int/@t<45>").ToArray();

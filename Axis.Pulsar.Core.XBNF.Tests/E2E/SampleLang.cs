@@ -26,7 +26,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
                 var langText = new StreamReader(langDefStream!).ReadToEnd();
 
                 // build importer
-                var importer = XBNFImporter.Builder
+                var importer = XBNFImporter
                     .NewBuilder()
                     .WithDefaultAtomicRuleDefinitions()
                     .Build();
@@ -48,7 +48,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
                 var langText = new StreamReader(langDefStream!).ReadToEnd();
 
                 // build importer
-                var importer = XBNFImporter.Builder
+                var importer = XBNFImporter
                     .NewBuilder()
                     .WithDefaultAtomicRuleDefinitions()
                     .Build();
@@ -69,7 +69,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
             var recognizer = context.Grammar.GetProduction("boolean-value-exp");
             var success = false;
             var result = default(NodeRecognitionResult);
-            var node = default(ICSTNode);
+            var node = default(ISymbolNode);
 
             success = recognizer.TryRecognize(
                 $"true",

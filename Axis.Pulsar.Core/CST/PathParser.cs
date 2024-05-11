@@ -40,9 +40,6 @@ namespace Axis.Pulsar.Core.CST
 
         public static bool TryParse(string pathText, out IResult<NodePath> result)
         {
-            if (string.IsNullOrEmpty(pathText))
-                throw new ArgumentException("Invalid path: null/empty");
-
             _ = TryRecognizePath(pathText, out var pathResult);
             result = pathResult.MapMatch(
                 data => Result.Of(data),
@@ -58,9 +55,6 @@ namespace Axis.Pulsar.Core.CST
 
         public static NodePath Parse(string pathText)
         {
-            if (string.IsNullOrEmpty(pathText))
-                throw new ArgumentException("Invalid path: null/empty");
-
             _ = TryRecognizePath(pathText, out var result);
             return result.Is(out NodePath path) ? path : ToFormatException(result).Throw<NodePath>();
         }
@@ -154,8 +148,6 @@ namespace Axis.Pulsar.Core.CST
             var symbolNamePath = parentPath.Next("symbol-name");
 
             #region delimiter
-            var hasDelimiter = false;
-
             if (!reader.TryGetToken(out var delimiter))
             {
                 result = FailedRecognitionError
@@ -176,18 +168,12 @@ namespace Axis.Pulsar.Core.CST
                     .ApplyTo(cause => PathParserResult<Tokens>.Of(cause));
                 return false;
             }
-            else hasDelimiter = true;
             #endregion
 
             #region Name
             if (!reader.TryGetPattern(Production.SymbolPattern, out var symbolName))
             {
-                if (!hasDelimiter)
-                    result = FailedRecognitionError
-                        .Of(symbolNamePath, position)
-                        .ApplyTo(cause => PathParserResult<Tokens>.Of(cause));
-
-                else result = PartialRecognitionError
+                result = PartialRecognitionError
                     .Of(symbolNamePath,
                         position,
                         delimiter.Segment.EndOffset - position + 1)
@@ -410,20 +396,13 @@ namespace Axis.Pulsar.Core.CST
 
         #endregion
 
-        private static FormatException ToFormatException(PathParserResult<NodePath> errorResult)
+        internal static FormatException ToFormatException(PathParserResult<NodePath> errorResult)
         {
-            ArgumentNullException.ThrowIfNull(errorResult);
-
-            INodeRecognitionError? error =
-                errorResult.Is(out FailedRecognitionError fre) ? fre :
-                errorResult.Is(out PartialRecognitionError pre) ? pre :
-                null;
-
-            return error switch
+            return errorResult.Value switch
             {
-                FailedRecognitionError fe => new FormatException(
+                FailedError fe => new FormatException(
                     $"Invalid path format: error detected at position {fe.TokenSegment.Offset}"),
-                PartialRecognitionError pe => new FormatException(
+                PartialError pe => new FormatException(
                     $"Invalid path format: error detected at position {pe.TokenSegment.Offset}"),
                 _ => throw new InvalidOperationException($"Invalid error result: {errorResult}")
             };
@@ -436,8 +415,9 @@ namespace Axis.Pulsar.Core.CST
     {
         private readonly object? _value;
 
-        object IUnion<TResult, FailedError, PartialError, PathParserResult<TResult>>.Value => _value!;
+        object IUnion<TResult, FailedError, PartialError, PathParserResult<TResult>>.Value => Value;
 
+        internal object Value => _value!;
 
         public PathParserResult(object value)
         {
@@ -508,7 +488,7 @@ namespace Axis.Pulsar.Core.CST
             Func<TResult, TOut> nodeMapper,
             Func<FailedError, TOut> failedErrorMapper,
             Func<PartialError, TOut> partialErrorMapper,
-            Func<TOut> nullMapper = null!)
+            Func<TOut>? nullMapper = null)
         {
             ArgumentNullException.ThrowIfNull(nodeMapper);
             ArgumentNullException.ThrowIfNull(failedErrorMapper);
@@ -534,7 +514,7 @@ namespace Axis.Pulsar.Core.CST
             Action<TResult> resultConsumer,
             Action<FailedError> failedErrorConsumer,
             Action<PartialError> partialErrorConsumer,
-            Action nullConsumer = null!)
+            Action? nullConsumer = null)
         {
             ArgumentNullException.ThrowIfNull(resultConsumer);
             ArgumentNullException.ThrowIfNull(failedErrorConsumer);
@@ -557,7 +537,7 @@ namespace Axis.Pulsar.Core.CST
             Action<TResult> resultConsumer,
             Action<FailedError> failedErrorConsumer,
             Action<PartialError> partialErrorConsumer,
-            Action nullConsumer = null!)
+            Action? nullConsumer = null)
         {
             ConsumeMatch(resultConsumer, failedErrorConsumer, partialErrorConsumer, nullConsumer);
             return this;

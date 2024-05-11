@@ -269,7 +269,7 @@ public class NodeRecognitionAccumulatorTests
             Func<int, TOut> nodeMapper,
             Func<FailedError, TOut> failedErrorMapper,
             Func<PartialError, TOut> partialErrorMapper,
-            Func<TOut> nullMapper = null!)
+            Func<TOut>? nullMapper = null!)
         {
             ArgumentNullException.ThrowIfNull(nodeMapper);
             ArgumentNullException.ThrowIfNull(failedErrorMapper);
@@ -295,7 +295,7 @@ public class NodeRecognitionAccumulatorTests
             Action<int> resultConsumer,
             Action<FailedError> failedErrorConsumer,
             Action<PartialError> partialErrorConsumer,
-            Action nullConsumer = null!)
+            Action? nullConsumer = null!)
         {
             ArgumentNullException.ThrowIfNull(resultConsumer);
             ArgumentNullException.ThrowIfNull(failedErrorConsumer);
@@ -318,7 +318,7 @@ public class NodeRecognitionAccumulatorTests
             Action<int> resultConsumer,
             Action<FailedError> failedErrorConsumer,
             Action<PartialError> partialErrorConsumer,
-            Action nullConsumer = null!)
+            Action? nullConsumer = null!)
         {
             ConsumeMatch(resultConsumer, failedErrorConsumer, partialErrorConsumer, nullConsumer);
             return this;

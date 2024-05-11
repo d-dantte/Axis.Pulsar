@@ -20,10 +20,16 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
         public TerminalPattern(string id, Regex pattern, IMatchType matchType)
         {
             Pattern = pattern ?? throw new ArgumentNullException(nameof(pattern));
-            MatchType = matchType ?? throw new ArgumentNullException(nameof(matchType));
             Id = id.ThrowIfNot(
                 Production.SymbolPattern.IsMatch,
-                _ => new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
+                _ => new ArgumentException($"Invalid {nameof(id)} format: '{id}'"));
+            MatchType = matchType switch
+            {
+                IMatchType.Closed
+                or IMatchType.Open => matchType,
+                null => throw new ArgumentNullException(nameof(matchType)),
+                _ => throw new InvalidOperationException($"Invalid {nameof(matchType)}: {matchType.GetType()}")
+            };
         }
 
         public static TerminalPattern Of(
@@ -39,7 +45,6 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
             out NodeRecognitionResult result)
         {
             ArgumentNullException.ThrowIfNull(reader);
-            ArgumentNullException.ThrowIfNull(symbolPath);
 
             var patternPath = symbolPath.Next(Id);
             result = MatchType switch
@@ -50,17 +55,14 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
                     Pattern,
                     closed),
 
-                IMatchType.Open open => RecognizeOpenPattern(
+                _ => RecognizeOpenPattern(
                     reader,
                     patternPath,
                     Pattern,
-                    open),
-
-                _ => throw new InvalidOperationException(
-                        $"Invalid match type: {MatchType}")
+                    (IMatchType.Open)MatchType)
             };
 
-            return result.Is(out ICSTNode _);
+            return result.Is(out ISymbolNode _);
         }
 
         private static NodeRecognitionResult RecognizeClosedPattern(
@@ -72,7 +74,6 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
             var position = reader.Position;
             if (reader.TryGetTokens(matchType.MaxMatch, out var tokens))
             {
-                //var matchRange = matchType.MaxMatch - matchType.MinMatch;
                 for (int length = tokens.Segment.Count; length >= matchType.MinMatch; length--)
                 {
                     var match = pattern.Match(
@@ -83,7 +84,7 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
                     if (match.Success && match.Length == length)
                     {
                         reader.Back(tokens.Segment.Count - length);
-                        return ICSTNode
+                        return ISymbolNode
                             .Of(symbolPath.Symbol, tokens[..length])
                             .ApplyTo(NodeRecognitionResult.Of);
                     }
@@ -123,7 +124,7 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
             var trueLength = tokens.Segment.Count - mismatchCount;
             if ((trueLength == 0 && matchType.AllowsEmptyTokens)
                 || trueLength > 0)
-                return ICSTNode
+                return ISymbolNode
                     .Of(symbolPath.Symbol, reader.GetTokens(trueLength, true))
                     .ApplyTo(NodeRecognitionResult.Of);
 
@@ -159,15 +160,11 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
         /// </summary>
         public readonly struct Open :
             IMatchType,
+            IEquatable<Open>,
             IDefaultValueProvider<Open>
         {
             /// <summary>
-            /// Default open match type that does not recognize the empty tokens, and has a <see cref="Open.MaxMismatch"/> of 1 
-            /// </summary>
-            public static readonly Open DefaultMatch = new Open(1, false);
-
-            /// <summary>
-            /// Number of mismatches that signals a match failure. Minimum value for this is 1
+            /// Number of mismatches that signals a match failure. Minimum value for this is 0
             /// </summary>
             public int MaxMismatch { get; }
 
@@ -178,13 +175,16 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
 
             public bool IsDefault => MaxMismatch == 0;
 
+            /// <summary>
+            /// Default open match type that does not recognize the empty tokens, and has a <see cref="Open.MaxMismatch"/> of 1 
+            /// </summary>
             public static Open Default => default;
 
             public Open(int maxMismatch, bool allowsEmptyTokens = false)
             {
                 AllowsEmptyTokens = allowsEmptyTokens;
                 MaxMismatch = maxMismatch.ThrowIf(
-                        v => v < 1,
+                        v => v < 0,
                         _ => new ArgumentOutOfRangeException(nameof(maxMismatch)));
             }
 
@@ -192,9 +192,14 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
 
             public override bool Equals(object? obj)
             {
-                return obj is Open other
-                    && other.MaxMismatch.Equals(MaxMismatch)
-                    && other.AllowsEmptyTokens.Equals(AllowsEmptyTokens);
+                return obj is Open other && Equals(other);
+            }
+
+            public bool Equals(Open other)
+            {
+                return
+                    MaxMismatch == other.MaxMismatch
+                    && AllowsEmptyTokens == other.AllowsEmptyTokens;
             }
 
             public override string ToString() => $"{MaxMismatch},{(AllowsEmptyTokens ? "*" : "+")}";
@@ -210,7 +215,8 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
         /// </summary>
         public readonly struct Closed :
             IMatchType,
-            IDefaultValueProvider<Open>
+            IEquatable<Closed>,
+            IDefaultValueProvider<Closed>
         {
             public static readonly Closed DefaultMatch = new(1, 1);
 
@@ -226,28 +232,37 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
 
             public bool IsDefault => MinMatch == 0 && MaxMatch == 0;
 
-            public static Open Default => default;
+            public static Closed Default => default;
 
             public Closed(int minMatch, int maxMatch)
             {
                 MinMatch = minMatch.ThrowIf(
                     v => v < 1,
-                    _ => new ArgumentException($"Invariant error: {nameof(Closed.MinMatch)} < 1"));
+                    _ => new ArgumentOutOfRangeException(
+                        nameof(MinMatch),
+                        $"Invariant error: {nameof(MinMatch)} < 1"));
 
                 MaxMatch = maxMatch.ThrowIf(
                     v => v < 1,
-                    _ => new ArgumentException($"Invariant error: {nameof(Closed.MaxMatch)} < 1"));
+                    _ => new ArgumentOutOfRangeException(
+                        nameof(MaxMatch),
+                        $"Invariant error: {nameof(MaxMatch)} < 1"));
 
                 if (MinMatch > MaxMatch)
-                    throw new ArgumentException($"Invariant error: {nameof(Closed.MaxMatch)} < {nameof(Closed.MinMatch)}");
+                    throw new ArgumentException($"Invariant error: {nameof(MaxMatch)} < {nameof(MinMatch)}");
             }
 
             public override int GetHashCode() => HashCode.Combine(MinMatch, MaxMatch);
 
             public override bool Equals(object? obj)
             {
-                return obj is Closed other
-                    && other.MinMatch.Equals(MinMatch)
+                return obj is Closed other && Equals(other);
+            }
+
+            public bool Equals(Closed other)
+            {
+                return 
+                    other.MinMatch.Equals(MinMatch)
                     && other.MaxMatch.Equals(MaxMatch);
             }
 

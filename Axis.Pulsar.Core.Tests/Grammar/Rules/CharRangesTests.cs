@@ -42,7 +42,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 out var result);
             Assert.IsTrue(success);
             Assert.IsTrue(
-                result.Is(out ICSTNode data)
+                result.Is(out ISymbolNode data)
                 && "xter".Equals(data.Symbol)
                 && data.Tokens.Equals("b"));
 

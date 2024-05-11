@@ -1,142 +1,125 @@
 ﻿using Axis.Luna.Common.Segments;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
+using Axis.Pulsar.Core.Grammar.Composite.Group;
 
-namespace Axis.Pulsar.Core.Grammar.Errors;
-
-/// <summary>
-/// 
-/// </summary>
-public interface INodeRecognitionError
+namespace Axis.Pulsar.Core.Grammar.Errors
 {
-    public Segment TokenSegment { get; }
 
-    public SymbolPath Symbol { get; }
-}
-
-/// <summary>
-/// 
-/// </summary>
-public readonly struct FailedRecognitionError : INodeRecognitionError
-{
-    public Segment TokenSegment { get; }
-
-    public SymbolPath Symbol { get; }
-
-    public FailedRecognitionError(
-        SymbolPath symbol,
-        int position)
+    /// <summary>
+    /// 
+    /// </summary>
+    public interface INodeRecognitionError
     {
-        TokenSegment = Segment.Of(position);
-        Symbol = symbol;
+        public Segment TokenSegment { get; }
+
+        public SymbolPath Symbol { get; }
     }
 
-    public static FailedRecognitionError Of(
-        SymbolPath symbol,
-        int position)
-        => new(symbol, position);
-}
-
-/// <summary>
-/// 
-/// </summary>
-public readonly struct PartialRecognitionError : INodeRecognitionError
-{
-    public Segment TokenSegment { get; }
-
-    public SymbolPath Symbol { get; }
-
-    public PartialRecognitionError(
-        SymbolPath symbol,
-        int position,
-        int length)
+    /// <summary>
+    /// Represents a failure to recognize input tokens based on a given rule
+    /// </summary>
+    public readonly struct FailedRecognitionError : INodeRecognitionError
     {
-        TokenSegment = Segment.Of(position, length);
-        Symbol = symbol;
-    }
+        public Segment TokenSegment { get; }
 
-    public static PartialRecognitionError Of(
-        SymbolPath symbol,
-        int position,
-        int length)
-        => new(symbol, position, length);
+        public SymbolPath Symbol { get; }
 
-    public static PartialRecognitionError Of(
-        SymbolPath symbol,
-        Segment segment)
-        => new(symbol, segment.Offset, segment.Count);
-}
-
-/// <summary>
-/// 
-/// </summary>
-public readonly struct GroupRecognitionError
-{
-    public INodeRecognitionError Cause { get; }
-
-    public int ElementCount { get; }
-
-
-    public GroupRecognitionError(
-        INodeRecognitionError cause,
-        INodeSequence nodeSequence)
-    {
-        ArgumentNullException.ThrowIfNull(nodeSequence);
-
-        (Cause, ElementCount) = cause switch
+        public FailedRecognitionError(
+            SymbolPath symbol,
+            int position)
         {
-            FailedRecognitionError => (cause, nodeSequence.RequiredNodeCount),
-            PartialRecognitionError => (cause, nodeSequence.Count),
-            _ => throw new InvalidOperationException(
-                $"Invalid cause: {cause?.GetType()}")
-        };
+            TokenSegment = Segment.Of(position);
+            Symbol = symbol;
+        }
+
+        public static FailedRecognitionError Of(
+            SymbolPath symbol,
+            int position)
+            => new(symbol, position);
     }
 
-    public GroupRecognitionError(
-        INodeRecognitionError cause,
-        int elementCount)
+    /// <summary>
+    /// Represents a failure to recognize input tokens based on a given rule, AFTER a given number
+    /// of VITAL tokens/symbols have been recognized. This signals a fatal error and all recognition
+    /// is halted.
+    /// </summary>
+    public readonly struct PartialRecognitionError : INodeRecognitionError
     {
-        ElementCount = elementCount.ThrowIf(
-            i => i < 0,
-            _ => new ArgumentOutOfRangeException(nameof(elementCount)));
+        public Segment TokenSegment { get; }
 
-        Cause = cause switch
+        public SymbolPath Symbol { get; }
+
+        public PartialRecognitionError(
+            SymbolPath symbol,
+            int position,
+            int length)
         {
-            FailedRecognitionError
-            or PartialRecognitionError => cause,
-            _ => throw new InvalidOperationException(
-                $"Invalid cause: {cause?.GetType()}")
-        };
+            TokenSegment = Segment.Of(position, length);
+            Symbol = symbol;
+        }
+
+        public static PartialRecognitionError Of(
+            SymbolPath symbol,
+            int position,
+            int length)
+            => new(symbol, position, length);
+
+        public static PartialRecognitionError Of(
+            SymbolPath symbol,
+            Segment segment)
+            => new(symbol, segment.Offset, segment.Count);
     }
 
-    public static GroupRecognitionError Of(
-        INodeRecognitionError cause,
-        int elementCount)
-        => new(cause, elementCount);
+    /// <summary>
+    /// Represents failure to aggregate recognized symbols. Raised by instances of <see cref="Grammar.Composite.Group.IAggregationRule"/>.
+    /// </summary>
+    public readonly struct SymbolAggregationError
+    {
+        public INodeRecognitionError Cause { get; }
 
-    public static GroupRecognitionError Of(
-        INodeRecognitionError cause)
-        => new(cause, 0);
+        public int ElementCount { get; }
 
-    public static GroupRecognitionError Of<TError>(
-        TError cause,
-        int elementCount)
-        where TError : INodeRecognitionError
-        => new(cause, elementCount);
+        public SymbolAggregationError(
+            INodeRecognitionError cause,
+            ISymbolNodeAggregation nodeAggregation)
+        {
+            ArgumentNullException.ThrowIfNull(nodeAggregation);
 
-    public static GroupRecognitionError Of<TError>(
-        TError cause)
-        where TError : INodeRecognitionError
-        => new(cause, 0);
+            (Cause, ElementCount) = cause switch
+            {
+                FailedRecognitionError => (cause, nodeAggregation.RequiredNodeCount()),
+                PartialRecognitionError => (cause, nodeAggregation.NodeCount()),
+                _ => throw new InvalidOperationException(
+                    $"Invalid cause: {cause?.GetType()}")
+            };
+        }
 
-    public static GroupRecognitionError Of(
-        INodeRecognitionError cause,
-        INodeSequence sequence)
-        => new(cause, sequence);
+        public SymbolAggregationError(
+            INodeRecognitionError cause,
+            int elementCount)
+        {
+            ElementCount = elementCount.ThrowIf(
+                i => i < 0,
+                _ => new ArgumentOutOfRangeException(nameof(elementCount)));
 
-    public static GroupRecognitionError Of<TError>(
-        TError cause,
-        INodeSequence sequence)
-        where TError : INodeRecognitionError
-        => new(cause, sequence);
+            Cause = cause switch
+            {
+                FailedRecognitionError
+                or PartialRecognitionError => cause,
+                _ => throw new InvalidOperationException(
+                    $"Invalid cause: {cause?.GetType()}")
+            };
+        }
+
+        public static SymbolAggregationError Of(
+            INodeRecognitionError cause,
+            ISymbolNodeAggregation aggregation)
+            => new(cause, aggregation);
+
+        public static SymbolAggregationError Of(
+            INodeRecognitionError cause,
+            int elementCount)
+            => new(cause, elementCount);
+    }
 }

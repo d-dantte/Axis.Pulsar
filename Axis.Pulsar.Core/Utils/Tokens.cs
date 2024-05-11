@@ -235,8 +235,9 @@ namespace Axis.Pulsar.Core.Utils
         /// Merge two <see cref="Tokens_old"/> instances.
         /// <para/>
         /// Note: merging a default Token with a non-default token yields the non-default token.
+        /// Note: merging any non-default token with an empty token yields the non-default token.
         /// </summary>
-        /// <param name="other">The token instance to merge with</param>
+        /// <param name="other">The token instance to merge with.</param>
         /// <returns></returns>
         public Tokens MergeWith(Tokens other)
         {
@@ -251,6 +252,9 @@ namespace Axis.Pulsar.Core.Utils
 
             if (!EqualityComparer<string>.Default.Equals(_source, other._source))
                 throw new InvalidOperationException("Invalid merge: unequal sources");
+
+            if (other.IsEmpty)
+                return this;
 
             return Of(_source!, _segment + other._segment);
         }

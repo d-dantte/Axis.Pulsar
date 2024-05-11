@@ -169,7 +169,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 path,
                 null!,
                 out var nodeResult);
-            Assert.IsTrue(nodeResult.Is(out ICSTNode node));
+            Assert.IsTrue(nodeResult.Is(out ISymbolNode node));
             Assert.IsTrue(node.Tokens.Equals("'the \\\"quick\\\" brown fox, etc...'"));
 
             success = dstring.TryRecognize(
@@ -207,7 +207,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
                 null!,
                 out var result);
             Assert.IsTrue(success);
-            Assert.IsTrue(result.Is(out ICSTNode node));
+            Assert.IsTrue(result.Is(out ISymbolNode node));
             Assert.IsTrue(node.Tokens.Equals("//stuff that is commented out"));
 
             TokenReader r = "//stuff that is commented out\nstuff not commented out";

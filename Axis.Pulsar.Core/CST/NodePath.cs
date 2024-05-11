@@ -1,17 +1,18 @@
 ﻿using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.Utils;
 using System.Collections.Immutable;
 using System.Text;
 
 namespace Axis.Pulsar.Core.CST
 {
     /// <summary>
-    /// Defines the path through a <see cref="ICSTNode"/> tree instance, to search for other nodes.
+    /// Defines the path through a <see cref="ISymbolNode"/> tree instance, to search for other nodes.
     /// </summary>
     public class NodePath
     {
         private readonly ImmutableArray<PathSegment> _segments;
-        private readonly Lazy<string> _text;
-        private readonly Lazy<int> _hashCode;
+        private readonly DeferredValue<string> _text;
+        private readonly DeferredValue<int> _hashCode;
 
         public ImmutableArray<PathSegment> Segments => _segments;
 
@@ -24,16 +25,15 @@ namespace Axis.Pulsar.Core.CST
                 .ToImmutableArray();
 
             // text
-            _text = new Lazy<string>(() =>
+            _text = new DeferredValue<string>(() =>
             {
                 return _segments
                     .Select(segment => segment.ToString())
-                    .JoinUsing("/")
-                    ?? "";
+                    .JoinUsing("/");
             });
 
             // hash code
-            _hashCode = new Lazy<int>(() => _segments.Aggregate(
+            _hashCode = new DeferredValue<int>(() => _segments.Aggregate(
                 func: (prev, segment) => HashCode.Combine(prev, segment),
                 seed: 0));
         }
@@ -66,8 +66,8 @@ namespace Axis.Pulsar.Core.CST
     public class PathSegment
     {
         private readonly ImmutableArray<NodeFilter> _filters;
-        private readonly Lazy<string> _text;
-        private readonly Lazy<int> _hashCode;
+        private readonly DeferredValue<string> _text;
+        private readonly DeferredValue<int> _hashCode;
 
         public ImmutableArray<NodeFilter> NodeFilters => _filters;
 
@@ -80,16 +80,15 @@ namespace Axis.Pulsar.Core.CST
                 .ToImmutableArray();
 
             // text
-            _text = new Lazy<string>(() =>
+            _text = new DeferredValue<string>(() =>
             {
                 return _filters
                         .Select(segment => segment.ToString())
-                        .JoinUsing("|")
-                        ?? "";
+                        .JoinUsing("|");
             });
 
             // hash code
-            _hashCode = new Lazy<int>(() => _filters.Aggregate(
+            _hashCode = new DeferredValue<int>(() => _filters.Aggregate(
                 func: (prev, filter) => HashCode.Combine(prev, filter),
                 seed: 0));
         }
@@ -117,7 +116,7 @@ namespace Axis.Pulsar.Core.CST
         /// </summary>
         /// <param name="node">The node to match</param>
         /// <returns>True if the node matches any of the filters, false otherwise</returns>
-        public bool Matches(ICSTNode node)
+        public bool Matches(ISymbolNode node)
         {
             return _filters.Any(filter => filter.Matches(node));
         }
@@ -134,14 +133,14 @@ namespace Axis.Pulsar.Core.CST
         Unspecified = 'U',
 
         /// <summary>
-        /// NonTerminal - Indicates that the node type being sought is a <see cref="ICSTNode.Composite"/> 
+        /// NonTerminal - Indicates that the node type being sought is a <see cref="ISymbolNode.Composite"/> 
         /// </summary>
-        NonTerminal = 'N',
+        Composite = 'C',
 
         /// <summary>
-        /// Terminal - Indicates that the node type being sought is a <see cref="ICSTNode.Atom"/> 
+        /// Terminal - Indicates that the node type being sought is a <see cref="ISymbolNode.Atom"/> 
         /// </summary>
-        Terminal = 'T'
+        Atomic = 'A'
     }
 
     /// <summary>
@@ -149,7 +148,7 @@ namespace Axis.Pulsar.Core.CST
     /// </summary>
     public record NodeFilter
     {
-        private readonly Lazy<string> _text;
+        private readonly DeferredValue<string> _text;
 
         public string? SymbolName { get; }
 
@@ -167,7 +166,7 @@ namespace Axis.Pulsar.Core.CST
                 throw new ArgumentException(
                     $"Invalid arguments: '{nameof(symbolName)}' & '{nameof(tokens)}' cannot both be null");
 
-            _text = new Lazy<string>(() =>
+            _text = new DeferredValue<string>(() =>
             {
                 var sb = new StringBuilder()
                     .Append('@')
@@ -195,13 +194,15 @@ namespace Axis.Pulsar.Core.CST
         /// <param name="node">The node</param>
         /// <returns>True if the node matches, false otherwise</returns>
         /// <exception cref="InvalidOperationException">If the given node is not of a recognized type.</exception>
-        public bool Matches(ICSTNode node)
+        public bool Matches(ISymbolNode node)
         {
+            ArgumentNullException.ThrowIfNull(node);
+
             var isNodeTypeMatch = NodeType == NodeType.Unspecified || node switch
             {
-                ICSTNode.Composite => NodeType.NonTerminal.Equals(NodeType),
-                ICSTNode.Atom => NodeType.Terminal.Equals(NodeType),
-                _ => throw new InvalidOperationException($"Invalid ICSTNode type: '{node?.GetType()}'")
+                ISymbolNode.Composite => NodeType.Composite.Equals(NodeType),
+                ISymbolNode.Atom => NodeType.Atomic.Equals(NodeType),
+                _ => throw new InvalidOperationException($"Invalid ICSTNode type: '{node.GetType()}'")
             };
 
             return isNodeTypeMatch
@@ -209,17 +210,17 @@ namespace Axis.Pulsar.Core.CST
                 && IsTokenMatch(node);
         }
 
-        private bool IsNameMatch(ICSTNode node)
+        public bool IsNameMatch(ISymbolNode node)
         {
             return SymbolName is null || node switch
             {
-                ICSTNode.Composite nt => SymbolName.Equals(nt.Symbol),
-                ICSTNode.Atom t => SymbolName.Equals(t.Symbol),
+                ISymbolNode.Composite
+                or ISymbolNode.Atom => SymbolName.Equals(node.Symbol),
                 _ => false
             };
         }
 
-        private bool IsTokenMatch(ICSTNode node)
+        private bool IsTokenMatch(ISymbolNode node)
         {
             return string.IsNullOrEmpty(Tokens) || node.Tokens.Equals(Tokens);
         }

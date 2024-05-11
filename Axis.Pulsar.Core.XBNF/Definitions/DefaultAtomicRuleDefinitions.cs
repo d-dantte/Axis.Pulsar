@@ -12,41 +12,41 @@ namespace Axis.Pulsar.Core.XBNF.Definitions
         /// 
         /// </summary>
         public static readonly AtomicRuleDefinition Literal = AtomicRuleDefinition.Of(
-            "Literal",
             ContentArgumentDelimiter.DoubleQuote,
-            new LiteralRuleFactory());
+            new LiteralRuleFactory(),
+            "Literal", "literal");
 
         /// <summary>
         /// 
         /// </summary>
         public static readonly AtomicRuleDefinition Pattern = AtomicRuleDefinition.Of(
-            "Pattern",
             ContentArgumentDelimiter.Sol,
-            new PatternRuleFactory());
+            new PatternRuleFactory(),
+            "Pattern", "pattern");
 
         /// <summary>
         /// 
         /// </summary>
         public static readonly AtomicRuleDefinition CharacterRanges = AtomicRuleDefinition.Of(
-            "Ranges",
             ContentArgumentDelimiter.Quote,
-            new CharRangeRuleFactory());
+            new CharRangeRuleFactory(),
+            "Ranges", "ranges");
 
         /// <summary>
         /// 
         /// </summary>
         public static readonly AtomicRuleDefinition EOF = AtomicRuleDefinition.Of(
-            "EOF",
             ContentArgumentDelimiter.None,
-            new EOFRuleFactory());
+            new EOFRuleFactory(),
+            "EOF", "eof");
 
         /// <summary>
         /// 
         /// </summary>
         public static readonly AtomicRuleDefinition DelimitedString = AtomicRuleDefinition.Of(
-            "DelimitedString",
             ContentArgumentDelimiter.None,
-            new DelimitedStringRuleFactory());
+            new DelimitedStringRuleFactory(),
+            "DelimitedString", "delimited-string");
 
     }
 }

@@ -3,33 +3,28 @@ using Axis.Pulsar.Core.XBNF.Lang;
 
 namespace Axis.Pulsar.Core.XBNF.Tests
 {
-    public class MetaContextBuilder
+    public class LanguageMetadataBuilder
     {
-        private readonly Dictionary<string, AtomicRuleDefinition> _atomicFactoryMap = new();
+        private readonly List<AtomicRuleDefinition> _atomicRuleDefinitions = new();
         private readonly Dictionary<string, ProductionValidatorDefinition> _productionValidatorMap = new();
 
-        public MetaContextBuilder()
+        public LanguageMetadataBuilder()
         {
         }
 
-        public static MetaContextBuilder NewBuilder() => new();
+        public static LanguageMetadataBuilder NewBuilder() => new();
 
         #region AtomicFactory
 
-        public MetaContextBuilder WithAtomicRuleDefinition(AtomicRuleDefinition ruleDefinition)
+        public LanguageMetadataBuilder WithAtomicRuleDefinition(AtomicRuleDefinition ruleDefinition)
         {
             ArgumentNullException.ThrowIfNull(ruleDefinition);
 
-            _atomicFactoryMap[ruleDefinition.Id] = ruleDefinition;
+            _atomicRuleDefinitions.Add(ruleDefinition);
             return this;
         }
 
-        public bool ContainsRuleDefinitionFor(string productionSymbol)
-        {
-            return _atomicFactoryMap.ContainsKey(productionSymbol);
-        }
-
-        public MetaContextBuilder WithDefaultAtomicRuleDefinitions()
+        public LanguageMetadataBuilder WithDefaultAtomicRuleDefinitions()
         {
             return this
                 .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.EOF)
@@ -41,7 +36,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests
         #endregion
 
         #region Production Validator
-        public MetaContextBuilder WithProductionValidator(ProductionValidatorDefinition validatorDefinition)
+        public LanguageMetadataBuilder WithProductionValidator(ProductionValidatorDefinition validatorDefinition)
         {
             ArgumentNullException.ThrowIfNull(validatorDefinition);
 
@@ -58,7 +53,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests
         public LanguageMetadata Build()
         {
             return new LanguageMetadata(
-                _atomicFactoryMap.Values,
+                _atomicRuleDefinitions,
                 _productionValidatorMap.Values);
         }
     }

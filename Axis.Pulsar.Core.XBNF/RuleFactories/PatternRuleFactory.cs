@@ -20,7 +20,9 @@ public class PatternRuleFactory : IAtomicRuleFactory
     #region Arguments
 
     /// <summary>
-    /// The content argument holds the literal string to be matched. The 
+    /// The content argument holds the regex definition
+    /// <para/>
+    /// - Escaping: No unescaping is done on the value of this argument - it is passed as-is into the <see cref="Regex"/> instance.
     /// </summary>
     public static IArgument PatternArgument => IAtomicRuleFactory.Content;
 

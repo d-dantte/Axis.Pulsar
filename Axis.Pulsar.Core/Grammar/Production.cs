@@ -68,7 +68,7 @@ namespace Axis.Pulsar.Core.Grammar
                 _ => { },
                 _ => { });
 
-            return result.Is(out ICSTNode _);
+            return result.Is(out ISymbolNode _);
         }
     }
 }

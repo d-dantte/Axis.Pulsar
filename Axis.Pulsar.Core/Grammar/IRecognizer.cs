@@ -12,6 +12,8 @@ namespace Axis.Pulsar.Core.Grammar
     {
         /// <summary>
         /// Attempt to recognize tokens according to the logic represented by the implementing rule.
+        /// <para/>
+        /// Note: All failed attempts to recognize MUST reset the <paramref name="reader"/>'s position so it remains the same prior to calling the method.
         /// </summary>
         /// <param name="reader">the reader from which tokens are read</param>
         /// <param name="symbolPath">the logical symbol-path of the parent rule, or null if this is the root rule</param>

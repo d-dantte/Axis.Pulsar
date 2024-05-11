@@ -28,6 +28,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Axis.Luna.Common" Version="7.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Axis.Pulsar.Core\Axis.Pulsar.Core.csproj" />
   </ItemGroup>
 

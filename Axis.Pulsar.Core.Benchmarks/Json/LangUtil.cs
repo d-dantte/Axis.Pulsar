@@ -17,7 +17,7 @@ namespace Axis.Pulsar.Core.Benchmarks.Json
                 .GetManifestResourceStream($"{typeof(LangUtil).Namespace}.json.xbnf")
                 .ApplyTo(stream => new StreamReader(stream!));
 
-            LanguageContext = XBNFImporter.Builder
+            LanguageContext = XBNFImporter
                 .NewBuilder()
                 .WithDefaultAtomicRuleDefinitions()
                 .Build()

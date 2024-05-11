@@ -9,7 +9,7 @@ using System.Collections.Immutable;
 namespace Axis.Pulsar.Core.Grammar.Atomic
 {
     /// <summary>
-    /// Recognizes a series of character ranges that represents valid or invalid characters
+    /// Reads a single token and matches it against a series of character ranges that represents valid or invalid characters
     /// </summary>
     public class CharacterRanges : IAtomicRule
     {
@@ -68,7 +68,6 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
             out NodeRecognitionResult result)
         {
             ArgumentNullException.ThrowIfNull(reader);
-            ArgumentNullException.ThrowIfNull(symbolPath);
 
             var position = reader.Position;
             var charRangePath = symbolPath.Next(Id);
@@ -84,7 +83,7 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
                 return false;
             }
 
-            result = ICSTNode
+            result = ISymbolNode
                 .Of(charRangePath.Symbol, token)
                 .ApplyTo(NodeRecognitionResult.Of);
             return true;

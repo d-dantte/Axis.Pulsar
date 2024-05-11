@@ -4,12 +4,15 @@ using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.XBNF.Definitions;
 using Axis.Pulsar.Core.XBNF.Parsers;
+using System.Collections.Immutable;
 
 namespace Axis.Pulsar.Core.XBNF.Lang
 {
     public class XBNFImporter : ILanguageImporter
     {
         private readonly LanguageMetadata _metadata;
+
+        public static Builder NewBuilder() => new();
 
         private XBNFImporter(LanguageMetadata metaContext)
         {
@@ -53,14 +56,14 @@ namespace Axis.Pulsar.Core.XBNF.Lang
 
         public class Builder
         {
-            private readonly Dictionary<string, AtomicRuleDefinition> _atomicFactoryMap = new();
+            private readonly List<AtomicRuleDefinition> _atomicRuleDefinitions = new();
             private readonly Dictionary<string, ProductionValidatorDefinition> _productionValidatorMap = new();
+
+            public ImmutableArray<AtomicRuleDefinition> AtomicDefinitions => _atomicRuleDefinitions.ToImmutableArray();
 
             public Builder()
             {
             }
-
-            public static Builder NewBuilder() => new();
 
             #region AtomicFactory
 
@@ -68,13 +71,8 @@ namespace Axis.Pulsar.Core.XBNF.Lang
             {
                 ArgumentNullException.ThrowIfNull(ruleDefinition);
 
-                _atomicFactoryMap[ruleDefinition.Id] = ruleDefinition;
+                _atomicRuleDefinitions.Add(ruleDefinition);
                 return this;
-            }
-
-            public bool ContainsRuleDefinitionFor(string productionSymbol)
-            {
-                return _atomicFactoryMap.ContainsKey(productionSymbol);
             }
 
             public Builder WithDefaultAtomicRuleDefinitions()
@@ -107,7 +105,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
             public XBNFImporter Build()
             {
                 return new XBNFImporter(new (
-                    _atomicFactoryMap.Values,
+                    _atomicRuleDefinitions,
                     _productionValidatorMap.Values));
             }
         }

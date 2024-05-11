@@ -52,7 +52,7 @@ namespace Axis.Pulsar.Core.Grammar
             if (rule is IAtomicRule)
                 isLeftTerminated = true;
 
-            else if (rule is ICompositeRule composite)
+            else if (rule is CompositeRule composite)
                 TraverseElement(composite.Element, context, out isLeftTerminated);
 
             else throw new InvalidOperationException(
@@ -60,7 +60,7 @@ namespace Axis.Pulsar.Core.Grammar
         }
 
         private static void TraverseElement(
-            IGroupRule element,
+            IAggregationElementRule element,
             TraversalContext context,
             out bool isLeftTerminated)
         {

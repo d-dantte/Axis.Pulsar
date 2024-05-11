@@ -16,23 +16,30 @@ public class LanguageMetadata
 
 
     internal LanguageMetadata(
-        IEnumerable<AtomicRuleDefinition> atomicRules,
+        IEnumerable<AtomicRuleDefinition> atomicRuleDefinitions,
         IEnumerable<ProductionValidatorDefinition> validators)
     {
-        AtomicRuleDefinitionMap = atomicRules
-            .ThrowIfNull(() => new ArgumentNullException(nameof(atomicRules)))
+        AtomicRuleDefinitionMap = atomicRuleDefinitions
+            .ThrowIfNull(() => new ArgumentNullException(nameof(atomicRuleDefinitions)))
             .ThrowIfAny(
                 item => item is null,
-                _ => new ArgumentException($"Invalid factory definition: null"))
-            .ToImmutableDictionary(
-                item => item.Id,
-                item => item);
+                _ => new ArgumentException($"Invalid {nameof(atomicRuleDefinitions)}: null"))
+            .SelectMany(item => item.Symbols.Select(symbol => (Symbol: symbol, Def: item)))
+            .Aggregate(ImmutableDictionary.CreateBuilder<string, AtomicRuleDefinition>(), (builder, item) =>
+            {
+                if (builder.TryAdd(item.Symbol, item.Def))
+                    return builder;
 
-        AtomicContentTypeMap = atomicRules
+                throw new InvalidOperationException(
+                    $"Invalid symbol: duplicate value '{item.Symbol}'");
+            })
+            .ToImmutable();
+
+        AtomicContentTypeMap = atomicRuleDefinitions
             .Where(def => def.ContentDelimiterType != ContentArgumentDelimiter.None)
             .ToImmutableDictionary(
                 item => item.ContentDelimiterType,
-                item => item.Id);
+                item => item.Symbols.First());
 
         ProductionValidatorDefinitionMap = validators
             .ThrowIfNull(() => new ArgumentNullException(nameof(validators)))

@@ -13,12 +13,12 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
 
         public string Tokens { get; }
 
-        public bool IsCaseInsensitive { get; }
+        public bool IsCaseSensitive { get; }
 
-        public TerminalLiteral(string id, string tokens, bool isCaseInsensitive)
+        public TerminalLiteral(string id, string tokens, bool isCaseSensitive)
         {
             Tokens = tokens ?? throw new ArgumentNullException(nameof(tokens));
-            IsCaseInsensitive = isCaseInsensitive;
+            IsCaseSensitive = isCaseSensitive;
             Id = id.ThrowIfNot(
                 Production.SymbolPattern.IsMatch,
                 _ => new ArgumentException($"Invalid atomic rule {nameof(id)}: '{id}'"));
@@ -47,9 +47,9 @@ namespace Axis.Pulsar.Core.Grammar.Atomic
             var literalPath = symbolPath.Next(Id);
 
             if (reader.TryGetTokens(Tokens.Length, true, out var tokens)
-                && tokens.Equals(Tokens, !IsCaseInsensitive))
+                && tokens.Equals(Tokens, !IsCaseSensitive))
             {
-                result = ICSTNode
+                result = ISymbolNode
                     .Of(literalPath.Symbol, tokens)
                     .ApplyTo(NodeRecognitionResult.Of);
                 return true;
