@@ -1,7 +1,5 @@
 ﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar;
-using Axis.Pulsar.Core.Grammar.Composite;
-using Axis.Pulsar.Core.Grammar.Atomic;
 using Axis.Pulsar.Core.Utils;
 using Axis.Pulsar.Core.XBNF.Parsers.Models;
 using Axis.Pulsar.Core.XBNF.Parsers.Results;
@@ -9,9 +7,12 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
-using Axis.Pulsar.Core.Grammar.Composite.Group;
 using Axis.Pulsar.Core.Grammar.Errors;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
+using Axis.Pulsar.Core.Grammar.Rules.Aggregate;
+using Axis.Pulsar.Core.Grammar.Rules.Atomic;
+using Axis.Pulsar.Core.Grammar.Rules.Composite;
+using Axis.Pulsar.Core.Grammar.Rules;
 
 namespace Axis.Pulsar.Core.XBNF.Parsers;
 
@@ -306,8 +307,8 @@ internal static class GrammarParser
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, compositeRulePath, context);
 
         result = NodeRecognitionAccumulator
-            .Of<KeyValuePair<uint?, IAggregationElementRule>, SymbolPath, ParserContext>(
-                KeyValuePair.Create(default(uint?), default(IAggregationElementRule)!))
+            .Of<KeyValuePair<uint?, IAggregationElement>, SymbolPath, ParserContext>(
+                KeyValuePair.Create(default(uint?), default(IAggregationElement)!))
 
             // optional recognition threshold
             .ThenTry<uint, XBNFResult<uint>>(
@@ -317,7 +318,7 @@ internal static class GrammarParser
                 (kvp, err) => default(uint?).ValuePair(kvp.Value))
 
             // required group element
-            .ThenTry<IAggregationElementRule, XBNFResult<IAggregationElementRule>>(
+            .ThenTry<IAggregationElement, XBNFResult<IAggregationElement>>(
                 TryParseGroupElement,
                 accumulatorArgs,
                 (kvp, element) => kvp.Key.ValuePair(element))
@@ -386,14 +387,14 @@ internal static class GrammarParser
         TokenReader reader,
         SymbolPath path,
         ParserContext context,
-        out XBNFResult<IAggregationElementRule> result)
+        out XBNFResult<IAggregationElement> result)
     {
         var position = reader.Position;
         var elementPath = path.Next("group-element");
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, elementPath, context);
 
         result = NodeRecognitionAccumulator
-            .Of<IAggregationElementRule, SymbolPath, ParserContext>(default!)
+            .Of<IAggregationElement, SymbolPath, ParserContext>(default!)
 
             // atomic rule ref
             .ThenTry<AtomicRuleRef, XBNFResult<AtomicRuleRef>>(
@@ -408,18 +409,18 @@ internal static class GrammarParser
                 (_, prodRef) => prodRef)
 
             // group
-            .OrTry<IAggregationRule, XBNFResult<IAggregationRule>>(
+            .OrTry<IAggregation, XBNFResult<IAggregation>>(
                 TryParseGroup,
                 accumulatorArgs,
                 (_, group) => group)
 
             // map
             .MapAll(
-                XBNFResult<IAggregationElementRule>.Of,
-                (fre, _) => XBNFResult<IAggregationElementRule>.Of(fre),
-                (pre, _) => XBNFResult<IAggregationElementRule>.Of(pre));
+                XBNFResult<IAggregationElement>.Of,
+                (fre, _) => XBNFResult<IAggregationElement>.Of(fre),
+                (pre, _) => XBNFResult<IAggregationElement>.Of(pre));
 
-        if (!result.Is(out IAggregationElementRule _))
+        if (!result.Is(out IAggregationElement _))
         {
             reader.Reset(position);
             return false;
@@ -520,14 +521,14 @@ internal static class GrammarParser
         TokenReader reader,
         SymbolPath path,
         ParserContext context,
-        out XBNFResult<IAggregationRule> result)
+        out XBNFResult<IAggregation> result)
     {
         var position = reader.Position;
         var groupPath = path.Next("group");
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, groupPath, context);
 
         result = NodeRecognitionAccumulator
-            .Of<IAggregationRule, SymbolPath, ParserContext>(default!)
+            .Of<IAggregation, SymbolPath, ParserContext>(default!)
 
             // choice
             .ThenTry<Choice, XBNFResult<Choice>>(
@@ -549,11 +550,11 @@ internal static class GrammarParser
 
             // map
             .MapAll(
-                XBNFResult<IAggregationRule>.Of,
-                (fre, _) => XBNFResult<IAggregationRule>.Of(fre),
-                (pre, _) => XBNFResult<IAggregationRule>.Of(pre));
+                XBNFResult<IAggregation>.Of,
+                (fre, _) => XBNFResult<IAggregation>.Of(fre),
+                (pre, _) => XBNFResult<IAggregation>.Of(pre));
 
-        if (!result.Is(out IAggregationRule _))
+        if (!result.Is(out IAggregation _))
         {
             reader.Reset(position);
             return false;
@@ -586,11 +587,11 @@ internal static class GrammarParser
 
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, setPath, context);
         result = NodeRecognitionAccumulator
-            .Of<(IAggregationElementRule[] list, Cardinality cardinality), SymbolPath, ParserContext>(
-                (list: default(IAggregationElementRule[])!, cardinality: default(Cardinality)))
+            .Of<(IAggregationElement[] list, Cardinality cardinality), SymbolPath, ParserContext>(
+                (list: default(IAggregationElement[])!, cardinality: default(Cardinality)))
 
             // required element list
-            .ThenTry<IAggregationElementRule[], XBNFResult<IAggregationElementRule[]>>(
+            .ThenTry<IAggregationElement[], XBNFResult<IAggregationElement[]>>(
                 TryParseElementList,
                 accumulatorArgs,
                 (info, list) => (list, info.cardinality))
@@ -649,11 +650,11 @@ internal static class GrammarParser
 
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, choicePath, context);
         result = NodeRecognitionAccumulator
-            .Of<(IAggregationElementRule[] list, Cardinality cardinality), SymbolPath, ParserContext>(
-                (list: default(IAggregationElementRule[])!, cardinality: default(Cardinality)))
+            .Of<(IAggregationElement[] list, Cardinality cardinality), SymbolPath, ParserContext>(
+                (list: default(IAggregationElement[])!, cardinality: default(Cardinality)))
 
             // required element list
-            .ThenTry<IAggregationElementRule[], XBNFResult<IAggregationElementRule[]>>(
+            .ThenTry<IAggregationElement[], XBNFResult<IAggregationElement[]>>(
                 TryParseElementList,
                 accumulatorArgs,
                 (info, list) => (list, info.cardinality))
@@ -706,11 +707,11 @@ internal static class GrammarParser
 
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, sequencePath, context);
         result = NodeRecognitionAccumulator
-            .Of<(IAggregationElementRule[] list, Cardinality cardinality), SymbolPath, ParserContext>(
-                (list: default(IAggregationElementRule[])!, cardinality: default(Cardinality)))
+            .Of<(IAggregationElement[] list, Cardinality cardinality), SymbolPath, ParserContext>(
+                (list: default(IAggregationElement[])!, cardinality: default(Cardinality)))
 
             // required element list
-            .ThenTry<IAggregationElementRule[], XBNFResult<IAggregationElementRule[]>>(
+            .ThenTry<IAggregationElement[], XBNFResult<IAggregationElement[]>>(
                 TryParseElementList,
                 accumulatorArgs,
                 (info, list) => (list, info.cardinality))
@@ -822,7 +823,7 @@ internal static class GrammarParser
         TokenReader reader,
         SymbolPath path,
         ParserContext context,
-        out XBNFResult<IAggregationElementRule[]> result)
+        out XBNFResult<IAggregationElement[]> result)
     {
         var position = reader.Position;
         var elementListPath = path.Next("element-list");
@@ -830,7 +831,7 @@ internal static class GrammarParser
         // open bracket
         if (!reader.TryGetTokens("[", out var openBracket))
         {
-            result = XBNFResult<IAggregationElementRule[]>.Of(FailedRecognitionError.Of(
+            result = XBNFResult<IAggregationElement[]>.Of(FailedRecognitionError.Of(
                 elementListPath,
                 position));
             reader.Reset(position);
@@ -839,7 +840,7 @@ internal static class GrammarParser
 
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, elementListPath, context);
         var accumulator = NodeRecognitionAccumulator
-            .Of<List<IAggregationElementRule>, SymbolPath, ParserContext>(new List<IAggregationElementRule>())
+            .Of<List<IAggregationElement>, SymbolPath, ParserContext>(new List<IAggregationElement>())
 
             // optional whitespace
             .ThenTry<SilentBlock, XBNFResult<SilentBlock>>(
@@ -849,7 +850,7 @@ internal static class GrammarParser
                 (group, _) => group)
 
             // required element
-            .ThenTry<IAggregationElementRule, XBNFResult<IAggregationElementRule>>(
+            .ThenTry<IAggregationElement, XBNFResult<IAggregationElement>>(
                 TryParseGroupElement,
                 accumulatorArgs,
                 (group, element) => group.AddItem(element));
@@ -866,7 +867,7 @@ internal static class GrammarParser
                     (group, _) => group)
 
                 // required element
-                .ThenTry<IAggregationElementRule, XBNFResult<IAggregationElementRule>>(
+                .ThenTry<IAggregationElement, XBNFResult<IAggregationElement>>(
                     TryParseGroupElement,
                     accumulatorArgs,
                     (group, element) => group.AddItem(element));
@@ -888,15 +889,15 @@ internal static class GrammarParser
             
             // map
             .MapAll(
-                data => XBNFResult<IAggregationElementRule[]>.Of(data.ToArray()),
+                data => XBNFResult<IAggregationElement[]>.Of(data.ToArray()),
                 (fre, _) => PartialRecognitionError
                     .Of(elementListPath,
                         position,
                         reader.Position - position)
-                    .ApplyTo(XBNFResult<IAggregationElementRule[]>.Of),
-                (pre, _) => XBNFResult<IAggregationElementRule[]>.Of(pre));
+                    .ApplyTo(XBNFResult<IAggregationElement[]>.Of),
+                (pre, _) => XBNFResult<IAggregationElement[]>.Of(pre));
 
-        if (!result.Is(out IAggregationElementRule[] _))
+        if (!result.Is(out IAggregationElement[] _))
         {
             reader.Reset(position);
             return false;

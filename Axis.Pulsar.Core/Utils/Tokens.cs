@@ -3,6 +3,7 @@ using Axis.Luna.Common.Indexers;
 using Axis.Luna.Extensions;
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.ExceptionServices;
 
 namespace Axis.Pulsar.Core.Utils
 {
@@ -76,6 +77,8 @@ namespace Axis.Pulsar.Core.Utils
         public static Tokens EmptyAt(string @string, int offset) => new(
             segment: LunaSegment.Of(offset, 0),
             source: @string);
+
+        public static Tokens Empty { get; } = Tokens.EmptyAt(string.Empty, 0);
 
         public static Tokens Of(string @string, LunaSegment segment) => new(
             segment: segment,
@@ -274,12 +277,19 @@ namespace Axis.Pulsar.Core.Utils
             if (IsDefaultOrEmpty)
                 return false;
 
-            return _source!.IndexOf(substring, _segment.Offset, _segment.Count) >= 0;
+            return 0 <= _source!.IndexOf(
+                substring,
+                _segment.Offset,
+                _segment.Count,
+                StringComparison.InvariantCulture);
         }
 
         public bool Contains(Tokens subtokens)
         {
-            if (IsDefault ^ subtokens.IsDefault)
+            if (subtokens.IsDefault)
+                return false;
+
+            if (IsDefaultOrEmpty)
                 return false;
 
             if (subtokens._segment.Count > _segment.Count)
@@ -287,7 +297,7 @@ namespace Axis.Pulsar.Core.Utils
 
             return AsSpan().Contains(subtokens.AsSpan(), StringComparison.InvariantCulture);
         }
-
+         
         public bool Contains(char c) => ContainsAny(c);
 
         public bool ContainsAny(params char[] chars)
@@ -319,7 +329,7 @@ namespace Axis.Pulsar.Core.Utils
             if (length + offset > _segment.Count)
                 throw new ArgumentOutOfRangeException(nameof(length));
 
-            _ = delimiters
+            var delims = delimiters
                 .ThrowIfNull(
                     () => new ArgumentNullException(nameof(delimiters)))
                 .ThrowIf(
@@ -334,7 +344,7 @@ namespace Axis.Pulsar.Core.Utils
             var parts = new List<(Tokens Delimiter, Tokens Tokens)>();
 
             // delimiter matchers
-            var delimMatchers = delimiters
+            var delimMatchers = delims
                 .OrderByDescending(delim => delim._segment.Count)
                 .Select(delim => SubstringMatcher.LookAheadMatcher.Of(delim, auxTokens, 0))
                 .ToArray();
@@ -402,7 +412,7 @@ namespace Axis.Pulsar.Core.Utils
         public static bool Intersects(Tokens first, Tokens second) => first.IntersectsWith(second);
 
         /// <summary>
-        /// Indicates that this instance is directly preceeding the given instance.
+        /// Indicates that the sources of both instances are equal, and this instance is directly preceeding the given instance.
         /// <para/>
         /// Note: directly preceeding means this token ends exactly one character before
         /// the start of the <paramref name="successor"/> instance.
@@ -420,7 +430,7 @@ namespace Axis.Pulsar.Core.Utils
         }
 
         /// <summary>
-        /// Indicates that this instance is directly succeeding the given instance.
+        /// Indicates that the sources of both instances are equal, and this instance is directly succeeding the given instance.
         /// <para/>
         /// Note: directly succeeding means this token starts from the very next character
         /// after the <paramref name="predecessor"/> instance ends.
@@ -443,8 +453,6 @@ namespace Axis.Pulsar.Core.Utils
             return false;
         }
 
-        public bool Equals(char value) => Equals(new[] { value });
-
         public bool Equals(char[] value)
         {
             if (IsDefault && value is null)
@@ -461,10 +469,13 @@ namespace Axis.Pulsar.Core.Utils
 
         public bool Equals(Tokens other, bool isCaseSensitive)
         {
-            if (_segment.Count != other._segment.Count)
+            if (IsDefault && other.IsDefault)
+                return true;
+
+            if (IsDefault ^ other.IsDefault)
                 return false;
 
-            if (_source is null ^ other._source is null)
+            if (_segment.Count != other._segment.Count)
                 return false;
 
             var flag = isCaseSensitive switch
@@ -525,4 +536,5 @@ namespace Axis.Pulsar.Core.Utils
         }
         #endregion
     }
+
 }

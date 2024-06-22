@@ -48,10 +48,14 @@ public readonly struct CharRange:
     /// <exception cref="InvalidOperationException"></exception>
     public CharRange MergeWith(CharRange range, bool mergeDisjointedRanges = false)
     {
-        if (TryMergeWith(range, mergeDisjointedRanges, out var merged))
-            return merged;
+        if (Intersects(this, range) || mergeDisjointedRanges)
+        {
+            return new CharRange(
+                Min(LowerBound, range.LowerBound),
+                Max(UpperBound, range.UpperBound));
+        }
 
-        throw new InvalidOperationException($"Invalid merge: disjointed ranges.");
+        else throw new InvalidOperationException($"Invalid merge: disjointed ranges.");
     }
 
     /// <summary>
@@ -68,16 +72,8 @@ public readonly struct CharRange:
     {
         try
         {
-            if (Intersects(this, range) || mergeDisjointedRanges)
-            {
-                merged = new CharRange(
-                    Min(LowerBound, range.LowerBound),
-                    Max(UpperBound, range.UpperBound));
-                return true;
-            }
-
-            merged = default;
-            return false;
+            merged = MergeWith(range, mergeDisjointedRanges);
+            return true;
         }
         catch
         {
@@ -189,24 +185,32 @@ public readonly struct CharRange:
     /// <para/>
     /// * Utf escaping is represented as a 6-character string containing: '\', 'u', and a 4-digit hex number.
     /// <para/>
-    /// * The only case where a 2-character length string is accepted is to escape the '\' character, i.e "\\"
+    /// * The only case where a 2-character length string is accepted is to escape the '\' character, i.e "\\". 
+    /// All other characters should be represented using Ascii-Escaping, or Utf-Escaping.
     /// </summary>
     /// <param name="charString">The character string</param>
     /// <returns></returns>
     /// <exception cref="ArgumentException"></exception>
     public static char ParseChar(string charString)
     {
-        if (charString.Length > 2 && charString[0] == '\\'
-            && (char.ToLower(charString[1]) == 'u' || char.ToLower(charString[1]) == 'x'))
-            return (char)ushort.Parse(charString[2..], System.Globalization.NumberStyles.HexNumber);
+        var styles = System.Globalization.NumberStyles.HexNumber;
 
-        else if (charString.Length == 2 && charString[0] == '\\' && (charString[1] == '\\'))
+        if ((charString.Length == 4 && charString.StartsWith("\\x"))
+            || (charString.Length == 6 && charString.StartsWith("\\u")))
+        {
+            if (ushort.TryParse(charString[2..], styles, null, out var num))
+                return (char)num;
+
+            else throw new FormatException($"Invalid character text: {charString}");
+        }
+
+        else if (charString.Equals("\\\\"))
             return charString[1];
 
         else if (charString.Length == 1)
             return charString[0];
 
-        else throw new ArgumentException($"Invalid character text: {charString}");
+        else throw new FormatException($"Invalid character text: {charString}");
     }
 
     /// <summary>

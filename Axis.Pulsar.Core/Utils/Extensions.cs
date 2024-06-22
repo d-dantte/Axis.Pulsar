@@ -1,4 +1,4 @@
-﻿using Axis.Luna.Result;
+﻿using System.Collections.Immutable;
 
 namespace Axis.Pulsar.Core.Utils
 {
@@ -15,20 +15,6 @@ namespace Axis.Pulsar.Core.Utils
                 : (second, first);
 
             return less.upper >= greater.lower;
-        }
-
-        internal static IResult<TData> MapError<TData, TError>(this
-            IResult<TData> result,
-            Func<TError, TData> errorMapper)
-            where TError : Exception
-        {
-            ArgumentNullException.ThrowIfNull(result);
-            ArgumentNullException.ThrowIfNull(errorMapper);
-
-            if (result.IsErrorResult<TData, TError>(out _))
-                return result.MapError(err => errorMapper.Invoke((err as TError)!));
-
-            else return result;
         }
 
         internal static int IndexOf(this
@@ -64,8 +50,29 @@ namespace Axis.Pulsar.Core.Utils
             return list;
         }
 
-        internal static void NoOp<TIn>(TIn @in) { }
+        internal static bool DefaultOrSequenceEqual<TItem>(this
+            ImmutableArray<TItem> first,
+            ImmutableArray<TItem> second)
+        {
+            return (first.IsDefault, second.IsDefault) switch
+            {
+                (true, true) => true,
+                (false, false) => first.SequenceEqual(second),
+                _ => false
+            };
+        }
 
-        internal static TOut DefaultOp<TIn, TOut>(TIn _) => default!;
+        internal static (ImmutableHashSet<T> distinctLeft, ImmutableHashSet<T> intersection, ImmutableHashSet<T> distinctRight) SplitSets<T>(
+            this HashSet<T> left,
+            HashSet<T> right)
+        {
+            ArgumentNullException.ThrowIfNull(left);
+            ArgumentNullException.ThrowIfNull(right);
+
+            return (
+                left.Except(right).ToImmutableHashSet(),
+                left.Intersect(right).ToImmutableHashSet(),
+                right.Except(left).ToImmutableHashSet());
+        }
     }
 }

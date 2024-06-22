@@ -1,5 +1,6 @@
 ﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.Grammar;
+using Axis.Pulsar.Core.Grammar.Rules;
 
 namespace Axis.Pulsar.Core.XBNF;
 
@@ -62,7 +63,7 @@ public class XBNFGrammar : IGrammar
     /// </summary>
     private void ValidateGrammar()
     {
-        var result = GrammarValidator.Validate(this);
+        var result = GrammarValidator__old.Validate(this);
 
         // based on the result, throw some exceptions, or return
     }

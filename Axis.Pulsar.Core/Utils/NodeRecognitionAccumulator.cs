@@ -11,9 +11,16 @@ public static class NodeRecognitionAccumulator
         TSymbolID symbol,
         TContext context,
         out TUnion result)
-        where TUnion : INodeRecognitionResultBase<TResult, TUnion>;
+        where TUnion : INodeRecognitionResult<TResult, TUnion>;
 
-    public static NodeRecognitionAccumulator<TData, TSymbolID, TContext> Of<TData, TSymbolID, TContext>(TData data) => new(data);
+    public static NodeRecognitionAccumulator<TData, TSymbolID, TContext> Of<TData, TSymbolID, TContext>(
+        TData data) => new(data);
+
+    public static NodeRecognitionAccumulator<TData, TSymbolID, TContext> OfFailed<TData, TSymbolID, TContext>(
+        FailedRecognitionError error) => new(default!, true, false, error);
+
+    public static NodeRecognitionAccumulator<TData, TSymbolID, TContext> OfPartial<TData, TSymbolID, TContext>(
+        PartialRecognitionError error) => new(default!, false, true, error);
 
     public static RecognitionArgs<TSymbolID, TContext> Args<TSymbolID, TContext>(
         TokenReader reader,
@@ -22,21 +29,14 @@ public static class NodeRecognitionAccumulator
         => new(reader, symbol, context);
 }
 
-public readonly struct RecognitionArgs<TSymbolID, TContext>
+public readonly struct RecognitionArgs<TSymbolID, TContext>(
+    TokenReader reader,
+    TSymbolID symbol,
+    TContext context)
 {
-    public TokenReader Reader { get; }
-    public TSymbolID Symbol { get; }
-    public TContext Context { get; }
-
-    public RecognitionArgs(
-        TokenReader reader,
-        TSymbolID symbol,
-        TContext context)
-    {
-        Reader = reader;
-        Symbol = symbol;
-        Context = context;
-    }
+    public TokenReader Reader { get; } = reader;
+    public TSymbolID Symbol { get; } = symbol;
+    public TContext Context { get; } = context;
 }
 
 public readonly struct NodeRecognitionAccumulator<TData, TSymbolID, TContext> :
@@ -61,14 +61,13 @@ public readonly struct NodeRecognitionAccumulator<TData, TSymbolID, TContext> :
     public static NodeRecognitionAccumulator<TData, TSymbolID, TContext> Default => default;
     #endregion
 
-    public NodeRecognitionAccumulator(TData data)
+    public NodeRecognitionAccumulator(
+        TData data)
+        : this(data, true, true, null)
     {
-        _data = data;
-        _state = State.All;
-        _error = null;
     }
 
-    private NodeRecognitionAccumulator(
+    internal NodeRecognitionAccumulator(
         TData data,
         bool canTryRequired,
         bool canTryAlternative,
@@ -100,7 +99,7 @@ public readonly struct NodeRecognitionAccumulator<TData, TSymbolID, TContext> :
         RecognitionArgs<TSymbolID, TContext> args,
         Func<TData, TOutResult, TData> mapper,
         Func<TData, FailedRecognitionError, TData>? failedRecognitionMapper = null)
-        where TOutUnion : INodeRecognitionResultBase<TOutResult, TOutUnion>
+        where TOutUnion : INodeRecognitionResult<TOutResult, TOutUnion>
     {
         ArgumentNullException.ThrowIfNull(tryParse);
         ArgumentNullException.ThrowIfNull(mapper);
@@ -128,7 +127,7 @@ public readonly struct NodeRecognitionAccumulator<TData, TSymbolID, TContext> :
         RecognitionArgs<TSymbolID, TContext> args,
         Func<TData, TOutResult, TData> mapper,
         Func<TData, FailedRecognitionError, TData>? failedRecognitionMapper = null)
-        where TOutUnion : INodeRecognitionResultBase<TOutResult, TOutUnion>
+        where TOutUnion : INodeRecognitionResult<TOutResult, TOutUnion>
     {
         ArgumentNullException.ThrowIfNull(tryParse);
         ArgumentNullException.ThrowIfNull(mapper);
@@ -158,7 +157,7 @@ public readonly struct NodeRecognitionAccumulator<TData, TSymbolID, TContext> :
         Func<TData, bool, bool, INodeRecognitionError?, bool> predicate,
         Func<TData, TOutResult, TData> mapper,
         Func<TData, FailedRecognitionError, TData>? freMapper = null)
-        where TOutUnion : INodeRecognitionResultBase<TOutResult, TOutUnion>
+        where TOutUnion : INodeRecognitionResult<TOutResult, TOutUnion>
     {
         ArgumentNullException.ThrowIfNull(tryParse);
         ArgumentNullException.ThrowIfNull(mapper);
@@ -178,7 +177,7 @@ public readonly struct NodeRecognitionAccumulator<TData, TSymbolID, TContext> :
         RecognitionArgs<TSymbolID, TContext> args,
         Func<TData, TOutResult, TData> mapper,
         Func<TData, FailedRecognitionError, TData>? freMapper)
-        where TOutUnion : INodeRecognitionResultBase<TOutResult, TOutUnion>
+        where TOutUnion : INodeRecognitionResult<TOutResult, TOutUnion>
     {
         _ = tryParse.Invoke(args.Reader, args.Symbol, args.Context, out var tresult);
 
@@ -230,8 +229,8 @@ public readonly struct NodeRecognitionAccumulator<TData, TSymbolID, TContext> :
         {
             null => dataMapper.Invoke(_data),
             FailedRecognitionError fre => failedRecognitionMapper.Invoke(fre, _data),
-            PartialRecognitionError pre => partialRecognitionMapper.Invoke(pre, _data),
-            _ => throw new InvalidOperationException($"Invalid recognition error: {_error.GetType()}")
+            //PartialRecognitionError pre
+            _ => partialRecognitionMapper.Invoke((PartialRecognitionError)_error, _data),
         };
     }
     #endregion
@@ -253,10 +252,8 @@ public readonly struct NodeRecognitionAccumulator<TData, TSymbolID, TContext> :
         else if (_error is FailedRecognitionError fre)
             failedRecognitionMapper.Invoke(fre, _data);
 
-        else if (_error is PartialRecognitionError pre)
-            partialRecognitionMapper.Invoke(pre, _data);
-
-        else throw new InvalidOperationException($"Invalid recognition error: {_error.GetType()}");
+        else
+            partialRecognitionMapper.Invoke((PartialRecognitionError) _error, _data);
     }
     #endregion
 

@@ -26,7 +26,8 @@ namespace Axis.Pulsar.Core.Utils
 
         public TokenReader(string source)
         {
-            _source = source ?? throw new ArgumentNullException(nameof(source));
+            ArgumentNullException.ThrowIfNull(source);
+            _source = source;
         }
 
         public static implicit operator TokenReader(string source) => new(source);

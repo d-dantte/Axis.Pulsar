@@ -40,14 +40,6 @@ namespace Axis.Pulsar.Core.Utils
         /// <summary>
         /// Advances the index as far as it will go - which is the length of the source + 1.
         /// </summary>
-        /// <param name="skipCount"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public int Advance() => Advance(0);
-
-        /// <summary>
-        /// Advances the index as far as it will go - which is the length of the source + 1.
-        /// </summary>
         /// <param name="skipCount">The number of characters to skip</param>
         /// <returns>The number of characters skipped</returns>
         /// <exception cref="ArgumentOutOfRangeException"></exception>

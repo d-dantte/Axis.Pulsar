@@ -27,7 +27,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
             if (grammarResult.Is(out IGrammar grammar))
             {
                 // validate the grammar
-                GrammarValidator
+                GrammarValidator__old
                     .Validate(grammar)
                     .ThrowIf(
                         r => !r.IsValidGrammar,

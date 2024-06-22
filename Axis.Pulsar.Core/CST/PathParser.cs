@@ -4,6 +4,7 @@ using Axis.Luna.Unions;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Results;
+using Axis.Pulsar.Core.Grammar.Rules;
 using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.CST
@@ -410,7 +411,7 @@ namespace Axis.Pulsar.Core.CST
     }
 
     public readonly struct PathParserResult<TResult> :
-        INodeRecognitionResultBase<TResult, PathParserResult<TResult>>,
+        INodeRecognitionResult<TResult, PathParserResult<TResult>>,
         IUnionOf<TResult, FailedError, PartialError, PathParserResult<TResult>>
     {
         private readonly object? _value;
@@ -427,9 +428,9 @@ namespace Axis.Pulsar.Core.CST
                 FailedRecognitionError
                 or PartialError
                 or TResult => value,
-                _ => throw new ArgumentOutOfRangeException(
-                    nameof(value),
-                    $"Invalid {nameof(value)} type: '{value.GetType()}'")
+                _ => throw new ArgumentException(
+                    $"Invalid {nameof(value)} type: '{value.GetType()}'",
+                    nameof(value))
             };
         }
 

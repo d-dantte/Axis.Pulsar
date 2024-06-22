@@ -1,14 +1,10 @@
 ﻿using Axis.Luna.Common.Segments;
 using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
-using Axis.Pulsar.Core.Grammar.Composite.Group;
+using System.Collections.Immutable;
 
 namespace Axis.Pulsar.Core.Grammar.Errors
 {
-
-    /// <summary>
-    /// 
-    /// </summary>
     public interface INodeRecognitionError
     {
         public Segment TokenSegment { get; }
@@ -72,54 +68,47 @@ namespace Axis.Pulsar.Core.Grammar.Errors
     }
 
     /// <summary>
-    /// Represents failure to aggregate recognized symbols. Raised by instances of <see cref="Grammar.Composite.Group.IAggregationRule"/>.
+    /// Represents failure to aggregate recognized symbols. Raised by instances of <see cref="Rules.Aggregate.IAggregation"/>.
     /// </summary>
-    public readonly struct SymbolAggregationError
+    public readonly struct AggregateRecognitionError
     {
         public INodeRecognitionError Cause { get; }
 
-        public int ElementCount { get; }
+        public ImmutableArray<ISymbolNode> RecognizedNodes { get; }
 
-        public SymbolAggregationError(
+        public int RequiredNodeCount => !RecognizedNodes.IsDefault
+            ? RecognizedNodes.Sum(node => node.RequiredNodeCount())
+            : 0;
+
+        public AggregateRecognitionError(
             INodeRecognitionError cause,
-            ISymbolNodeAggregation nodeAggregation)
+            params ISymbolNode[] nodes)
+            : this(cause, nodes.AsEnumerable())
         {
-            ArgumentNullException.ThrowIfNull(nodeAggregation);
-
-            (Cause, ElementCount) = cause switch
-            {
-                FailedRecognitionError => (cause, nodeAggregation.RequiredNodeCount()),
-                PartialRecognitionError => (cause, nodeAggregation.NodeCount()),
-                _ => throw new InvalidOperationException(
-                    $"Invalid cause: {cause?.GetType()}")
-            };
         }
 
-        public SymbolAggregationError(
+        public AggregateRecognitionError(
             INodeRecognitionError cause,
-            int elementCount)
+            IEnumerable<ISymbolNode> nodes)
         {
-            ElementCount = elementCount.ThrowIf(
-                i => i < 0,
-                _ => new ArgumentOutOfRangeException(nameof(elementCount)));
-
-            Cause = cause switch
-            {
-                FailedRecognitionError
-                or PartialRecognitionError => cause,
-                _ => throw new InvalidOperationException(
-                    $"Invalid cause: {cause?.GetType()}")
-            };
+            Cause = cause.ThrowIfNull(() => new ArgumentNullException(nameof(cause)));
+            RecognizedNodes = nodes
+                .ThrowIfNull(
+                    () => new ArgumentNullException(nameof(nodes)))
+                .ThrowIfAny(
+                    node => node is null,
+                    _ => new InvalidOperationException($"Invalid node: null"))
+                .ToImmutableArray();
         }
 
-        public static SymbolAggregationError Of(
+        public static AggregateRecognitionError Of(
             INodeRecognitionError cause,
-            ISymbolNodeAggregation aggregation)
-            => new(cause, aggregation);
+            params ISymbolNode[] nodes)
+            => new(cause, nodes);
 
-        public static SymbolAggregationError Of(
+        public static AggregateRecognitionError Of(
             INodeRecognitionError cause,
-            int elementCount)
-            => new(cause, elementCount);
+            IEnumerable<ISymbolNode> nodes)
+            => new(cause, nodes);
     }
 }

@@ -24,6 +24,15 @@ namespace Axis.Pulsar.Core.Tests.Utils
             Assert.AreEqual('\0', range.UpperBound);
             Assert.IsFalse(range.IsRange);
 
+            range = "a-z";
+            Assert.AreEqual('a', range.LowerBound);
+            Assert.AreEqual('z', range.UpperBound);
+
+            range = '^';
+            Assert.IsFalse(range.IsRange);
+            Assert.AreEqual(range.LowerBound, range.UpperBound);
+            Assert.AreEqual('^', range.UpperBound);
+
             Assert.ThrowsException<ArgumentException>(() => CharRange.Of('b', 'a'));
         }
 
@@ -51,10 +60,13 @@ namespace Axis.Pulsar.Core.Tests.Utils
             var range = CharRange.Of('0', '9');
             var range2 = CharRange.Of('0', '9');
             var range3 = CharRange.Of('0');
+            CharRange range4 = "2-5";
 
             Assert.AreEqual(range, range);
             Assert.IsTrue(range.Equals(range));
             Assert.IsTrue(range.Equals((object)range));
+            Assert.IsFalse(range.Equals(new object()));
+            Assert.IsFalse(range.Equals(range4));
 #pragma warning disable CS1718 // Comparison made to same variable
             Assert.IsTrue(range == range);
 #pragma warning restore CS1718 // Comparison made to same variable
@@ -104,6 +116,9 @@ namespace Axis.Pulsar.Core.Tests.Utils
             Assert.AreEqual(range.LowerBound, result.LowerBound);
             Assert.AreEqual(range2.UpperBound, result.UpperBound);
 
+            _ = range2.TryMergeWith(range, out var result_x);
+            Assert.AreEqual(result, result_x);
+
             merged = result.TryMergeWith(range3, out result);
             Assert.IsTrue(merged);
             Assert.AreEqual(range.LowerBound, result.LowerBound);
@@ -152,6 +167,37 @@ namespace Axis.Pulsar.Core.Tests.Utils
             range = CharRange.Parse("\\x2c - \\u12ab");
             Assert.AreEqual(',', range.LowerBound);
             Assert.AreEqual('\u12ab', range.UpperBound);
+
+            Assert.ThrowsException<ArgumentException>(
+                () => CharRange.Parse(null!));
+
+            Assert.ThrowsException<FormatException>(
+                () => CharRange.Parse("a-g-y"));
+        }
+
+        [TestMethod]
+        public void ParseChar_Tests()
+        {
+            var @char = CharRange.ParseChar("a");
+            Assert.AreEqual('a', @char);
+
+            @char = CharRange.ParseChar("\\\\");
+            Assert.AreEqual('\\', @char);
+
+            @char = CharRange.ParseChar("\\x24");
+            Assert.AreEqual('\x24', @char);
+
+            @char = CharRange.ParseChar("\\uae3c");
+            Assert.AreEqual('\uae3c', @char);
+
+            Assert.ThrowsException<FormatException>(
+                () => CharRange.Parse("\\xaz"));
+
+            Assert.ThrowsException<FormatException>(
+                () => CharRange.Parse("1234"));
+
+            Assert.ThrowsException<FormatException>(
+                () => CharRange.Parse("123456"));
         }
 
         [TestMethod]
@@ -172,6 +218,19 @@ namespace Axis.Pulsar.Core.Tests.Utils
             Assert.AreEqual('7', normalized[0].UpperBound);
             Assert.AreEqual('9', normalized[1].LowerBound);
             Assert.AreEqual('9', normalized[1].UpperBound);
+
+            Assert.ThrowsException<ArgumentNullException>(
+                () => default(IEnumerable<CharRange>)!.NormalizeRanges());
+        }
+
+        [TestMethod]
+        public void ToString_Tests()
+        {
+            CharRange range = "1-4";
+            Assert.AreEqual("1-4", range.ToString());
+
+            range = "£";
+            Assert.AreEqual("£", range.ToString());
         }
     }
 }

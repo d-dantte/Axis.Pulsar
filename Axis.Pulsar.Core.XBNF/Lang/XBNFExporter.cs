@@ -1,11 +1,11 @@
 ﻿using Axis.Luna.Extensions;
-using Axis.Pulsar.Core.Grammar;
-using Axis.Pulsar.Core.Grammar.Composite;
-using Axis.Pulsar.Core.Grammar.Atomic;
 using Axis.Pulsar.Core.Lang;
 using System.Text;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
-using Axis.Pulsar.Core.Grammar.Composite.Group;
+using Axis.Pulsar.Core.Grammar.Rules.Aggregate;
+using Axis.Pulsar.Core.Grammar.Rules.Atomic;
+using Axis.Pulsar.Core.Grammar.Rules.Composite;
+using Axis.Pulsar.Core.Grammar.Rules;
 
 namespace Axis.Pulsar.Core.XBNF.Lang
 {
@@ -137,7 +137,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
             return $"{rt}{WriteElement(nonTerminal.Element, context)}";
         }
 
-        internal static string WriteElement(IAggregationElementRule element, XBNFLanguageContext context)
+        internal static string WriteElement(IAggregationElement element, XBNFLanguageContext context)
         {
             ArgumentNullException.ThrowIfNull(element);
 
@@ -169,7 +169,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
             return $"${prodRef.Ref}";
         }
 
-        internal static string WriteGroup(IAggregationRule group, XBNFLanguageContext context)
+        internal static string WriteGroup(IAggregation group, XBNFLanguageContext context)
         {
             ArgumentNullException.ThrowIfNull(group);
             ArgumentNullException.ThrowIfNull(context);

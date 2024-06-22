@@ -1,5 +1,6 @@
 ﻿using Axis.Luna.Extensions;
 using Axis.Luna.Result;
+using Axis.Luna.Unions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Errors;
@@ -226,6 +227,10 @@ namespace Axis.Pulsar.Core.Tests.CST
             Assert.IsFalse(parsed);
             Assert.IsTrue(result.Is(out FailedRecognitionError _));
 
+            parsed = PathParser.TryRecognizePath("abcd/xyz/", out result);
+            Assert.IsFalse(parsed);
+            Assert.IsTrue(result.Is(out PartialRecognitionError _));
+
             parsed = PathParser.TryRecognizePath("abc|", out result);
             Assert.IsFalse(parsed);
             Assert.IsTrue(result.Is(out PartialRecognitionError pre));
@@ -277,6 +282,208 @@ namespace Axis.Pulsar.Core.Tests.CST
         {
             var result = PathParserResult<NodePath>.Of(new NodePath());
             Assert.IsFalse(result.IsNull());
+        }
+    }
+
+
+    [TestClass]
+    public class PathParserResultTests
+    {
+        [TestMethod]
+        public void Constructor_Tests()
+        {
+            var result = PathParserResult<string>.Of("stuff");
+            Assert.IsNotNull(result);
+            Assert.AreEqual("stuff", result.Value);
+
+            result = new PathParserResult<string>(null!);
+            Assert.IsNull(result.Value);
+
+            result = PathParserResult<string>.Of(FailedRecognitionError.Of("bleh", 0));
+            Assert.IsInstanceOfType<FailedRecognitionError>(result.Value);
+
+            result = PathParserResult<string>.Of(PartialRecognitionError.Of("bleh", 0, 1));
+            Assert.IsInstanceOfType<PartialRecognitionError>(result.Value);
+
+            Assert.ThrowsException<ArgumentException>(
+                () => new PathParserResult<string>(new List<int>()));
+        }
+
+        [TestMethod]
+        public void Is_Tests()
+        {
+            var @string = "bleh";
+            var failed = FailedRecognitionError.Of("bleh", 0);
+            var partial = PartialRecognitionError.Of("bleh", 0, 1);
+
+            var stringResult = PathParserResult<string>.Of(@string);
+            var failedResult = PathParserResult<string>.Of(failed);
+            var partialResult = PathParserResult<string>.Of(partial);
+            var nullResult = default(PathParserResult<string>);
+
+            Assert.IsTrue(stringResult.Is(out string s));
+            Assert.AreEqual(@string, s);
+            Assert.IsFalse(stringResult.Is(out FailedRecognitionError fre));
+            Assert.AreEqual<FailedRecognitionError>(default, fre);
+
+            Assert.IsTrue(failedResult.Is(out fre));
+            Assert.AreEqual(failed, fre);
+            Assert.IsFalse(failedResult.Is(out PartialRecognitionError pre));
+            Assert.AreEqual<PartialRecognitionError>(default, pre);
+
+            Assert.IsTrue(partialResult.Is(out pre));
+            Assert.AreEqual(partial, pre);
+            Assert.IsFalse(partialResult.Is(out s));
+            Assert.IsNull(s);
+
+            Assert.IsTrue(nullResult.IsNull());
+        }
+
+        [TestMethod]
+        public void MapMatch_Tests()
+        {
+            var @string = "bleh";
+            var failed = FailedRecognitionError.Of("bleh", 0);
+            var partial = PartialRecognitionError.Of("bleh", 0, 1);
+
+            var stringResult = PathParserResult<string>.Of(@string);
+            var failedResult = PathParserResult<string>.Of(failed);
+            var partialResult = PathParserResult<string>.Of(partial);
+            var nullResult = default(PathParserResult<string>);
+
+            var result = stringResult.MapMatch(
+                s => "1",
+                f => "2",
+                p => "3",
+                () => "4");
+            Assert.AreEqual("1", result);
+
+            result = failedResult.MapMatch(
+                s => "1",
+                f => "2",
+                p => "3",
+                () => "4");
+            Assert.AreEqual("2", result);
+
+            result = partialResult.MapMatch(
+                s => "1",
+                f => "2",
+                p => "3",
+                () => "4");
+            Assert.AreEqual("3", result);
+
+            result = nullResult.MapMatch(
+                s => "1",
+                f => "2",
+                p => "3",
+                () => "4");
+            Assert.AreEqual("4", result);
+
+            result = nullResult.MapMatch(
+                s => "1",
+                f => "2",
+                p => "3");
+            Assert.IsNull(result);
+        }
+
+        [TestMethod]
+        public void ConsumeMatch_Tests()
+        {
+            var @string = "bleh";
+            var failed = FailedRecognitionError.Of("bleh", 0);
+            var partial = PartialRecognitionError.Of("bleh", 0, 1);
+
+            var stringResult = PathParserResult<string>.Of(@string);
+            var failedResult = PathParserResult<string>.Of(failed);
+            var partialResult = PathParserResult<string>.Of(partial);
+            var nullResult = default(PathParserResult<string>);
+            string? result = null;
+
+            stringResult.ConsumeMatch(
+                s => result = "1",
+                f => result = "2",
+                p => result = "3",
+                () =>result =  "4");
+            Assert.AreEqual("1", result);
+
+            failedResult.ConsumeMatch(
+                s => result = "1",
+                f => result = "2",
+                p => result = "3",
+                () => result = "4");
+            Assert.AreEqual("2", result);
+
+            partialResult.ConsumeMatch(
+                s => result = "1",
+                f => result = "2",
+                p => result = "3",
+                () => result = "4");
+            Assert.AreEqual("3", result);
+
+            nullResult.ConsumeMatch(
+                s => result = "1",
+                f => result = "2",
+                p => result = "3",
+                () => result = "4");
+            Assert.AreEqual("4", result);
+
+            nullResult.ConsumeMatch(
+                s => result = "1",
+                f => result = "2",
+                p => result = "3");
+            // nothing to assert
+        }
+
+        [TestMethod]
+        public void WithMatch_Tests()
+        {
+            var @string = "bleh";
+            var failed = FailedRecognitionError.Of("bleh", 0);
+            var partial = PartialRecognitionError.Of("bleh", 0, 1);
+
+            var stringResult = PathParserResult<string>.Of(@string);
+            var failedResult = PathParserResult<string>.Of(failed);
+            var partialResult = PathParserResult<string>.Of(partial);
+            var nullResult = default(PathParserResult<string>);
+            string? result = null;
+
+            var r = stringResult.WithMatch(
+                s => result = "1",
+                f => result = "2",
+                p => result = "3",
+                () => result = "4");
+            Assert.AreEqual("1", result);
+            Assert.AreEqual(r, stringResult);
+
+            r = failedResult.WithMatch(
+                s => result = "1",
+                f => result = "2",
+                p => result = "3",
+                () => result = "4");
+            Assert.AreEqual("2", result);
+            Assert.AreEqual(r, failedResult);
+
+            r = partialResult.WithMatch(
+                s => result = "1",
+                f => result = "2",
+                p => result = "3",
+                () => result = "4");
+            Assert.AreEqual("3", result);
+            Assert.AreEqual(r, partialResult);
+
+            r = nullResult.WithMatch(
+                s => result = "1",
+                f => result = "2",
+                p => result = "3",
+                () => result = "4");
+            Assert.AreEqual("4", result);
+            Assert.AreEqual(r, nullResult);
+
+            r = nullResult.WithMatch(
+                s => result = "1",
+                f => result = "2",
+                p => result = "3");
+            Assert.AreEqual(r, nullResult);
         }
     }
 }

@@ -5,10 +5,10 @@
         /// <summary>
         /// The validation result
         /// </summary>
-        public GrammarValidator.ValidationResult ValidationResult { get; }
+        public GrammarValidator__old.ValidationResult ValidationResult { get; }
 
         public GrammarValidationException(
-            GrammarValidator.ValidationResult validationResult)
+            GrammarValidator__old.ValidationResult validationResult)
         {
             ValidationResult =
                 validationResult

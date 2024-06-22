@@ -25,4 +25,17 @@ namespace Axis.Pulsar.Core.Grammar
             ILanguageContext context,
             out TResult result);
     }
+
+    public static class RecognizerExtensions
+    {
+        public static TResult Recognize<TResult>(this
+            IRecognizer<TResult> recognizer,
+            TokenReader reader,
+            SymbolPath symbolPath,
+            ILanguageContext context)
+        {
+            _ = recognizer.TryRecognize(reader, symbolPath, context, out var result);
+            return result;
+        }
+    }
 }

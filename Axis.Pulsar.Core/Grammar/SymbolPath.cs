@@ -8,6 +8,10 @@ namespace Axis.Pulsar.Core.Grammar
         IDefaultValueProvider<SymbolPath>
     {
         private readonly string _symbol;
+
+        /// <summary>
+        /// Using an object to avoid the struct limitation of cyclic references
+        /// </summary>
         private readonly object? _parentSymbol;
 
         public string Symbol => _symbol;
@@ -15,7 +19,7 @@ namespace Axis.Pulsar.Core.Grammar
         public SymbolPath? Parent => _parentSymbol switch
         {
             SymbolPath sp => sp,
-            _ => null!
+            _ => (SymbolPath?)null!
         };
 
         #region DefaultProvider
@@ -26,13 +30,15 @@ namespace Axis.Pulsar.Core.Grammar
 
         public SymbolPath(string symbol, SymbolPath? parentSymbol)
         {
-            _symbol = symbol ?? throw new ArgumentNullException(nameof(symbol));
+            ArgumentNullException.ThrowIfNull(symbol);
+
+            _symbol = symbol;
             _parentSymbol = parentSymbol switch
             {
-                null => null!,
+                null => (object) null!,
                 SymbolPath parent => parent.IsDefault switch
                 {
-                    true => null!,
+                    true => (object) null!,
                     _ => parent
                 }
             };
@@ -87,23 +93,20 @@ namespace Axis.Pulsar.Core.Grammar
             if (!TryParse(path, out var ppath))
                 throw new FormatException($"Invalid path format: '{path}'");
 
-            return ppath;
+            return ppath!.Value;
         }
 
-        public static bool TryParse(string path, out SymbolPath symbolPath)
+        public static bool TryParse(string path, out SymbolPath? symbolPath)
         {
             symbolPath = path switch
             {
-                null => SymbolPath.Default,
+                null => default(SymbolPath?),
                 _ => path
-                    .ThrowIf(
-                        string.IsNullOrEmpty,
-                        _ => new ArgumentException($"Invalid path: null/empty"))
                     .Split('/')
                     .Select(s => s.Trim())
                     .Aggregate(default(SymbolPath), (path, name) => path.Next(name))
             };
-            return true;
+            return symbolPath != null;
         }
     }
 }

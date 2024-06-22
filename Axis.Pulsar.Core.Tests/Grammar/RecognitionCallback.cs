@@ -5,15 +5,15 @@ using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Tests.Grammar
 {
-    internal delegate bool TryRecognizeNode(
+    internal delegate bool NodeRecognition(
         TokenReader reader,
         SymbolPath path,
         ILanguageContext context,
         out NodeRecognitionResult result);
 
-    internal delegate bool TryRecognizeNodeSequence(
+    internal delegate bool AggregateRecognition(
         TokenReader reader,
         SymbolPath path,
         ILanguageContext context,
-        out SymbolAggregationResult result);
+        out NodeAggregationResult result);
 }

@@ -8,7 +8,7 @@ namespace Axis.Pulsar.Core.Grammar.Results
     using PartialError = PartialRecognitionError;
 
     public readonly struct NodeRecognitionResult :
-        INodeRecognitionResultBase<ISymbolNode, NodeRecognitionResult>,
+        INodeRecognitionResult<ISymbolNode, NodeRecognitionResult>,
         IUnionOf<ISymbolNode, FailedError, PartialError, NodeRecognitionResult>
     {
         private readonly object? _value;
@@ -17,18 +17,14 @@ namespace Axis.Pulsar.Core.Grammar.Results
 
         #region Construction
 
+        /// <summary>
+        /// This method expects the Of(...) methods to never pass in a value that is not
+        /// an ISymbolNode, FailedError, or PartialError.
+        /// </summary>
+        /// <param name="value"></param>
         private NodeRecognitionResult(object value)
         {
-            _value = value switch
-            {
-                null => null,
-                FailedError 
-                or PartialError
-                or ISymbolNode => value,
-                _ => throw new ArgumentOutOfRangeException(
-                    nameof(value),
-                    $"Invalid {nameof(value)} type: '{value.GetType()}'")
-            };
+            _value = value;
         }
 
         /// <summary>
@@ -40,7 +36,7 @@ namespace Axis.Pulsar.Core.Grammar.Results
         public static NodeRecognitionResult Of(ISymbolNode value) => value switch
         {
             null => throw new ArgumentNullException(nameof(value)),
-            _ => new(value)
+            _ => new(value!)
         };
 
         public static NodeRecognitionResult Of(FailedError value) => new(value);
@@ -86,6 +82,17 @@ namespace Axis.Pulsar.Core.Grammar.Results
 
         public bool IsNull() => _value is null;
 
+        #region Map
+        public TOut Map<TIn, TOut>(Func<TIn, TOut> seqFunc)
+        {
+            ArgumentNullException.ThrowIfNull(seqFunc);
+
+            if (_value is TIn @in)
+                return seqFunc.Invoke(@in);
+
+            throw new InvalidOperationException($"Invalid map operation");
+        }
+
         public TOut MapMatch<TOut>(
             Func<ISymbolNode, TOut> nodeMapper,
             Func<FailedError, TOut> failedErrorMapper,
@@ -102,8 +109,8 @@ namespace Axis.Pulsar.Core.Grammar.Results
             if (_value is FailedError t2)
                 return failedErrorMapper.Invoke(t2);
 
-            if (_value is PartialError t3)
-                return partialErrorMapper.Invoke(t3);
+            if (_value is PartialError t4)
+                return partialErrorMapper.Invoke(t4);
 
             // unknown type, assume null
             return nullMapper switch
@@ -111,6 +118,18 @@ namespace Axis.Pulsar.Core.Grammar.Results
                 null => default!,
                 _ => nullMapper.Invoke()
             };
+        }
+        #endregion
+
+        #region Consume
+        public void Consume<TIn>(Action<TIn> seqFunc)
+        {
+            ArgumentNullException.ThrowIfNull(seqFunc);
+
+            if (_value is TIn @in)
+                seqFunc.Invoke(@in);
+            else
+                throw new InvalidOperationException($"Invalid consume operation");
         }
 
         public void ConsumeMatch(
@@ -129,11 +148,26 @@ namespace Axis.Pulsar.Core.Grammar.Results
             else if (_value is FailedError t2)
                 failedErrorConsumer.Invoke(t2);
 
-            else if (_value is PartialError t3)
-                partialErrorConsumer.Invoke(t3);
+            else if (_value is PartialError t4)
+                partialErrorConsumer.Invoke(t4);
 
-            else if (_value is null && nullConsumer is not null)
+            else if (nullConsumer is not null)
                 nullConsumer.Invoke();
+        }
+        #endregion
+
+        #region With
+        public TIn With<TIn>(Action<TIn> seqFunc)
+        {
+            ArgumentNullException.ThrowIfNull(seqFunc);
+
+            if (_value is TIn @in)
+            {
+                seqFunc.Invoke(@in);
+                return @in;
+            }
+            else
+                throw new InvalidOperationException($"Invalid consume operation");
         }
 
         public NodeRecognitionResult WithMatch(
@@ -142,38 +176,19 @@ namespace Axis.Pulsar.Core.Grammar.Results
             Action<PartialError> partialErrorConsumer,
             Action? nullConsumer = null!)
         {
-            ConsumeMatch(nodeConsumer, failedErrorConsumer, partialErrorConsumer, nullConsumer);
+            ConsumeMatch(
+                nodeConsumer,
+                failedErrorConsumer,
+                partialErrorConsumer,
+                nullConsumer);
+
             return this;
-        }
-
-        #region Map
-        public TOut Map<TIn, TOut>(Func<TIn, TOut> seqFunc)
-        {
-            ArgumentNullException.ThrowIfNull(seqFunc);
-
-            if (_value is TIn @in)
-                return seqFunc.Invoke(@in);
-
-            throw new InvalidOperationException($"Invalid map operation");
-        }
-        #endregion
-
-        #region Consume
-        public void Consume<TIn>(Action<TIn> seqFunc)
-        {
-            ArgumentNullException.ThrowIfNull(seqFunc);
-
-            if (_value is TIn @in)
-                seqFunc.Invoke(@in);
-            else
-                throw new InvalidOperationException($"Invalid consume operation");
         }
         #endregion
 
         #region Get
         public TOut Get<TOut>()
         {
-
             if (_value is TOut @out)
                 return @out;
             else

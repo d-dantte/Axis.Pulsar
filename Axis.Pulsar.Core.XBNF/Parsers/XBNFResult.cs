@@ -8,7 +8,7 @@ namespace Axis.Pulsar.Core.XBNF.Parsers
     using PartialError = PartialRecognitionError;
 
     internal class XBNFResult<TResult> :
-        INodeRecognitionResultBase<TResult, XBNFResult<TResult>>,
+        INodeRecognitionResult<TResult, XBNFResult<TResult>>,
         IUnionOf<TResult, FailedError, PartialError, XBNFResult<TResult>>
     {
         private readonly object? _value;

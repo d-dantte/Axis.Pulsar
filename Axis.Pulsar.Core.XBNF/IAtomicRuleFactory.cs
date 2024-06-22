@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 using Axis.Luna.Common;
 using Axis.Luna.Common.StringEscape;
 using Axis.Luna.Extensions;
-using Axis.Pulsar.Core.Grammar.Atomic;
+using Axis.Pulsar.Core.Grammar.Rules.Atomic;
 using Axis.Pulsar.Core.XBNF.Lang;
 
 namespace Axis.Pulsar.Core.XBNF;

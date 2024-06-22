@@ -1,12 +1,16 @@
-﻿using Axis.Pulsar.Core.Grammar.Composite;
-using Axis.Pulsar.Core.Grammar.Atomic;
-using System.Collections.Immutable;
-using Axis.Pulsar.Core.Grammar.Composite.Group;
+﻿using System.Collections.Immutable;
+using System.Data;
+using System.Text;
 using Axis.Luna.Extensions;
+using Axis.Pulsar.Core.Grammar.Rules;
+using Axis.Pulsar.Core.Grammar.Rules.Aggregate;
+using Axis.Pulsar.Core.Grammar.Rules.Atomic;
+using Axis.Pulsar.Core.Grammar.Rules.Composite;
+using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar
 {
-    public static class GrammarValidator
+    public static class GrammarValidator__old
     {
         public static ValidationResult Validate(IGrammar grammar)
         {
@@ -45,7 +49,7 @@ namespace Axis.Pulsar.Core.Grammar
         }
 
         private static void TraverseRule(
-            IRule rule,
+            Production.IRule rule,
             TraversalContext context,
             out bool isLeftTerminated)
         {
@@ -60,7 +64,7 @@ namespace Axis.Pulsar.Core.Grammar
         }
 
         private static void TraverseElement(
-            IAggregationElementRule element,
+            IAggregationElement element,
             TraversalContext context,
             out bool isLeftTerminated)
         {
@@ -225,6 +229,420 @@ namespace Axis.Pulsar.Core.Grammar
                 && UnreferencedProductions.IsEmpty;
         }
 
+        #endregion
+    }
+
+    public static class GrammarValidator
+    {
+        public static ValidationResult ValidateGrammar(IGrammar grammar)
+        {
+            var context = new ValidationContext(grammar);
+
+            TraverseProduction(grammar.GetProduction(grammar.Root), context);
+
+            var splitSets = grammar.ProductionSymbols
+                .ToHashSet()
+                .SplitSets(context.Symbols);
+
+            return new ValidationResult(
+                splitSets.intersection,
+                splitSets.distinctLeft,
+                context.UnresolvableProductions,
+                splitSets.distinctRight);
+        }
+
+        public static void TraverseProduction(Production production, ValidationContext context)
+        {
+            ArgumentNullException.ThrowIfNull(production);
+            ArgumentNullException.ThrowIfNull(context);
+
+            // Check for infinite recursion: for every production ref, ensure that the production node for the ref isn't already in the stack
+            if (HasNonHaltingProductionLoop(production, context))
+            {
+                // report infinite loop validation error, and traverse no further
+                context.UnresolvableProductions.Add(NodeStack.ProductionRefKeyFor(production.Symbol));
+                return;
+            }
+
+            // No infinite recursion detected.
+            else
+            {
+                context.TraversalStack.Push(new ProductionNode(production));
+                context.Symbols.Add(NodeStack.ProductionKeyFor(production.Symbol));
+
+                if (production.Rule is IAtomicRule atomicRule)
+                    TraverseAtomicRule(atomicRule, context);
+
+                else if (production.Rule is CompositeRule compositeRule)
+                    TraverseAggregationElementRule(0, compositeRule.Element, context);
+
+                else throw new InvalidOperationException(
+                    $"Invalid rule [type: {production.Rule!.GetType()}, path: {context.TraversalStack.SymbolPath}]");
+
+                context.TraversalStack.Pop();
+            }
+        }
+
+        public static void TraverseAtomicRule(IAtomicRule rule, ValidationContext context)
+        {
+            ArgumentNullException.ThrowIfNull(rule);
+            ArgumentNullException.ThrowIfNull(context);
+
+            context.Symbols.Add(NodeStack.AtomicKeyFor(rule.Id));
+        }
+
+        public static void TraverseAggregationElementRule(int index, IAggregationElement rule, ValidationContext context)
+        {
+            ArgumentNullException.ThrowIfNull(rule);
+            ArgumentNullException.ThrowIfNull(context);
+
+            context.TraversalStack.Push(new AggregateRuleNode(index, rule));
+
+            if (rule is ProductionRef productionRef)
+                TraverseProduction(context.Grammar.GetProduction(productionRef.Ref), context);
+
+            else if (rule is AtomicRuleRef atomicRef)
+                TraverseAtomicRule(atomicRef.Ref, context);
+
+            else if (rule is Repetition repetition)
+                TraverseAggregationElementRule(0, repetition.Element, context);
+
+            else TraverseAggregationRule(rule.As<IAggregation>(), context);
+
+            context.TraversalStack.Pop();
+        }
+
+        public static void TraverseAggregationRule(IAggregation rule, ValidationContext context)
+        {
+            ArgumentNullException.ThrowIfNull(rule);
+            ArgumentNullException.ThrowIfNull(context);
+
+            rule.Elements.ForEvery((index, element) =>
+            {
+                TraverseAggregationElementRule((int)index, element, context);
+            });
+        }
+
+        /// <summary>
+        /// Detects infinite recursion in symbol-graph
+        /// </summary>
+        public static bool HasNonHaltingProductionLoop(Production production, ValidationContext context)
+        {
+            var haltingLoopDetected = false;
+
+            // 1. Find any previous productions nodes with the same symbol
+            var productionKey = NodeStack.ProductionKeyFor(production.Symbol);
+            if (context.TraversalStack.TryPeek(productionKey, out var productionIndices))
+            {
+                // indicates that a loop halting condition is detected
+                var lastProductionIndex = productionIndices[^1];
+
+                // 2. Find any choice after the last production, whose child has an index >= 1
+                if (context.TraversalStack.TryPeek(NodeStack.ChoiceAggregation, out var choiceIndices))
+                {
+                    foreach(var choiceIndex in choiceIndices)
+                    {
+                        if (choiceIndex < lastProductionIndex)
+                            continue;
+
+                        if (context.TraversalStack.Peek(choiceIndex + 1).Index > 0)
+                        {
+                            // infinite loop averted
+                            haltingLoopDetected = true;
+                            break;
+                        }
+                    }
+                }
+
+                // 3. Find any repetition after the last production, that is optional
+                if (!haltingLoopDetected
+                    && context.TraversalStack.TryPeek(NodeStack.RepetitionAggregation, out var repetitionIndices))
+                {
+                    foreach (var repetitionIndex in repetitionIndices)
+                    {
+                        if (repetitionIndex < lastProductionIndex)
+                            continue;
+
+                        var repetition = context.TraversalStack
+                            .Peek(repetitionIndex)
+                            .As<AggregateRuleNode>().Rule
+                            .As<Repetition>();
+
+                        if (repetition.Cardinality.IsZeroMinOccurence)
+                        {
+                            // infinite loop averted
+                            haltingLoopDetected = true;
+                            break;
+                        }
+                    }
+                }
+
+                return !haltingLoopDetected;
+            }
+
+            return false;
+        }
+
+        #region Nested types
+        public class ValidationContext
+        {
+            /// <summary>
+            /// All refs encountered in the grammar
+            /// </summary>
+            public HashSet<string> Symbols { get; } = [];
+
+            /// <summary>
+            /// Productions for whom resolution results in an infinite loop.
+            /// </summary>
+            public HashSet<string> UnresolvableProductions { get; } = [];
+
+            public NodeStack TraversalStack { get; } = new();
+
+            public IGrammar Grammar { get; }
+
+            public ValidationContext(IGrammar grammar)
+            {
+                ArgumentNullException.ThrowIfNull(grammar);
+
+                Grammar = grammar;
+            }
+
+            internal ValidationContext Clear()
+            {
+                Symbols.Clear();
+                UnresolvableProductions.Clear();
+                TraversalStack.Clear();
+                return this;
+            }
+        }
+
+        public class ValidationResult
+        {
+            public ImmutableHashSet<string> HealthyRefs { get; }
+
+            /// <summary>
+            /// Productions that have no refs pointing to them that can be resolved from the root symbol.
+            /// </summary>
+            public ImmutableHashSet<string> UnreferencedProductions { get; }
+
+            /// <summary>
+            /// Productions for whom resolution results in an infinite loop.
+            /// </summary>
+            public ImmutableHashSet<string> UnresolvableProductions { get; }
+
+            /// <summary>
+            /// Production Refs that point to no production in the grammar
+            /// </summary>
+            public ImmutableHashSet<string> UnresolvedSymbolRefs { get; }
+
+            public bool IsValid =>
+                UnreferencedProductions.IsEmpty
+                && UnresolvedSymbolRefs.IsEmpty
+                && UnresolvableProductions.IsEmpty;
+
+            public ValidationResult(
+                IEnumerable<string> healthyRefs,
+                IEnumerable<string> unreferencedProductions,
+                IEnumerable<string> unresolvableProductions,
+                IEnumerable<string> unresolvedSymbolRefs)
+            {
+                ArgumentNullException.ThrowIfNull(healthyRefs);
+                ArgumentNullException.ThrowIfNull(unreferencedProductions);
+                ArgumentNullException.ThrowIfNull(unresolvableProductions);
+                ArgumentNullException.ThrowIfNull(unresolvedSymbolRefs);
+
+                HealthyRefs = healthyRefs.ToImmutableHashSet();
+                UnreferencedProductions = unreferencedProductions.ToImmutableHashSet();
+                UnresolvableProductions = unresolvableProductions.ToImmutableHashSet();
+                UnresolvedSymbolRefs = unresolvedSymbolRefs.ToImmutableHashSet();
+            }
+        }
+
+        public interface INode
+        {
+            int Index { get; }
+        }
+
+        public class ProductionNode : INode
+        {
+            public int Index => 0;
+
+            public Production Production { get; }
+
+            public ProductionNode(Production production)
+            {
+                ArgumentNullException.ThrowIfNull(production);
+                Production = production;
+            }
+        }
+
+        public class ProductionRuleNode: INode
+        {
+            public int Index => 0;
+
+            public Production.IRule Rule { get; }
+
+            public ProductionRuleNode(Production.IRule rule)
+            {
+                ArgumentNullException.ThrowIfNull(rule);
+
+                Rule = rule;
+            }
+        }
+
+        public class AggregateRuleNode: INode
+        {
+            public int Index { get; }
+
+            public IAggregationElement Rule { get; }
+
+            public AggregateRuleNode(int index, IAggregationElement rule)
+            {
+                ArgumentNullException.ThrowIfNull(rule);
+
+                Rule = rule;
+                Index = index.ThrowIf(
+                    i => i < 0,
+                    _ => new ArgumentOutOfRangeException(nameof(index)));
+            }
+        }
+
+        public class NodeStack
+        {
+            private readonly List<INode> nodes = [];
+            private readonly Dictionary<string, List<int>> symbolIndexMap = [];
+
+            public static readonly string ProductionPrefix = "$";
+            public static readonly string RefPrefix = "#";
+            public static readonly string AtomicPrefix = "@";
+            public static readonly string ChoiceAggregation = "Choice";
+            public static readonly string SequenceAggregation = "Sequence";
+            public static readonly string SetAggregation = "Set";
+            public static readonly string RepetitionAggregation = "Repetition";
+
+            public int Count => nodes.Count;
+            public string SymbolPath
+            {
+                get
+                {
+                    return nodes
+                        .Aggregate(
+                            new StringBuilder(),
+                            (sb, node) => sb.Append('/').Append(NodeStack.NodeString(node)))
+                        .ToString();
+                }
+            }
+
+            public NodeStack Push(INode node)
+            {
+                ArgumentNullException.ThrowIfNull(node);
+
+                nodes.Add(node);
+
+                var key = EvaluateNodeKey(node);
+                var list = symbolIndexMap.GetOrAdd(key, _ => []);
+                list.Add(nodes.Count - 1);
+
+                return this;
+            }
+
+            public NodeStack Pop()
+            {
+                if (nodes.Count == 0)
+                    return this;
+
+                var key = EvaluateNodeKey(nodes[^1]);
+                var list = symbolIndexMap[key];
+                list.RemoveAt(list.Count - 1);
+                if (list.IsEmpty())
+                    symbolIndexMap.Remove(key);
+
+                nodes.RemoveAt(nodes.Count - 1);
+
+                return this;
+            }
+
+            public NodeStack Clear()
+            {
+                nodes.Clear();
+                symbolIndexMap.Clear();
+                return this;
+            }
+
+            public INode Peek(int index)
+            {
+                return nodes[index];
+            }
+
+            public ImmutableArray<int>? Peek(string nodeKey)
+            {
+                if (symbolIndexMap.TryGetValue(nodeKey, out var list))
+                    return [.. list];
+
+                else return null;
+            }
+
+            public bool TryPeek(string nodeKey, out ImmutableArray<int> indices)
+            {
+                var result = Peek(nodeKey);
+
+                if (result is null)
+                {
+                    indices = default;
+                    return false;
+                }
+                else
+                {
+                    indices = result.Value;
+                    return true;
+                }
+            }
+
+
+            public static string EvaluateNodeKey(INode node)
+            {
+                return node switch
+                {
+                    ProductionNode pnode => ProductionKeyFor(pnode.Production.Symbol),
+                    ProductionRuleNode prnode => AtomicRefKeyFor(prnode.Rule.As<IAtomicRule>().Id),
+                    AggregateRuleNode arnode => arnode.Rule switch
+                    {
+                        Set => SetAggregation,
+                        Choice => ChoiceAggregation,
+                        Sequence => SequenceAggregation,
+                        Repetition => RepetitionAggregation,
+
+                        ProductionRef pref => ProductionRefKeyFor(pref.Ref),
+                        AtomicRuleRef arref => AtomicRefKeyFor(arref.Ref.Id),
+
+                        _ => throw new InvalidOperationException(
+                            $"Invalid aggregation: {arnode.Rule.GetType()}")
+                    },
+                    _ => throw new InvalidOperationException(
+                        $"Invalid node: {node.GetType()}")
+                };
+            }
+
+            public static string ProductionRefKeyFor(
+                string symbol)
+                => $"{RefPrefix}{ProductionPrefix}{symbol}";
+
+            public static string AtomicRefKeyFor(
+                string symbol)
+                => $"{RefPrefix}{AtomicPrefix}{symbol}";
+
+            public static string AtomicKeyFor(
+                string symbol)
+                => $"{AtomicPrefix}{symbol}";
+
+            public static string ProductionKeyFor(
+                string symbol)
+                => $"{ProductionPrefix}{symbol}";
+
+            public static string NodeString(
+                INode node)
+                => $"{EvaluateNodeKey(node)}{{{node.Index}}}";
+        }
         #endregion
     }
 }

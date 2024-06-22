@@ -14,6 +14,70 @@ namespace Axis.Pulsar.Core.Tests.Utils
             Assert.AreEqual(source, reader.Source);
             Assert.AreEqual(0, reader.Position);
             Assert.IsFalse(reader.IsConsumed);
+
+            Assert.ThrowsException<ArgumentNullException>(
+                () => new TokenReader(null!));
+        }
+
+        [TestMethod]
+        public void GetTokens_Tests()
+        {
+            var reader = new TokenReader("tokens");
+            var tokens = reader.GetToken();
+
+            Assert.AreEqual<Tokens>("t", tokens);
+        }
+
+        [TestMethod]
+        public void TryGetTokens_Tests()
+        {
+            var reader = new TokenReader("tokens");
+
+            Assert.IsTrue(reader.TryGetTokens(Tokens.Of("tok"), out var tokens));
+            Assert.AreEqual<Tokens>("tok", tokens);
+
+            Assert.IsFalse(reader.TryGetTokens(Tokens.Of("bleh"), out tokens));
+            Assert.AreEqual<Tokens>("ens", tokens);
+        }
+
+        [TestMethod]
+        public void PeekTokens_Tests()
+        {
+            var reader = new TokenReader("tokens");
+            var tokens = reader.PeekTokens(3, false);
+            Assert.AreEqual<Tokens>("tok", tokens);
+
+            tokens = reader.PeekToken();
+            Assert.AreEqual<Tokens>("t", tokens);
+
+            Assert.ThrowsException<EndOfStreamException>(
+                () => reader.PeekTokens(30, true));
+
+            Assert.ThrowsException<ArgumentException>(
+                () => reader.TryPeekTokens("", out tokens));
+        }
+
+        [TestMethod]
+        public void TryPeekTokens_Tests()
+        {
+            var reader = new TokenReader("tokens");
+
+            Assert.ThrowsException<ArgumentException>(
+                () => reader.TryPeekTokens(Tokens.Default, out var tokens));
+
+            Assert.IsTrue(reader.TryPeekTokens(Tokens.Of("tok"), out var tokens));
+            Assert.AreEqual<Tokens>("tok", tokens);
+            Assert.IsFalse(reader.TryPeekTokens(Tokens.Of("ble"), out tokens));
+            Assert.IsFalse(reader.TryPeekTokens(Tokens.Of("blehritorious"), out tokens));
+        }
+
+        [TestMethod]
+        public void TryPeekTokensCount_Tests()
+        {
+            var reader = new TokenReader("tokens");
+
+            Assert.ThrowsException<ArgumentOutOfRangeException>(
+                () => reader.TryPeekTokens(-1, true, out var tokens));
         }
 
         [TestMethod]
@@ -122,6 +186,24 @@ namespace Axis.Pulsar.Core.Tests.Utils
 
             reader.Reset(2);
             Assert.AreEqual(2, reader.Position);
+        }
+
+        [TestMethod]
+        public void Advance_Tests()
+        {
+            var reader = new TokenReader("something");
+
+            Assert.ThrowsException<ArgumentOutOfRangeException>(
+                () => reader.Advance(-1));
+
+            Assert.ThrowsException<InvalidOperationException>(
+                () => reader.Advance(100));
+
+            _ = reader.Advance(2);
+            Assert.AreEqual(2, reader.Position);
+
+            _ = reader.Advance();
+            Assert.AreEqual(3, reader.Position);
         }
 
         [GeneratedRegex("[a-zA-Z]{1,3}")]

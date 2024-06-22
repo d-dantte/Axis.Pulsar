@@ -1,5 +1,5 @@
 ﻿using Axis.Luna.Extensions;
-using Axis.Pulsar.Core.Grammar;
+using Axis.Pulsar.Core.Grammar.Rules;
 using System.Collections.Immutable;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 

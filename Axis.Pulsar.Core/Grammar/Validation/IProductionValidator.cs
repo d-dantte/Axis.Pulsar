@@ -12,14 +12,12 @@ namespace Axis.Pulsar.Core.Grammar.Validation
         /// Validates the SUCCESSFULLY recognized tokens of the given production symbol, passed in as
         /// a <see cref="ISymbolNode"/>. The idea is, after a production is SUCCESSFULLY processed,
         /// the <see cref="ISymbolNode"/> instance is passed into the designated validator.
-        /// <para/>
-        /// Validation fails if any exception is thrown from this method, or passes otherwise.
-        /// <para/>
         /// </summary>
         /// <param name="symbolPath"></param>
         /// <param name="context"></param>
         /// <param name="recogniedNode"></param>
-        void Validate(
+        /// <returns>True if the symbol is valid, false otherwise</returns>
+        Status Validate(
             SymbolPath symbolPath,
             ILanguageContext context,
             ISymbolNode recogniedNode);

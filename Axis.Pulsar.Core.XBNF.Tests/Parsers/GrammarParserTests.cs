@@ -1,8 +1,6 @@
 ﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.CST;
 using Axis.Pulsar.Core.Grammar;
-using Axis.Pulsar.Core.Grammar.Composite;
-using Axis.Pulsar.Core.Grammar.Atomic;
 using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
@@ -13,8 +11,11 @@ using Axis.Pulsar.Core.XBNF.Parsers.Models;
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
-using Axis.Pulsar.Core.Grammar.Composite.Group;
 using Axis.Pulsar.Core.Grammar.Errors;
+using Axis.Pulsar.Core.Grammar.Rules.Aggregate;
+using Axis.Pulsar.Core.Grammar.Rules.Atomic;
+using Axis.Pulsar.Core.Grammar.Rules.Composite;
+using Axis.Pulsar.Core.Grammar.Rules;
 
 namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 {
@@ -869,7 +870,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.Is(out IAggregationElementRule element));
+            Assert.IsTrue(result.Is(out IAggregationElement element));
             Assert.AreEqual(Cardinality.OccursOnlyOnce(), element.Cardinality);
             Assert.IsInstanceOfType<AtomicRuleRef>(element);
 
@@ -902,7 +903,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.Is(out IAggregationElementRule[] options));
+            Assert.IsTrue(result.Is(out IAggregationElement[] options));
             Assert.AreEqual(2, options.Length);
 
 
@@ -935,7 +936,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.Is(out IAggregationElementRule[] elements));
+            Assert.IsTrue(result.Is(out IAggregationElement[] elements));
             Assert.AreEqual(0, elements.Length);
         }
 
@@ -1072,7 +1073,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.Is(out IAggregationRule group));
+            Assert.IsTrue(result.Is(out IAggregation group));
             Assert.IsInstanceOfType<Set>(group);
 
             success = GrammarParser.TryParseGroup(
