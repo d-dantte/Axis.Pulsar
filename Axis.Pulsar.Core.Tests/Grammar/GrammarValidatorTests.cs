@@ -14,7 +14,6 @@ namespace Axis.Pulsar.Core.Tests.Grammar
     [TestClass]
     public class GrammarValidatorTests
     {
-
         [TestMethod]
         public void TraverseAtomicRule_Tests()
         {
@@ -392,6 +391,8 @@ namespace Axis.Pulsar.Core.Tests.Grammar
 
             Assert.ThrowsException<ArgumentOutOfRangeException>(
                 () => new AggregateRuleNode(-1, @ref));
+
+            Assert.AreEqual("Node.#$bleh", node.ToString());
         }
 
         [TestMethod]
@@ -402,6 +403,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar
             Assert.IsNotNull(node);
             Assert.AreEqual(0, node.Index);
             Assert.AreEqual(rule, node.Rule);
+            Assert.AreEqual("Node.@bleh", node.ToString());
         }
 
         [TestMethod]
@@ -413,7 +415,77 @@ namespace Axis.Pulsar.Core.Tests.Grammar
             Assert.IsNotNull(node);
             Assert.AreEqual(0, node.Index);
             Assert.AreEqual(prod, node.Production);
+            Assert.AreEqual("Node.$sss", node.ToString());
         }
+
+        [TestMethod]
+        public void ToString_WithProduction_Tests()
+        {
+            var prod = new Production("abc", new FauxRule());
+            Assert.AreEqual("Node.$abc", INode.ToString(prod));
+        }
+
+        [TestMethod]
+        public void ToString_WithProductionRule_Tests()
+        {
+            var atomic = new TerminalLiteral("abc", "def");
+            var composite = new CompositeRule(null, new AtomicRuleRef(atomic));
+            var fake = new FauxRule();
+
+            Assert.AreEqual("Node.@abc", INode.ToString(atomic));
+            Assert.AreEqual("Node.#@abc", INode.ToString(composite));
+            Assert.ThrowsException<InvalidOperationException>(
+                () => INode.ToString(fake));
+        }
+
+        [TestMethod]
+        public void ToString_With_AggregateElement_Tests()
+        {
+            var atomicRef = new AtomicRuleRef(new TerminalLiteral("abc", "def"));
+
+            IAggregationElement elt = new Set(atomicRef);
+            Assert.AreEqual("Node.Set", INode.ToString(elt));
+
+            elt = new Choice(atomicRef);
+            Assert.AreEqual("Node.Choice", INode.ToString(elt));
+
+            elt = new Sequence(atomicRef);
+            Assert.AreEqual("Node.Sequence", INode.ToString(elt));
+
+            elt = new Repetition(Cardinality.OccursOnlyOnce(), atomicRef);
+            Assert.AreEqual("Node.Repetition", INode.ToString(elt));
+
+            elt = atomicRef;
+            Assert.AreEqual("Node.#@abc", INode.ToString(elt));
+
+            elt = new ProductionRef("xyz");
+            Assert.AreEqual("Node.#$xyz", INode.ToString(elt));
+
+            Assert.ThrowsException<InvalidOperationException>(
+                () => INode.ToString(new FauxElement()));
+
+            Assert.ThrowsException<InvalidOperationException>(
+                () => INode.ToString(default(IAggregationElement)!));
+        }
+
+        internal class FauxRule : Production.IRule
+        {
+            public bool TryRecognize(TokenReader reader, SymbolPath symbolPath, ILanguageContext context, out NodeRecognitionResult result)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        internal class FauxElement : IAggregationElement
+        {
+            public AggregationType Type => AggregationType.Unit;
+
+            public bool TryRecognize(TokenReader reader, SymbolPath symbolPath, ILanguageContext context, out NodeAggregationResult result)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
     }
 
     [TestClass]

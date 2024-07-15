@@ -240,11 +240,11 @@ $string-value-exp -> ?[
 		$block-space.? ")"
 	]
 ]
-$string-constant-exp -> @DelimitedString{
+$string-constant-exp -> @DelimitedContent{
 	start: '"',
 	end: '"',
-	ranges: '^\n, ^\r',
-	escaped-delimiter: '\"'
+	end-escape: '\\"',
+	content-rule: 'icr: \n, \r'
 }
 $string-character-exp -> :3 +[
 	$string-value-exp
@@ -519,11 +519,11 @@ $attribute-set-access-exp -> :2 +[
 $attribute-identifier -> /^[a-zA-Z]([a-zA-Z0-9-_])*$/{
 	match-type: '1,+'
 }
-$attribute-name -> @delimited-string{
+$attribute-name -> @delimited-content{
 	start: '\'',
 	end: '\'',
-	ranges: '^\n, ^\r',
-	escaped-delimiter: '\\''
+	end-escape: '\\'',
+	content-rule: 'icr: \n, \r'
 }
 
 

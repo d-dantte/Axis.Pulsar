@@ -110,9 +110,7 @@ internal static class GrammarParser
             prods => XBNFGrammar
                 .Of(prods[0].Symbol, prods)
                 .ApplyTo(XBNFResult<IGrammar>.Of),
-            (fre, prods) => XBNFGrammar
-                .Of(prods[0].Symbol, prods)
-                .ApplyTo(XBNFResult<IGrammar>.Of),
+            (fre, prods) => XBNFResult<IGrammar>.Of(fre),
             (pre, prods) => XBNFResult<IGrammar>.Of(pre));
 
         if (!result.Is(out IGrammar _))
@@ -135,8 +133,8 @@ internal static class GrammarParser
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, productionPath, context);
 
         var accummulator = NodeRecognitionAccumulator
-            .Of<KeyValuePair<string, IRule>, SymbolPath, ParserContext>(
-                KeyValuePair.Create<string, IRule>(null!, null!))
+            .Of<KeyValuePair<string, Production.IRule>, SymbolPath, ParserContext>(
+                KeyValuePair.Create<string, Production.IRule>(null!, null!))
 
             // symbol name
             .ThenTry<string, XBNFResult<string>>(
@@ -166,7 +164,7 @@ internal static class GrammarParser
             .ThenTry<CompositeRule, XBNFResult<CompositeRule>>(
                 TryParseCompositeRule,
                 accumulatorArgs,
-                (kvp, rule) => kvp.Key.ValuePair((IRule)rule));
+                (kvp, rule) => kvp.Key.ValuePair((Production.IRule)rule));
 
         result = accummulator.MapAll(
             prod => Production
@@ -306,7 +304,7 @@ internal static class GrammarParser
         var compositeRulePath = path.Next("composite-rule");
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, compositeRulePath, context);
 
-        result = NodeRecognitionAccumulator
+        var accumulator = NodeRecognitionAccumulator
             .Of<KeyValuePair<uint?, IAggregationElement>, SymbolPath, ParserContext>(
                 KeyValuePair.Create(default(uint?), default(IAggregationElement)!))
 
@@ -321,14 +319,14 @@ internal static class GrammarParser
             .ThenTry<IAggregationElement, XBNFResult<IAggregationElement>>(
                 TryParseGroupElement,
                 accumulatorArgs,
-                (kvp, element) => kvp.Key.ValuePair(element))
+                (kvp, element) => kvp.Key.ValuePair(element));
 
-            .MapAll(
-                kvp => CompositeRule
-                    .Of(kvp.Key, kvp.Value)
-                    .ApplyTo(XBNFResult<CompositeRule>.Of),
-                (fre, d) => XBNFResult<CompositeRule>.Of(fre),
-                (pre, d) => XBNFResult<CompositeRule>.Of(pre));
+        result = accumulator.MapAll(
+            kvp => CompositeRule
+                .Of(kvp.Key, kvp.Value)
+                .ApplyTo(XBNFResult<CompositeRule>.Of),
+            (fre, d) => XBNFResult<CompositeRule>.Of(fre),
+            (pre, d) => XBNFResult<CompositeRule>.Of(pre));
 
         if (!result.Is(out CompositeRule _))
         {
@@ -367,7 +365,8 @@ internal static class GrammarParser
             return false;
         }
 
-        if (!TryParseSilentBlock(reader, thresholdPath, context, out _))
+        // mandatory whitespace
+        if (!TryParseWhitespace(reader, thresholdPath, context, out _))
         {
             result = XBNFResult<uint>.Of(PartialRecognitionError.Of(
                 thresholdPath,
@@ -376,6 +375,9 @@ internal static class GrammarParser
             reader.Reset(position);
             return false;
         }
+
+        // optional silent block
+        _ = TryParseSilentBlock(reader, thresholdPath, context, out _);
 
         result = uint
             .Parse(digitTokens.AsSpan())
@@ -394,29 +396,30 @@ internal static class GrammarParser
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, elementPath, context);
 
         result = NodeRecognitionAccumulator
-            .Of<IAggregationElement, SymbolPath, ParserContext>(default!)
+            .Of<(IAggregationElement element, Cardinality cardinality), SymbolPath, ParserContext>(default!)
 
             // atomic rule ref
-            .ThenTry<AtomicRuleRef, XBNFResult<AtomicRuleRef>>(
+            .ThenTry<(AtomicRuleRef, Cardinality), XBNFResult<(AtomicRuleRef, Cardinality)>>(
                 TryParseAtomicRuleRef,
                 accumulatorArgs,
                 (_, ruleRef) => ruleRef)
 
             // production ref
-            .OrTry<ProductionRef, XBNFResult<ProductionRef>>(
+            .OrTry<(ProductionRef, Cardinality), XBNFResult<(ProductionRef, Cardinality)>>(
                 TryParseProductionRef,
                 accumulatorArgs,
                 (_, prodRef) => prodRef)
 
             // group
-            .OrTry<IAggregation, XBNFResult<IAggregation>>(
-                TryParseGroup,
+            .OrTry<(IAggregation, Cardinality), XBNFResult<(IAggregation, Cardinality)>>(
+                TryParseAggregation,
                 accumulatorArgs,
                 (_, group) => group)
 
             // map
             .MapAll(
-                XBNFResult<IAggregationElement>.Of,
+                data => CreateRepetitionElement(data.cardinality, data.element)
+                    .ApplyTo(XBNFResult<IAggregationElement>.Of),
                 (fre, _) => XBNFResult<IAggregationElement>.Of(fre),
                 (pre, _) => XBNFResult<IAggregationElement>.Of(pre));
 
@@ -433,7 +436,7 @@ internal static class GrammarParser
         TokenReader reader,
         SymbolPath path,
         ParserContext context,
-        out XBNFResult<AtomicRuleRef> result)
+        out XBNFResult<(AtomicRuleRef, Cardinality)> result)
     {
         var position = reader.Position;
         var atomicRulePath = path.Next("atomic-rule");
@@ -456,15 +459,14 @@ internal static class GrammarParser
                 (kvp, cardinality) => kvp.Key.ValuePair(cardinality),
                 (kvp, err) => kvp)
 
-            // map
+            // map  
             .MapAll(
-                kvp => AtomicRuleRef
-                    .Of(kvp.Value, kvp.Key)
-                    .ApplyTo(XBNFResult<AtomicRuleRef>.Of),
-                (fre, _) => XBNFResult<AtomicRuleRef>.Of(fre),
-                (pre, _) => XBNFResult<AtomicRuleRef>.Of(pre));
+                kvp => (AtomicRuleRef.Of(kvp.Key), kvp.Value)
+                    .ApplyTo(XBNFResult<(AtomicRuleRef, Cardinality)>.Of),
+                (fre, _) => XBNFResult<(AtomicRuleRef, Cardinality)>.Of(fre),
+                (pre, _) => XBNFResult<(AtomicRuleRef, Cardinality)>.Of(pre));
 
-        if (!result.Is(out AtomicRuleRef _))
+        if (!result.Is(out (AtomicRuleRef, Cardinality) _))
         {
             reader.Reset(position);
             return false;
@@ -477,7 +479,7 @@ internal static class GrammarParser
         TokenReader reader,
         SymbolPath path,
         ParserContext context,
-        out XBNFResult<ProductionRef> result)
+        out XBNFResult<(ProductionRef, Cardinality)> result)
     {
         var position = reader.Position;
         var productionRefPath = path.Next("production-ref");
@@ -502,13 +504,12 @@ internal static class GrammarParser
 
             // map
             .MapAll(
-                kvp => ProductionRef
-                    .Of(kvp.Value, kvp.Key)
-                    .ApplyTo(XBNFResult<ProductionRef>.Of),
-                (fre, _) => XBNFResult<ProductionRef>.Of(fre),
-                (pre, _) => XBNFResult<ProductionRef>.Of(pre));
+                kvp => (ProductionRef.Of(kvp.Key), kvp.Value)
+                    .ApplyTo(XBNFResult<(ProductionRef, Cardinality)>.Of),
+                (fre, _) => XBNFResult< (ProductionRef, Cardinality)>.Of(fre),
+                (pre, _) => XBNFResult< (ProductionRef, Cardinality)>.Of(pre));
 
-        if (!result.Is(out ProductionRef _))
+        if (!result.Is(out (ProductionRef, Cardinality) _))
         {
             reader.Reset(position);
             return false;
@@ -517,44 +518,44 @@ internal static class GrammarParser
         return true;
     }
 
-    internal static bool TryParseGroup(
+    internal static bool TryParseAggregation(
         TokenReader reader,
         SymbolPath path,
         ParserContext context,
-        out XBNFResult<IAggregation> result)
+        out XBNFResult<(IAggregation, Cardinality)> result)
     {
         var position = reader.Position;
         var groupPath = path.Next("group");
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, groupPath, context);
 
         result = NodeRecognitionAccumulator
-            .Of<IAggregation, SymbolPath, ParserContext>(default!)
+            .Of<(IAggregation, Cardinality), SymbolPath, ParserContext>(default!)
 
             // choice
-            .ThenTry<Choice, XBNFResult<Choice>>(
+            .ThenTry<(Choice, Cardinality), XBNFResult<(Choice, Cardinality)>>(
                 TryParseChoice,
                 accumulatorArgs,
                 (_, choice) => choice)
 
             // sequence
-            .OrTry<Sequence, XBNFResult<Sequence>>(
+            .OrTry<(Sequence, Cardinality), XBNFResult<(Sequence, Cardinality)>>(
                 TryParseSequence,
                 accumulatorArgs,
                 (_, sequence) => sequence)
 
             // set
-            .OrTry<Set, XBNFResult<Set>>(
+            .OrTry<(Set, Cardinality), XBNFResult<(Set, Cardinality)>>(
                 TryParseSet,
                 accumulatorArgs,
                 (_, set) => set)
 
             // map
             .MapAll(
-                XBNFResult<IAggregation>.Of,
-                (fre, _) => XBNFResult<IAggregation>.Of(fre),
-                (pre, _) => XBNFResult<IAggregation>.Of(pre));
+                XBNFResult<(IAggregation, Cardinality)>.Of,
+                (fre, _) => XBNFResult<(IAggregation, Cardinality)>.Of(fre),
+                (pre, _) => XBNFResult<(IAggregation, Cardinality)>.Of(pre));
 
-        if (!result.Is(out IAggregation _))
+        if (!result.Is(out (IAggregation, Cardinality) _))
         {
             reader.Reset(position);
             return false;
@@ -567,7 +568,7 @@ internal static class GrammarParser
         TokenReader reader,
         SymbolPath path,
         ParserContext context,
-        out XBNFResult<Set> result)
+        out XBNFResult<(Set, Cardinality)> result)
     {
         var position = reader.Position;
         var setPath = path.Next("set");
@@ -575,7 +576,7 @@ internal static class GrammarParser
         if (!reader.TryGetTokens("#", out var delimiterToken))
         {
             reader.Reset(position);
-            result = XBNFResult<Set>.Of(FailedRecognitionError.Of(
+            result = XBNFResult<(Set, Cardinality)>.Of(FailedRecognitionError.Of(
                 setPath,
                 position));
             return false;
@@ -606,22 +607,21 @@ internal static class GrammarParser
             // map
             .MapAll(
                 info => Set
-                    .Of(cardinality: info.cardinality,
-                        elements: info.list!,
+                    .Of(elements: info.list!,
                         minRecognitionCount: minMatchCount.IsEmpty switch
                         {
                             true => info.list!.Length,
                             false => int.Parse(minMatchCount.AsSpan())
                         })
-                    .ApplyTo(XBNFResult<Set>.Of),
+                    .ApplyTo(data => XBNFResult<(Set, Cardinality)>.Of((data, info.cardinality))),
 
                 (fre, _) => PartialRecognitionError
                     .Of(setPath, position, reader.Position - position)
-                    .ApplyTo(XBNFResult<Set>.Of),
+                    .ApplyTo(XBNFResult<(Set, Cardinality)>.Of),
 
-                (pre, _) => XBNFResult<Set>.Of(pre));
+                (pre, _) => XBNFResult<(Set, Cardinality)>.Of(pre));
 
-        if (!result.Is(out Set _))
+        if (!result.Is(out (Set, Cardinality) _))
         {
             reader.Reset(position);
             return false;
@@ -634,7 +634,7 @@ internal static class GrammarParser
         TokenReader reader,
         SymbolPath path,
         ParserContext context,
-        out XBNFResult<Choice> result)
+        out XBNFResult<(Choice, Cardinality)> result)
     {
         var position = reader.Position;
         var choicePath = path.Next("choice");
@@ -642,9 +642,8 @@ internal static class GrammarParser
         if (!reader.TryGetTokens("?", out var delimiterToken))
         {
             reader.Reset(position);
-            result = XBNFResult<Choice>.Of(FailedRecognitionError.Of(
-                choicePath,
-                position));
+            result = XBNFResult<(Choice, Cardinality)>.Of(
+                FailedRecognitionError.Of(choicePath, position));
             return false;
         }
 
@@ -669,16 +668,16 @@ internal static class GrammarParser
             // map
             .MapAll(
                 info => Choice
-                    .Of(info.cardinality, info.list)
-                    .ApplyTo(XBNFResult<Choice>.Of),
+                    .Of(info.list)
+                    .ApplyTo(data => XBNFResult<(Choice, Cardinality)>.Of((data, info.cardinality))),
 
                 (fre, _) => PartialRecognitionError
                     .Of(choicePath, position, reader.Position - position)
-                    .ApplyTo(XBNFResult<Choice>.Of),
+                    .ApplyTo(XBNFResult<(Choice, Cardinality)>.Of),
 
-                (pre, _) => XBNFResult<Choice>.Of(pre));
+                (pre, _) => XBNFResult<(Choice, Cardinality)>.Of(pre));
 
-        if (!result.Is(out Choice _))
+        if (!result.Is(out (Choice, Cardinality) _))
         {
             reader.Reset(position);
             return false;
@@ -691,7 +690,7 @@ internal static class GrammarParser
         TokenReader reader,
         SymbolPath path,
         ParserContext context,
-        out XBNFResult<Sequence> result)
+        out XBNFResult<(Sequence, Cardinality)> result)
     {
         var position = reader.Position;
         var sequencePath = path.Next("sequence-group");
@@ -699,9 +698,8 @@ internal static class GrammarParser
         if (!reader.TryGetTokens("+", out var delimiterToken))
         {
             reader.Reset(position);
-            result = XBNFResult<Sequence>.Of(FailedRecognitionError.Of(
-                sequencePath,
-                position));
+            result = XBNFResult<(Sequence, Cardinality)>.Of(
+                FailedRecognitionError.Of(sequencePath, position));
             return false;
         }
 
@@ -726,16 +724,16 @@ internal static class GrammarParser
             // map
             .MapAll(
                 info => Sequence
-                    .Of(info.cardinality, info.list)
-                    .ApplyTo(XBNFResult<Sequence>.Of),
+                    .Of(info.list)
+                    .ApplyTo(data => XBNFResult<(Sequence, Cardinality)>.Of((data, info.cardinality))),
 
                 (fre, _) => PartialRecognitionError
                     .Of(sequencePath, position, reader.Position - position)
-                    .ApplyTo(XBNFResult<Sequence>.Of),
+                    .ApplyTo(XBNFResult<(Sequence, Cardinality)>.Of),
 
-                (pre, _) => XBNFResult<Sequence>.Of(pre));
+                (pre, _) => XBNFResult<(Sequence, Cardinality)>.Of(pre));
 
-        if (!result.Is(out Sequence _))
+        if (!result.Is(out (Sequence, Cardinality) _))
         {
             reader.Reset(position);
             return false;
@@ -801,7 +799,7 @@ internal static class GrammarParser
                     int.Parse(minOccursTokens.AsSpan()),
                     int.Parse(maxOccursTokens.AsSpan())))
             };
-            return true;
+            return result.Is(out Cardinality _);
         }
         else
         {
@@ -815,7 +813,7 @@ internal static class GrammarParser
                 _ => XBNFResult<Cardinality>.Of(Cardinality.OccursAtLeast(
                     int.Parse(minOccursTokens.AsSpan())))
             };
-            return true;
+            return result.Is(out Cardinality _);
         }
     }
 
@@ -882,8 +880,7 @@ internal static class GrammarParser
                 (_, _, _, err) => err switch
                 {
                     PartialRecognitionError => false,
-                    FailedRecognitionError => true,
-                    _ => throw new InvalidOperationException($"Invalid error: {err}")
+                    _ => true, // FailedRecognitionError
                 },
                 (data, bracketToken) => data)
             
@@ -942,7 +939,7 @@ internal static class GrammarParser
         var atomicRulePath = path.Next("atomic-rule");
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, atomicRulePath, context);
 
-        result = NodeRecognitionAccumulator
+        var accummulator = NodeRecognitionAccumulator
             .Of<(string Name, List<Parameter> Args), SymbolPath, ParserContext>(
                 (Name: string.Empty, Args: new List<Parameter>()))
 
@@ -977,9 +974,10 @@ internal static class GrammarParser
                 {
                     info.Args.AddRange(args);
                     return info;
-                })
+                });
 
             // map to atomic rule
+        result = accummulator
             .MapAll(
 
                 // errors
@@ -1001,7 +999,7 @@ internal static class GrammarParser
                         context.Metadata,
                         info.Args.ToImmutableDictionary(
                             arg => arg.Argument,
-                            arg => arg.EscapedValue!,
+                            arg => arg.RawValue!,
                             ArgumentKeyComparer.Default)); // <-- the key comparer that makes comparing regular and content arguments possible.
 
                     // append the args to the context
@@ -1028,8 +1026,8 @@ internal static class GrammarParser
         var position = reader.Position;
         var atomicContentPath = path.Next("atomic-content");
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, atomicContentPath, context);
-
         var accumulator = NodeRecognitionAccumulator.Of<Parameter, SymbolPath, ParserContext>(default);
+        bool isContentParsed = false;
 
         if (reader.TryPeekToken(out var delimToken))
         {
@@ -1037,27 +1035,26 @@ internal static class GrammarParser
             {
                 if (delimChar == delimToken[0])
                 {
-                    accumulator = accumulator.OrTry(
+                    accumulator = accumulator.ThenTry(
                         DelimitedContentParserDelegate(delimChar, delimChar),
                         accumulatorArgs,
                         (info, content) => Parameter.Of(
                             IArgument.Of(delimChar.DelimiterType()),
                             content));
-
-                    // break if we already have a match
-                    if (accumulator.CanTryRequired)
-                        break;
+                    isContentParsed = true;
+                    break;
                 }
             }
         }
 
+        if (!isContentParsed)
+            accumulator = NodeRecognitionAccumulator.OfFailed<Parameter, SymbolPath, ParserContext>(
+                FailedRecognitionError.Of(atomicContentPath, position));
+
         result = accumulator.MapAll(
             // data
-            @param => !@param.Equals(default)
-                ? XBNFResult<Parameter>.Of(@param)
-                : FailedRecognitionError
-                    .Of(atomicContentPath, position)
-                    .ApplyTo(XBNFResult<Parameter>.Of),
+            @param => XBNFResult<Parameter>.Of(@param),
+
             // errors
             (fre, _) => XBNFResult<Parameter>.Of(fre),
             (pre, _) => XBNFResult<Parameter>.Of(pre));
@@ -1086,7 +1083,7 @@ internal static class GrammarParser
             {
                 reader.Reset(position);
                 result = contentResult.MapMatch(
-                    tokens => throw new InvalidOperationException("Invalid contentResult: should be error"),
+                    tokens => throw new InvalidOperationException("Invalid contentResult: should be error"), // never reached
                     XBNFResult<string>.Of,
                     XBNFResult<string>.Of);
                 return false;
@@ -1095,7 +1092,7 @@ internal static class GrammarParser
             content = !contentResult.Is(out Tokens contentTokens)
                 ? content
                 : contentTokens
-                    .ToString()!
+                    .ToString()
                     .ApplyTo(content.Append);
 
             // optional segments
@@ -1106,7 +1103,7 @@ internal static class GrammarParser
                 content = !contentResult.Is(out contentTokens)
                     ? content
                     : contentTokens
-                        .ToString()!
+                        .ToString()
                         .ApplyTo(content.Append);
             }
 
@@ -1474,7 +1471,6 @@ internal static class GrammarParser
             NumberFormatInfo.InvariantInfo,
             out var @decimal))
         {
-            Console.Write($"tokens: {tokens.AsSpan()}, parsed: {@decimal}\r\n");
             result = XBNFResult<decimal>.Of(@decimal);
             return true;
         }
@@ -1500,8 +1496,7 @@ internal static class GrammarParser
         var position = reader.Position;
         var blockPath = path.Next("silent-block");
         var accumulatorArgs = NodeRecognitionAccumulator.Args(reader, blockPath, context);
-        var accumulator = NodeRecognitionAccumulator.Of<List<ISilentElement>, SymbolPath, ParserContext>(
-            new List<ISilentElement>());
+        var accumulator = NodeRecognitionAccumulator.Of<List<ISilentElement>, SymbolPath, ParserContext>([]);
 
         do
         {
@@ -1528,10 +1523,10 @@ internal static class GrammarParser
         while (accumulator.CanTryRequired);
 
         result = accumulator.MapAll(
-            dataMapper: list => XBNFResult<SilentBlock>.Of(SilentBlock.Of(list)),
+            dataMapper: list => XBNFResult<SilentBlock>.Of(SilentBlock.Of(list)), // never reached
 
             // errors?
-            partialRecognitionMapper: (pre, _) => XBNFResult<SilentBlock>.Of(pre),
+            partialRecognitionMapper: (pre, _) => XBNFResult<SilentBlock>.Of(pre), // never reached
             failedRecognitionMapper: (fre, list) => list.Count switch
             {
                 >= 1 => XBNFResult<SilentBlock>.Of(SilentBlock.Of(list)),
@@ -1658,13 +1653,19 @@ internal static class GrammarParser
 
     #endregion
 
-    #region helpes
+    #region helpers
 
-    private static string Flatten(this
-        IEnumerable<Tokens> tokens)
-        => tokens
-            .Aggregate(new StringBuilder(), (builder, tokens) => builder.Append(tokens))
-            .ToString();
+    internal static IAggregationElement CreateRepetitionElement(
+        Cardinality cardinality,
+        IAggregationElement element)
+    {
+        ArgumentNullException.ThrowIfNull(element);
+
+        if (Cardinality.OccursOnlyOnce().Equals(cardinality))
+            return element;
+
+        else return new Repetition(cardinality, element);
+    }
 
     #endregion
 

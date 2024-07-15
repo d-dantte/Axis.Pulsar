@@ -413,6 +413,26 @@ namespace Axis.Pulsar.Core.Tests.Utils
             Assert.IsFalse(tokens.Preceeds(tokens4));
             Assert.IsFalse(tokens.Preceeds("bleh"));
         }
+
+        [TestMethod]
+        public void StartsWith_Tests()
+        {
+            Assert.IsTrue(default(Tokens).StartsWith(default));
+            Assert.IsFalse(Tokens.Empty.StartsWith(Tokens.Default));
+            Assert.IsTrue(Tokens.Empty.StartsWith(Tokens.Empty));
+            Assert.IsFalse(Tokens.Of("abc").StartsWith(Tokens.Of("abcde")));
+            Assert.IsTrue(Tokens.Of("abcd").StartsWith(Tokens.Of("ab")));
+        }
+
+        [TestMethod]
+        public void EndsWith_Tests()
+        {
+            Assert.IsTrue(default(Tokens).EndsWith(default));
+            Assert.IsFalse(Tokens.Empty.EndsWith(Tokens.Default));
+            Assert.IsTrue(Tokens.Empty.EndsWith(Tokens.Empty));
+            Assert.IsFalse(Tokens.Of("abc").EndsWith(Tokens.Of("abcde")));
+            Assert.IsTrue(Tokens.Of("abcd").EndsWith(Tokens.Of("cd")));
+        }
     }
 
     [TestClass]

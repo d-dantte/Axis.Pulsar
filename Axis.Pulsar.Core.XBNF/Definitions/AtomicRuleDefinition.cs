@@ -21,16 +21,16 @@ namespace Axis.Pulsar.Core.XBNF.Definitions
             IAtomicRuleFactory factory,
             params string[] symbols)
         {            
-            // Also does null check
-            if (symbols.IsEmpty())
-                throw new ArgumentException($"Invalid {nameof(symbols)}: empty");
-
             Factory = factory.ThrowIfNull(() => new ArgumentNullException(nameof(factory)));
             ContentDelimiterType = contentDelimiterType.ThrowIfNot(
                 Enum.IsDefined,
                 _ => new ArgumentException($"Invalid content delimiter type: '{contentDelimiterType}' is undefined"));
 
             Symbols = symbols
+                .ThrowIfNull(() => new ArgumentNullException(nameof(symbols)))
+                .ThrowIf(
+                    strs => strs.IsEmpty(),
+                    _ => new ArgumentException($"Invalid {nameof(symbols)}: empty"))
                 .ThrowIfAny(
                     symbol => !Production.SymbolPattern.IsMatch(symbol),
                     symbol => new FormatException($"Invalid {nameof(symbol)} format: '{symbol}'"))

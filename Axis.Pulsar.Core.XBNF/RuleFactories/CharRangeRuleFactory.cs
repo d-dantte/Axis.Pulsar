@@ -103,7 +103,7 @@ public class CharRangeRuleFactory : IAtomicRuleFactory
         return escapedRange?
             .Replace("\\'", "'")
             .Replace("\\^", "^")
-            .Replace("\\ ", "\\x20")!;
+            .Replace("\\ ", " ")!;
     }
 
     internal static string Escape(string rawString)

@@ -36,7 +36,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
                 .ToString();
         }
 
-        internal static string WriteRule(IRule rule, XBNFLanguageContext context)
+        internal static string WriteRule(Production.IRule rule, XBNFLanguageContext context)
         {
             ArgumentNullException.ThrowIfNull(rule);
 
@@ -91,7 +91,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
 
             var contentText = args
                 .Where(arg => arg.Argument is ContentArgument)
-                .Select(arg => $"{@char}{arg.EscapedValue}{@char}")
+                .Select(arg => $"{@char}{arg.RawValue}{@char}")
                 .FirstOrDefault();
 
             var argsText = args
@@ -115,7 +115,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
                         .Append(_sb.Length == 1 ? "" : ",")
                         .Append(" ").Append(arg.Argument)
                         .Append(": ")
-                        .Append("'").Append(arg.EscapedValue).Append("'");
+                        .Append("'").Append(arg.RawValue).Append("'");
                 })
                 .Append(" }")
                 .ToString();
@@ -141,17 +141,16 @@ namespace Axis.Pulsar.Core.XBNF.Lang
         {
             ArgumentNullException.ThrowIfNull(element);
 
-            var eltString = element switch
+            return element switch
             {
                 AtomicRuleRef @ref => WriteAtomicRuleRef(@ref, context),
                 ProductionRef @ref => WriteProductionRef(@ref, context),
+                Repetition rep => WriteRepetition(rep, context),
                 Choice choice => WriteChoice(choice, context),
                 Sequence seq => WriteSequence(seq, context),
                 Set set => WriteSet(set, context),
                 _ => throw new InvalidOperationException($"")
             };
-
-            return $"{eltString}{element.Cardinality}";
         }
 
         internal static string WriteAtomicRuleRef(AtomicRuleRef ruleRef, XBNFLanguageContext context)
@@ -167,6 +166,17 @@ namespace Axis.Pulsar.Core.XBNF.Lang
             ArgumentNullException.ThrowIfNull(context);
 
             return $"${prodRef.Ref}";
+        }
+
+        internal static string WriteRepetition(Repetition repetition, XBNFLanguageContext context)
+        {
+            ArgumentNullException.ThrowIfNull(repetition);
+            ArgumentNullException.ThrowIfNull(context);
+
+            var cardinality = Cardinality.OccursOnlyOnce().Equals(repetition.Cardinality)
+                ? "" : $"{repetition.Cardinality}";
+
+            return $"{WriteElement(repetition.Element, context)}{cardinality}";
         }
 
         internal static string WriteGroup(IAggregation group, XBNFLanguageContext context)

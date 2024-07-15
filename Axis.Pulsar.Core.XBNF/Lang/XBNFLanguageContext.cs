@@ -24,20 +24,18 @@ namespace Axis.Pulsar.Core.XBNF.Lang
             ParserContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(grammar);
 
-            Grammar = grammar ?? throw new ArgumentNullException(nameof(grammar));
+            Grammar = grammar;
             Metadata = context.Metadata;
 
             AtomicRuleArguments = context.AtomicRuleArguments
                 .ThrowIfAny(
                     kvp => string.IsNullOrEmpty(kvp.Key),
-                    _ => new ArgumentException("Invalid atomicRuleArgument key: null/empty"))
+                    _ => new InvalidOperationException("Invalid atomicRuleArgument key: null/empty"))
                 .ToImmutableDictionary();
 
             ProductionValidators = context.Metadata.ProductionValidatorDefinitionMap
-                .ThrowIfAny(
-                    kvp => string.IsNullOrEmpty(kvp.Key),
-                    _ => new ArgumentException("Invalid production symbol: null/empty"))
                 .ToImmutableDictionary(
                     def => def.Key,
                     def => def.Value.Validator);

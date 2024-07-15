@@ -7,15 +7,18 @@
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="SampleGrammar\Int1.xbnf" />
+    <None Remove="SampleGrammar\Int2.xbnf" />
     <None Remove="SampleGrammar\json.xbnf" />
     <None Remove="SampleGrammar\SampleLang.xbnf" />
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="SampleGrammar\Int2.xbnf" />
     <EmbeddedResource Include="SampleGrammar\Int1.xbnf" />
     <EmbeddedResource Include="SampleGrammar\json.xbnf" />
     <EmbeddedResource Include="SampleGrammar\SampleLang.xbnf" />

@@ -67,12 +67,6 @@ public interface IAtomicRuleFactory
         /// </summary>
         /// <param name="delimiter">The delimiter</param>
         public static IArgument Of(ContentArgumentDelimiter delimiter) => new ContentArgument(delimiter);
-
-        /// <summary>
-        /// Creates a <see cref="ContentArgument"/> instance.
-        /// </summary>
-        /// <param name="delimiter">The delimiter character</param>
-        public static IArgument Of(char delimiter) => new ContentArgument(delimiter.DelimiterType());
     }
 
     /// <summary>
@@ -110,7 +104,7 @@ public interface IAtomicRuleFactory
 
         public override bool Equals([NotNullWhen(true)] object? obj)
         {
-            return obj is IArgument arg && Equals(arg);
+            return obj is RegularArgument arg && Equals(arg);
         }
 
         public bool Equals(RegularArgument arg)
@@ -272,45 +266,32 @@ public interface IAtomicRuleFactory
     {
         public IArgument Argument { get; }
 
-        public string? EscapedValue { get; }
+        public string? RawValue { get; }
 
         public Parameter(
             IArgument argument,
-            string? escapedValue,
-            IStringEscaper? stringEscaper)
+            string? rawValue)
         {
-            Argument = argument;
-            EscapedValue = escapedValue;
+            Argument = argument ?? throw new ArgumentNullException(nameof(argument));
+            RawValue = rawValue;
         }
 
-        public Parameter(
-            IArgument argument,
-            string? escapedValue)
-            : this(argument, escapedValue, null)
-        { }
-
         public static Parameter Of(
             IArgument argument,
-            string? value,
-            IStringEscaper? stringEscaper)
-            => new(argument, value, stringEscaper);
-
-        public static Parameter Of(
-            IArgument argument,
-            string? value)
+            string? value = null)
             => new(argument, value);
 
         #region DefaultValueProvider
         public static Parameter Default => default;
 
-        public bool IsDefault => Argument is null && EscapedValue is null;
+        public bool IsDefault => RawValue is null && Argument is null;
         #endregion
 
         public bool Equals(Parameter other)
         {
             return 
                 EqualityComparer<IArgument>.Default.Equals(Argument, other.Argument)
-                && EqualityComparer<string>.Default.Equals(EscapedValue, other.EscapedValue);
+                && EqualityComparer<string>.Default.Equals(RawValue, other.RawValue);
         }
 
         public override bool Equals([NotNullWhen(true)] object? obj)
@@ -319,13 +300,19 @@ public interface IAtomicRuleFactory
                 && Equals(other);
         }
 
-        public override int GetHashCode() => HashCode.Combine(Argument, EscapedValue);
+        public override int GetHashCode() => HashCode.Combine(Argument, RawValue);
 
         public override string ToString()
         {
-            return IsDefault
-                ? "{}"
-                : $"{{key: {Argument}, value: {EscapedValue}}}";
+            return Argument switch
+            {
+                null => "{}",
+                _ => RawValue switch
+                {
+                    null => $"{{flag: {Argument}}}",
+                    _ => $"{{key: {Argument}, value: {RawValue}}}"
+                }
+            };
         }
 
         public static bool operator ==(Parameter left, Parameter right)

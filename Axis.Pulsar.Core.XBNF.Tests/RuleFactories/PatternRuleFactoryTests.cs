@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 namespace Axis.Pulsar.Core.XBNF.Tests.RuleFactories
 {
     [TestClass]
-    public class CharRangeRuleFactoryTests
+    public class PatternRuleFactoryTests
     {
         [TestMethod]
         public void ParseRanges_Tests()
@@ -51,26 +51,6 @@ namespace Axis.Pulsar.Core.XBNF.Tests.RuleFactories
 
             result = CharRangeRuleFactory.Escape("'^ ");
             Assert.AreEqual("\\'\\^\\ ", result);
-        }
-    }
-
-    [TestClass]
-    public class RangesEscapeTransformerTests
-    {
-        [TestMethod]
-        public void DecodeTests()
-        {
-            var unescaped = CharRangeRuleFactory.Unescape("a-z");
-            Assert.AreEqual("a-z", unescaped);
-
-            unescaped = CharRangeRuleFactory.Unescape("a-\\^");
-            Assert.AreEqual("a-^", unescaped);
-
-            unescaped = CharRangeRuleFactory.Unescape("\0-\\'");
-            Assert.AreEqual("\0-'", unescaped);
-
-            unescaped = CharRangeRuleFactory.Unescape("\0-\\ ");
-            Assert.AreEqual("\0- ", unescaped);
         }
     }
 }

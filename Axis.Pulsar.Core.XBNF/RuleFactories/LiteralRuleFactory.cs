@@ -28,7 +28,7 @@ public class LiteralRuleFactory : IAtomicRuleFactory
     /// <summary>
     /// case sensitive flag
     /// </summary>
-    public static IArgument CaseSensitiveArgument => IArgument.Of("case-sensitive");
+    public static IArgument CaseInsensitiveArgument => IArgument.Of("case-insensitive");
 
     #endregion
 
@@ -42,7 +42,7 @@ public class LiteralRuleFactory : IAtomicRuleFactory
         return TerminalLiteral.Of(
             ruleId,
             ParseLiteral(arguments[LiteralArgument]),
-            arguments.TryGetValue(CaseSensitiveArgument, out _));
+            !arguments.TryGetValue(CaseInsensitiveArgument, out _));
     }
 
     /// <summary>

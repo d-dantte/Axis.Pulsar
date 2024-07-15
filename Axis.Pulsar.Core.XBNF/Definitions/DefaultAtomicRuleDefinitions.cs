@@ -41,12 +41,28 @@ namespace Axis.Pulsar.Core.XBNF.Definitions
             "EOF", "eof");
 
         /// <summary>
-        /// 
+        /// TODO: complete this method
         /// </summary>
-        public static readonly AtomicRuleDefinition DelimitedString = AtomicRuleDefinition.Of(
+        public static readonly AtomicRuleDefinition DelimitedContent = AtomicRuleDefinition.Of(
             ContentArgumentDelimiter.None,
-            new DelimitedStringRuleFactory(),
-            "DelimitedString", "delimited-string");
-
+            new DelimitedContentRuleFactory(
+                DelimitedContentRuleFactory.ConstraintQualifierMap
+                    .New()
+                    .AddQualifiers(
+                        new DelimitedContentRuleFactory.LegalCharacterRangesParser(),
+                        "lcr", "legal-char-ranges")
+                    .AddQualifiers(
+                        new DelimitedContentRuleFactory.IllegalCharacterRangesParser(),
+                        "icr", "illegal-char-ranges")
+                    .AddQualifiers(
+                        new DelimitedContentRuleFactory.LegalDiscretePatternsParser(),
+                        "ldp", "legal-discrete-patterns")
+                    .AddQualifiers(
+                        new DelimitedContentRuleFactory.IllegalCharacterRangesParser(),
+                        "idp", "illegal-discrete-pattern")
+                    .AddQualifiers(
+                        DelimitedContentRuleFactory.DefaultDelimitedContentParser.DefaultConstraintParser,
+                        "default", "exclude-delims")),
+            "DelimitedContent", "delimited-content", "dc");
     }
 }

@@ -6,7 +6,7 @@ $json -> +[$block-space.? ?[$json-object $json-list] $block-space.?]
 
 # Whitespaces
 $block-space -> ?[$line-comment $space $tab $line-feed $carriage-return].+
-$line-comment -> @DelimitedString{start:'//', ranges:'^\n, ^\r'}
+$line-comment -> @DelimitedContent{start:'//', content-rule: 'icr: \x0d, \x0a'}
 $space -> '\s'
 $tab -> '\t'
 $line-feed -> "\n"
@@ -81,7 +81,7 @@ $number-sign -> ?['+' '\-']
 
 
 # String
-$json-string -> @DelimitedString{start: '"', end: '"', escaped-delimiter: '\\"'}
+$json-string -> @DelimitedContent{start: '"', end: '"', end-escape: '\\"', content-rule: 'default'}
 
 
 # Boolean

@@ -32,8 +32,8 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
         public static TerminalLiteral Of(
             string id,
             string tokens,
-            bool isCaseInensitive)
-            => new(id, tokens, isCaseInensitive);
+            bool isCaseSensitive)
+            => new(id, tokens, isCaseSensitive);
 
         public bool TryRecognize(
             TokenReader reader,

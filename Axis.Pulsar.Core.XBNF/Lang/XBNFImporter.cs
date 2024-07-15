@@ -4,7 +4,9 @@ using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.XBNF.Definitions;
 using Axis.Pulsar.Core.XBNF.Parsers;
+using Axis.Pulsar.Core.XBNF.RuleFactories;
 using System.Collections.Immutable;
+using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
 namespace Axis.Pulsar.Core.XBNF.Lang
 {
@@ -27,11 +29,11 @@ namespace Axis.Pulsar.Core.XBNF.Lang
             if (grammarResult.Is(out IGrammar grammar))
             {
                 // validate the grammar
-                GrammarValidator__old
-                    .Validate(grammar)
+                _ = GrammarValidator
+                    .ValidateGrammar(grammar)
                     .ThrowIf(
-                        r => !r.IsValidGrammar,
-                        r => new GrammarValidationException(r));
+                        result => !result.IsValid,
+                        result => new GrammarValidationException(result));
 
                 // create the language context from the grammar
                 return new XBNFLanguageContext(grammar, context);
@@ -75,14 +77,26 @@ namespace Axis.Pulsar.Core.XBNF.Lang
                 return this;
             }
 
-            public Builder WithDefaultAtomicRuleDefinitions()
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <returns></returns>
+            public Builder WithDefaultAtomicRuleDefinitions(
+                Action<DelimitedContentRuleFactory.ConstraintQualifierMap>? modifier = null)
             {
+                var map = new DelimitedContentRuleFactory.ConstraintQualifierMap();
+
+                // Add qualifiers for Legal/Illegal CharRange, Legal/Illegal DiscretePattern
+
+                // finally
+                modifier?.Invoke(map);
+
                 return this
                     .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.EOF)
                     .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.Literal)
                     .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.Pattern)
                     .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.CharacterRanges)
-                    .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.DelimitedString);
+                    .WithAtomicRuleDefinition(DefaultAtomicRuleDefinitions.DelimitedContent);
             }
 
             #endregion

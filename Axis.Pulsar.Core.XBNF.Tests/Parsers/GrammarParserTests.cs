@@ -16,6 +16,7 @@ using Axis.Pulsar.Core.Grammar.Rules.Aggregate;
 using Axis.Pulsar.Core.Grammar.Rules.Atomic;
 using Axis.Pulsar.Core.Grammar.Rules.Composite;
 using Axis.Pulsar.Core.Grammar.Rules;
+using Axis.Pulsar.Core.XBNF.RuleFactories;
 
 namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 {
@@ -180,6 +181,17 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(result.Is(out bc));
             Assert.IsTrue(comment.IsConsumed);
             Assert.AreEqual(comment.Source[2..^2], bc.Content.ToString());
+
+            // same-line block comment
+            comment = "/* and stuff\n that \rdoesn't \r\nend * \n\rin a new line";
+            success = GrammarParser.TryParseBlockComment(
+                comment,
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out PartialRecognitionError pre));
         }
 
         [TestMethod]
@@ -258,7 +270,16 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out Parameter param));
             Assert.AreEqual("arg-name", param.Argument.ToString());
-            Assert.IsNull(param.EscapedValue);
+            Assert.IsNull(param.RawValue);
+
+            success = GrammarParser.TryParseArgument(
+                ".34$$arg-name",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out FailedRecognitionError fre));
 
             // args / value
             success = GrammarParser.TryParseArgument(
@@ -270,7 +291,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out param));
             Assert.AreEqual("arg-name", param.Argument.ToString());
-            Assert.AreEqual("value", param.EscapedValue);
+            Assert.AreEqual("value", param.RawValue);
 
             // args / value
             success = GrammarParser.TryParseArgument(
@@ -282,7 +303,17 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out param));
             Assert.AreEqual("arg-name", param.Argument.ToString());
-            Assert.AreEqual("value2", param.EscapedValue);
+            Assert.AreEqual("value2", param.RawValue);
+
+            // args / invalid-value
+            success = GrammarParser.TryParseArgument(
+                "arg-name : $$%$%",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out PartialRecognitionError pre));
 
             // args / bool
             success = GrammarParser.TryParseArgument(
@@ -294,7 +325,18 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out param));
             Assert.AreEqual("arg-name", param.Argument.ToString());
-            Assert.AreEqual("True", param.EscapedValue);
+            Assert.AreEqual("True", param.RawValue);
+
+            success = GrammarParser.TryParseArgument(
+                "arg-name : false",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.Is(out param));
+            Assert.AreEqual("arg-name", param.Argument.ToString());
+            Assert.AreEqual("False", param.RawValue);
 
             // args / number
             success = GrammarParser.TryParseArgument(
@@ -306,8 +348,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out param));
             Assert.AreEqual("arg-name", param.Argument.ToString());
-            Assert.AreEqual("34", param.EscapedValue);
-
+            Assert.AreEqual("34", param.RawValue);
 
             success = GrammarParser.TryParseArgument(
                 "arg-name : 34.54",
@@ -318,7 +359,16 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out param));
             Assert.AreEqual("arg-name", param.Argument.ToString());
-            Assert.AreEqual("34.54", param.EscapedValue);
+            Assert.AreEqual("34.54", param.RawValue);
+
+            success = GrammarParser.TryParseArgument(
+                "arg-name : 34.54.44",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out pre));
         }
 
         [TestMethod]
@@ -339,6 +389,24 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out Parameter[] args));
             Assert.AreEqual(1, args.Length);
+
+            success = GrammarParser.TryParseAtomicRuleArguments(
+                "{@@@}",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out PartialRecognitionError pre));
+
+            success = GrammarParser.TryParseAtomicRuleArguments(
+                "{arg-name",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out pre));
 
             // args / value
             success = GrammarParser.TryParseAtomicRuleArguments(
@@ -372,7 +440,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out args));
             Assert.AreEqual(1, args.Length);
-            Assert.AreEqual("value\\'", args[0].EscapedValue);
+            Assert.AreEqual("value\\'", args[0].RawValue);
         }
 
         [TestMethod]
@@ -408,8 +476,6 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(result.Is(out info));
             Assert.IsTrue(info.Equals("the content, and its concatenation"));
 
-
-            // quote
             tryParse = GrammarParser.DelimitedContentParserDelegate('\'', '\'');
             success = tryParse(
                 "'the content,' + ' and its concatenation' and stuff behind that should't parse",
@@ -420,6 +486,26 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out info));
             Assert.IsTrue(info.Equals("the content, and its concatenation"));
+
+            tryParse = GrammarParser.DelimitedContentParserDelegate('\'', '\'');
+            success = tryParse(
+                "'the content,' + ' and its concatenation that doesn\\'t end with an end-delimiter",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out PartialRecognitionError pre));
+
+            tryParse = GrammarParser.DelimitedContentParserDelegate('\'', '\'');
+            success = tryParse(
+                "the content ",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out FailedRecognitionError fre));
         }
 
         [TestMethod]
@@ -440,7 +526,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out Parameter param));
             Assert.AreEqual(ContentArgumentDelimiter.Quote, param.Argument.As<ContentArgument>().Delimiter);
-            Assert.IsTrue(param.EscapedValue!.Equals("the content\\'"));
+            Assert.IsTrue(param.RawValue!.Equals("the content\\'"));
 
             // double quote
             success = GrammarParser.TryParseAtomicContent(
@@ -452,7 +538,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out param));
             Assert.AreEqual(ContentArgumentDelimiter.DoubleQuote, param.Argument.As<ContentArgument>().Delimiter);
-            Assert.IsTrue(param.EscapedValue!.Equals("the content\\\""));
+            Assert.IsTrue(param.RawValue!.Equals("the content\\\""));
 
             // grave
             success = GrammarParser.TryParseAtomicContent(
@@ -464,7 +550,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out param));
             Assert.AreEqual(ContentArgumentDelimiter.Grave, param.Argument.As<ContentArgument>().Delimiter);
-            Assert.IsTrue(param.EscapedValue!.Equals("the content\\`"));
+            Assert.IsTrue(param.RawValue!.Equals("the content\\`"));
 
             // sol
             success = GrammarParser.TryParseAtomicContent(
@@ -476,7 +562,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out param));
             Assert.AreEqual(ContentArgumentDelimiter.Sol, param.Argument.As<ContentArgument>().Delimiter);
-            Assert.IsTrue(param.EscapedValue!.Equals("the content\\/"));
+            Assert.IsTrue(param.RawValue!.Equals("the content\\/"));
 
             // back-sol
             success = GrammarParser.TryParseAtomicContent(
@@ -488,7 +574,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out param));
             Assert.AreEqual(ContentArgumentDelimiter.BackSol, param.Argument.As<ContentArgument>().Delimiter);
-            Assert.IsTrue(param.EscapedValue!.Equals("the content\\\\"));
+            Assert.IsTrue(param.RawValue!.Equals("the content\\\\"));
 
             // vertical bar
             success = GrammarParser.TryParseAtomicContent(
@@ -500,17 +586,53 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out param));
             Assert.AreEqual(ContentArgumentDelimiter.VerticalBar, param.Argument.As<ContentArgument>().Delimiter);
-            Assert.IsTrue(param.EscapedValue!.Equals("the content\\|"));
+            Assert.IsTrue(param.RawValue!.Equals("the content\\|"));
+
+            // invalid delim char
+            success = GrammarParser.TryParseAtomicContent(
+                "?the content\\?",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out FailedRecognitionError fre));
+
+            // empty content
+            success = GrammarParser.TryParseAtomicContent(
+                "``",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.Is(out param));
+            Assert.AreEqual(ContentArgumentDelimiter.Grave, param.Argument.As<ContentArgument>().Delimiter);
+            Assert.IsTrue(param.RawValue!.Equals(""));
+
+            // empty content
+            success = GrammarParser.TryParseAtomicContent(
+                "",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out FailedRecognitionError _));
         }
 
         [TestMethod]
         public void TryParseAtomicRule_Tests()
         {
+            var map = new DelimitedContentRuleFactory
+                .ConstraintQualifierMap()
+                .AddQualifiers(DelimitedContentRuleFactory.DefaultDelimitedContentParser.DefaultConstraintParser, "default");
+
             var metaContext = LanguageMetadataBuilder
                 .NewBuilder()
                 .WithDefaultAtomicRuleDefinitions()
                 .WithAtomicRuleDefinition(AtomicRuleDefinition.Of(new WindowsNewLineFactory(), "nl"))
-                .WithAtomicRuleDefinition(AtomicRuleDefinition.Of(new DelimitedStringRuleFactory(), "bleh"))
+                .WithAtomicRuleDefinition(AtomicRuleDefinition.Of(new DelimitedContentRuleFactory(map), "bleh"))
                 .Build()
                 .ApplyTo(x => new ParserContext(x));
 
@@ -547,7 +669,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(result.Is(out rule));
             Assert.IsInstanceOfType<TerminalLiteral>(rule);
             var literal = rule.As<TerminalLiteral>();
-            Assert.IsFalse(literal.IsCaseSensitive);
+            Assert.IsTrue(literal.IsCaseSensitive);
             Assert.AreEqual("literal", literal.Tokens);
 
             success = GrammarParser.TryParseAtomicRule(
@@ -560,7 +682,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(result.Is(out rule));
             Assert.IsInstanceOfType<TerminalLiteral>(rule);
             literal = rule.As<TerminalLiteral>();
-            Assert.IsTrue(literal.IsCaseSensitive);
+            Assert.IsFalse(literal.IsCaseSensitive);
             Assert.AreEqual("literal with falg", literal.Tokens);
             #endregion
 
@@ -636,31 +758,67 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.AreEqual(2, charRange.IncludeList.Length);
             #endregion
 
-            #region delimited strings
+            #region delimited Content
 
             success = GrammarParser.TryParseAtomicRule(
-                "@bleh{start: '(', end: ')'}",
+                "@bleh{start: '(', end: ')', end-escape: '\\\\)', content-rule: 'default'}",
                 "parent",
                 metaContext,
                 out result);
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out rule));
-            var dstring = rule.As<DelimitedString>();
-            Assert.AreEqual("(", dstring.StartDelimiter);
-            Assert.AreEqual(")", dstring.EndDelimiter);
+            var dstring = rule.As<DelimitedContent>();
+            Assert.AreEqual("(", dstring.StartDelimiter.Delimiter);
+            Assert.AreEqual(")", dstring.EndDelimiter!.Value.Delimiter);
 
             success = GrammarParser.TryParseAtomicRule(
-                "@bleh{start: '\\\\(', end: ')'}",
+                "@bleh{start: '\\\\(', end: ')', end-escape: '\\\\)', content-rule: 'default'}",
                 "parent",
                 metaContext,
                 out result);
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out rule));
-            dstring = rule.As<DelimitedString>();
-            Assert.AreEqual("\\(", dstring.StartDelimiter);
-            Assert.AreEqual(")", dstring.EndDelimiter);
+            dstring = rule.As<DelimitedContent>();
+            Assert.AreEqual("\\(", dstring.StartDelimiter.Delimiter);
+            Assert.AreEqual(")", dstring.EndDelimiter!.Value.Delimiter);
+            #endregion
+
+            #region unregistered
+            Assert.ThrowsException<InvalidOperationException>(
+                () => GrammarParser.TryParseAtomicRule(
+                    "`literal`",
+                    "parent",
+                    metaContext,
+                    out result));
+            Assert.ThrowsException<InvalidOperationException>(
+                () => GrammarParser.TryParseAtomicRule(
+                    "@abc{stuff: 'vaue'}",
+                    "parent",
+                    metaContext,
+                    out result));
+            #endregion
+
+            #region Invalid
+
+            success = GrammarParser.TryParseAtomicRule(
+                "@bleh{$$, start: '(', end: ')', end-escape: '\\\\)', content-rule: 'default'}",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out PartialRecognitionError _));
+
+            success = GrammarParser.TryParseAtomicRule(
+                "%%%",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out FailedRecognitionError _));
             #endregion
         }
 
@@ -697,6 +855,15 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             success = GrammarParser.TryParseRecognitionThreshold(
                 ":x2 ",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out PartialRecognitionError _));
+
+            success = GrammarParser.TryParseRecognitionThreshold(
+                ":2#[]",
                 "parent",
                 metaContext,
                 out result);
@@ -791,9 +958,9 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.Is(out ProductionRef @ref));
-            Assert.AreEqual("symbol", @ref.Ref);
-            Assert.AreEqual(Cardinality.OccursOptionally(), @ref.Cardinality);
+            Assert.IsTrue(result.Is(out (ProductionRef @ref, Cardinality cardinality) @ref));
+            Assert.AreEqual("symbol", @ref.@ref.Ref);
+            Assert.AreEqual(Cardinality.OccursOptionally(), @ref.cardinality);
 
             success = GrammarParser.TryParseProductionRef(
                 "$symbol",
@@ -803,8 +970,8 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out @ref));
-            Assert.AreEqual("symbol", @ref.Ref);
-            Assert.AreEqual(Cardinality.OccursOnlyOnce(), @ref.Cardinality);
+            Assert.AreEqual("symbol", @ref.@ref.Ref);
+            Assert.AreEqual(Cardinality.OccursOnlyOnce(), @ref.cardinality);
         }
 
 
@@ -825,9 +992,9 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.Is(out AtomicRuleRef @ref));
-            Assert.AreEqual(Cardinality.OccursOptionally(), @ref.Cardinality);
-            Assert.IsInstanceOfType<WindowsNewLine>(@ref.Ref);
+            Assert.IsTrue(result.Is(out (AtomicRuleRef @ref, Cardinality cardinality) @ref));
+            Assert.AreEqual(Cardinality.OccursOptionally(), @ref.cardinality);
+            Assert.IsInstanceOfType<WindowsNewLine>(@ref.@ref.Ref);
 
             success = GrammarParser.TryParseAtomicRuleRef(
                 "/\\\\d/{flags:'i'}.2",
@@ -837,8 +1004,8 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out @ref));
-            Assert.AreEqual(Cardinality.OccursOnly(2), @ref.Cardinality);
-            Assert.IsInstanceOfType<TerminalPattern>(@ref.Ref);
+            Assert.AreEqual(Cardinality.OccursOnly(2), @ref.cardinality);
+            Assert.IsInstanceOfType<TerminalPattern>(@ref.@ref.Ref);
 
             success = GrammarParser.TryParseAtomicRuleRef(
                 "'+, \\x2d'",
@@ -848,8 +1015,8 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out @ref));
-            Assert.AreEqual(Cardinality.OccursOnlyOnce(), @ref.Cardinality);
-            Assert.IsInstanceOfType<CharacterRanges>(@ref.Ref);
+            Assert.AreEqual(Cardinality.OccursOnlyOnce(), @ref.cardinality);
+            Assert.IsInstanceOfType<CharacterRanges>(@ref.@ref.Ref);
 
         }
 
@@ -871,7 +1038,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out IAggregationElement element));
-            Assert.AreEqual(Cardinality.OccursOnlyOnce(), element.Cardinality);
+            Assert.IsTrue(element is AtomicRuleRef);
             Assert.IsInstanceOfType<AtomicRuleRef>(element);
 
             success = GrammarParser.TryParseGroupElement(
@@ -882,8 +1049,20 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out element));
-            Assert.AreEqual(Cardinality.OccursOnlyOnce(), element.Cardinality);
-            Assert.IsInstanceOfType<ProductionRef>(element);
+            Assert.IsTrue(element is ProductionRef);
+
+            success = GrammarParser.TryParseGroupElement(
+                "$stuff.+",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.Is(out element));
+            Assert.IsTrue(element is Repetition);
+            Assert.AreEqual(
+                Cardinality.OccursAtLeastOnce(),
+                element.As<Repetition>().Cardinality);
         }
 
         [TestMethod]
@@ -938,6 +1117,26 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out IAggregationElement[] elements));
             Assert.AreEqual(0, elements.Length);
+
+
+            success = GrammarParser.TryParseElementList(
+                "[",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out PartialRecognitionError _));
+
+
+            success = GrammarParser.TryParseElementList(
+                "[ $",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out PartialRecognitionError _));
         }
 
         [TestMethod]
@@ -957,9 +1156,9 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.Is(out Choice choice));
-            Assert.AreEqual(2, choice.Elements.Length);
-            Assert.AreEqual(Cardinality.Occurs(1, 5), choice.Cardinality);
+            Assert.IsTrue(result.Is(out (Choice choice, Cardinality cardinality) choice));
+            Assert.AreEqual(2, choice.choice.Elements.Length);
+            Assert.AreEqual(Cardinality.Occurs(1, 5), choice.cardinality);
 
             success = GrammarParser.TryParseChoice(
                 @"?[ ""Z"" + ""T""
@@ -970,8 +1169,17 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out choice));
-            Assert.AreEqual(2, choice.Elements.Length);
-            Assert.AreEqual(Cardinality.Occurs(1, 5), choice.Cardinality);
+            Assert.AreEqual(2, choice.choice.Elements.Length);
+            Assert.AreEqual(Cardinality.Occurs(1, 5), choice.cardinality);
+
+            success = GrammarParser.TryParseChoice(
+                "?===",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out PartialRecognitionError _));
         }
 
         [TestMethod]
@@ -992,9 +1200,9 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.Is(out Sequence sequence));
-            Assert.AreEqual(2, sequence.Elements.Length);
-            Assert.AreEqual(Cardinality.Occurs(1, 5), sequence.Cardinality);
+            Assert.IsTrue(result.Is(out (Sequence sequence, Cardinality cardinality) sequence));
+            Assert.AreEqual(2, sequence.sequence.Elements.Length);
+            Assert.AreEqual(Cardinality.Occurs(1, 5), sequence.cardinality);
 
 
             success = GrammarParser.TryParseSequence(
@@ -1005,8 +1213,8 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out sequence));
-            Assert.AreEqual(2, sequence.Elements.Length);
-            Assert.AreEqual(Cardinality.OccursOnlyOnce(), sequence.Cardinality);
+            Assert.AreEqual(2, sequence.sequence.Elements.Length);
+            Assert.AreEqual(Cardinality.OccursOnlyOnce(), sequence.cardinality);
 
 
             success = GrammarParser.TryParseSequence(
@@ -1018,8 +1226,18 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out sequence));
-            Assert.AreEqual(1, sequence.Elements.Length);
-            Assert.AreEqual(Cardinality.OccursOnlyOnce(), sequence.Cardinality);
+            Assert.AreEqual(1, sequence.sequence.Elements.Length);
+            Assert.AreEqual(Cardinality.OccursOnlyOnce(), sequence.cardinality);
+
+
+            success = GrammarParser.TryParseSequence(
+                "+==",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out PartialRecognitionError _));
         }
 
         [TestMethod]
@@ -1040,22 +1258,43 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.Is(out Set set));
-            Assert.AreEqual(2, set.Elements.Length);
-            Assert.AreEqual(Cardinality.OccursOnlyOnce(), set.Cardinality);
+            Assert.IsTrue(result.Is(out (Set set, Cardinality cardinality) set));
+            Assert.AreEqual(2, set.set.Elements.Length);
+            Assert.AreEqual(Cardinality.OccursOnlyOnce(), set.cardinality);
 
 
             success = GrammarParser.TryParseSet(
-                "#5[ $stuff $other-stuff ]",
+                "#2[ $stuff $other-stuff ]",
                 "parent",
                 metaContext,
                 out result);
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out set));
-            Assert.AreEqual(2, set.Elements.Length);
-            Assert.AreEqual(Cardinality.OccursOnlyOnce(), set.Cardinality);
-            Assert.AreEqual(5, set.MinRecognitionCount);
+            Assert.AreEqual(2, set.set.Elements.Length);
+            Assert.AreEqual(Cardinality.OccursOnlyOnce(), set.cardinality);
+            Assert.AreEqual(2, set.set.MinRecognitionCount);
+
+
+            success = GrammarParser.TryParseSet(
+                "#2[ $stuff $other-stuff ].+",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.Is(out set));
+            Assert.AreEqual(2, set.set.Elements.Length);
+
+
+            success = GrammarParser.TryParseSet(
+                "#^^[ $stuff $other-stuff ].+",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out PartialRecognitionError _));
         }
 
         [TestMethod]
@@ -1066,17 +1305,17 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 .Build()
                 .ApplyTo(x => new ParserContext(x));
 
-            var success = GrammarParser.TryParseGroup(
+            var success = GrammarParser.TryParseAggregation(
                 "#[$tuff]",
                 "parent",
                 metaContext,
                 out var result);
 
             Assert.IsTrue(success);
-            Assert.IsTrue(result.Is(out IAggregation group));
-            Assert.IsInstanceOfType<Set>(group);
+            Assert.IsTrue(result.Is(out (IAggregation, Cardinality) group));
+            Assert.IsInstanceOfType<Set>(group.Item1);
 
-            success = GrammarParser.TryParseGroup(
+            success = GrammarParser.TryParseAggregation(
                 "+[$tuff]",
                 "parent",
                 metaContext,
@@ -1084,9 +1323,9 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out group));
-            Assert.IsInstanceOfType<Sequence>(group);
+            Assert.IsInstanceOfType<Sequence>(group.Item1);
 
-            success = GrammarParser.TryParseGroup(
+            success = GrammarParser.TryParseAggregation(
                 "?[$tuff]",
                 "parent",
                 metaContext,
@@ -1094,14 +1333,14 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out group));
-            Assert.IsInstanceOfType<Choice>(group);
+            Assert.IsInstanceOfType<Choice>(group.Item1);
 
             metaContext = LanguageMetadataBuilder
                 .NewBuilder()
                 .WithDefaultAtomicRuleDefinitions()
                 .Build()
                 .ApplyTo(x => new ParserContext(x));
-            success = GrammarParser.TryParseGroup(
+            success = GrammarParser.TryParseAggregation(
                 context: metaContext,
                 result: out result,
                 path: "parent",
@@ -1121,7 +1360,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out group));
-            Assert.IsInstanceOfType<Sequence>(group);
+            Assert.IsInstanceOfType<Sequence>(group.Item1);
         }
 
         [TestMethod]
@@ -1141,6 +1380,56 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out CompositeRule rule));
             Assert.IsInstanceOfType<CompositeRule>(rule);
+
+            success = GrammarParser.TryParseCompositeRule(
+                "&[$tuff ?[$other-stuff $more-stuff].?]",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out FailedRecognitionError _));
+        }
+
+        [TestMethod]
+        public void TryParseCardinality_Tests()
+        {
+            var metaContext = LanguageMetadataBuilder
+                .NewBuilder()
+                .Build()
+                .ApplyTo(x => new ParserContext(x));
+
+            var success = GrammarParser.TryParseCardinality(
+                ".3,4",
+                "parent",
+                metaContext,
+                out var result);
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.Is(out Cardinality cardinality));
+
+            success = GrammarParser.TryParseCardinality(
+                ".abc",
+                "parent",
+                metaContext,
+                out result);
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out PartialRecognitionError _));
+
+            success = GrammarParser.TryParseCardinality(
+                ".*,",
+                "parent",
+                metaContext,
+                out result);
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out PartialRecognitionError _));
+
+            success = GrammarParser.TryParseCardinality(
+                ".*,3",
+                "parent",
+                metaContext,
+                out result);
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out PartialRecognitionError _));
         }
 
         #endregion
@@ -1164,6 +1453,42 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(success);
             Assert.IsTrue(result.Is(out Tokens opTokens));
             Assert.IsTrue(opTokens.Equals("->"));
+
+            success = GrammarParser.TryParseMapOperator(
+                "-?",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out FailedRecognitionError _));
+        }
+
+        [TestMethod]
+        public void TryParseEOF_Tests()
+        {
+            var metaContext = LanguageMetadataBuilder
+                .NewBuilder()
+                .Build()
+                .ApplyTo(x => new ParserContext(x));
+
+            var success = GrammarParser.TryParseEOF(
+                "",
+                "parent",
+                metaContext,
+                out var result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.Is(out XBNF.Parsers.Results.EOF eof));
+
+            success = GrammarParser.TryParseEOF(
+                " ",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out FailedRecognitionError _));
         }
 
         [TestMethod]
@@ -1318,8 +1643,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 .ApplyTo(x => new ParserContext(x));
 
             using var langDefStream = ResourceLoader.Load("SampleGrammar.Int1.xbnf");
-            var langText = new StreamReader(langDefStream!).ReadToEnd();
-            
+            var langText = new StreamReader(langDefStream!).ReadToEnd();            
 
             var success = GrammarParser.TryParseGrammar(
                 langText,
@@ -1330,6 +1654,35 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(result.Is(out IGrammar grammar));
             Assert.AreEqual(5, grammar.ProductionCount);
             Assert.AreEqual("int", grammar.Root);
+
+            using var langDefStream2 = ResourceLoader.Load("SampleGrammar.Int2.xbnf");
+            var langText2 = new StreamReader(langDefStream2!).ReadToEnd();
+
+            success = GrammarParser.TryParseGrammar(
+                langText2,
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.Is(out grammar));
+            Assert.AreEqual(5, grammar.ProductionCount);
+            Assert.AreEqual("int", grammar.Root);
+
+            success = GrammarParser.TryParseGrammar(
+                "invalid grammar",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out FailedRecognitionError _));
+
+            success = GrammarParser.TryParseGrammar(
+                "$invalid -> ?[",
+                metaContext,
+                out result);
+
+            Assert.IsFalse(success);
+            Assert.IsTrue(result.Is(out PartialRecognitionError _));
         }
         #endregion
 

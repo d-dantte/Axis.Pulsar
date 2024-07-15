@@ -80,6 +80,8 @@ namespace Axis.Pulsar.Core.Grammar.Rules
             return result.Is(out ISymbolNode _);
         }
 
+        public override string ToString() => $"${Symbol}[{Rule.GetType().Name}]";
+
 
         /// <summary>
         /// Production rule

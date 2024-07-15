@@ -21,12 +21,14 @@ namespace Axis.Pulsar.Core.XBNF.Definitions
             IProductionValidator validator)
         {
             Validator = validator ?? throw new ArgumentNullException(nameof(validator));
-            Symbol = symbol.ThrowIfNot(
-                Production.SymbolPattern.IsMatch,
-                _ => new FormatException($"Invalid symbol format: '{symbol}'"));
+            Symbol = symbol
+                .ThrowIfNull(() => new ArgumentNullException(nameof(symbol)))
+                .ThrowIfNot(
+                    Production.SymbolPattern.IsMatch,
+                    _ => new FormatException($"Invalid symbol format: '{symbol}'"));
         }
 
-        public ProductionValidatorDefinition Of(
+        public static ProductionValidatorDefinition Of(
             string symbol,
             IProductionValidator validator)
             => new(symbol, validator);

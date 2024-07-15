@@ -253,11 +253,14 @@ namespace Axis.Pulsar.Core.Utils
             if (other.IsDefault)
                 return this;
 
-            if (!EqualityComparer<string>.Default.Equals(_source, other._source))
-                throw new InvalidOperationException("Invalid merge: unequal sources");
+            if (IsEmpty)
+                return other;
 
             if (other.IsEmpty)
                 return this;
+
+            if (!EqualityComparer<string>.Default.Equals(_source, other._source))
+                throw new InvalidOperationException("Invalid merge: unequal sources");
 
             return Of(_source!, _segment + other._segment);
         }
@@ -487,6 +490,40 @@ namespace Axis.Pulsar.Core.Utils
             return
                 ((_segment.Offset == other._segment.Offset) && ReferenceEquals(_source, other._source))
                 || AsSpan().Equals(other.AsSpan(), flag);
+        }
+
+        public bool StartsWith(Tokens tokens)
+        {
+            if (IsDefault && tokens.IsDefault)
+                return true;
+
+            if (IsDefault ^ tokens.IsDefault)
+                return false;
+
+            if (IsEmpty && tokens.IsEmpty)
+                return true;
+
+            if (Segment.Count < tokens.Segment.Count)
+                return false;
+
+            return AsSpan().StartsWith(tokens.AsSpan());
+        }
+
+        public bool EndsWith(Tokens tokens)
+        {
+            if (IsDefault && tokens.IsDefault)
+                return true;
+
+            if (IsDefault ^ tokens.IsDefault)
+                return false;
+
+            if (IsEmpty && tokens.IsEmpty)
+                return true;
+
+            if (Segment.Count < tokens.Segment.Count)
+                return false;
+
+            return AsSpan().EndsWith(tokens.AsSpan());
         }
 
         #endregion

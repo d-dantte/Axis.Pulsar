@@ -232,5 +232,15 @@ namespace Axis.Pulsar.Core.Tests.Utils
             range = "£";
             Assert.AreEqual("£", range.ToString());
         }
+
+        [TestMethod]
+        public void GetHashCode_Tests()
+        {
+            var range = CharRange.Parse("1-3");
+            var hash = range.GetHashCode();
+            Assert.AreEqual(
+                HashCode.Combine(range.UpperBound, range.LowerBound),
+                hash);
+        }
     }
 }

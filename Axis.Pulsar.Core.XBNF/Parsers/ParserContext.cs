@@ -1,5 +1,6 @@
 ﻿using Axis.Luna.Extensions;
 using Axis.Pulsar.Core.XBNF.Lang;
+using System.Collections.Immutable;
 using static Axis.Pulsar.Core.XBNF.IAtomicRuleFactory;
 
 namespace Axis.Pulsar.Core.XBNF.Parsers
@@ -8,16 +9,18 @@ namespace Axis.Pulsar.Core.XBNF.Parsers
     {
         private readonly Dictionary<string, Parameter[]> _atomicRuleArgs = new();
 
-        internal IReadOnlyDictionary<string, Parameter[]> AtomicRuleArguments => _atomicRuleArgs.AsReadOnly();
+        internal IImmutableDictionary<string, Parameter[]> AtomicRuleArguments => _atomicRuleArgs.ToImmutableDictionary();
 
         internal LanguageMetadata Metadata { get; }
 
         internal ParserContext(LanguageMetadata metadata)
         {
-            Metadata = metadata.ThrowIfNull(() => new ArgumentNullException(nameof(metadata)));
+            ArgumentNullException.ThrowIfNull(metadata);
+
+            Metadata = metadata;
         }
 
-        internal void AppendAtomicRuleArguments(string id, Parameter[] arguments)
+        internal void AppendAtomicRuleArguments(string id, params Parameter[] arguments)
         {
             if (!_atomicRuleArgs.TryAdd(id, arguments))
                 throw new InvalidOperationException(

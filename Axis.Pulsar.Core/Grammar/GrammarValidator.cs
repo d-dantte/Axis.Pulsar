@@ -10,6 +10,7 @@ using Axis.Pulsar.Core.Utils;
 
 namespace Axis.Pulsar.Core.Grammar
 {
+    [Obsolete]
     public static class GrammarValidator__old
     {
         public static ValidationResult Validate(IGrammar grammar)
@@ -234,15 +235,29 @@ namespace Axis.Pulsar.Core.Grammar
 
     public static class GrammarValidator
     {
+        /// <summary>
+        /// Validate the grammar. A valid grammar is one that:
+        /// <list type="number">
+        ///     <item>Has no unreferenced production. An unreferenced production is one that cannot be traced back to the root</item>
+        ///     <item>Has no orphaned symbol-references. An orphaned symbol-reference is one that refers to a non-existent production</item>
+        ///     <item>All symbols terminate in terminals</item>
+        ///     <item>Has no infinite recursion</item>
+        /// </list>
+        /// </summary>
         public static ValidationResult ValidateGrammar(IGrammar grammar)
         {
             var context = new ValidationContext(grammar);
 
             TraverseProduction(grammar.GetProduction(grammar.Root), context);
 
+            var verifiedProductionSymbols = context.Symbols
+                .Where(symbol => symbol.StartsWith("$"))
+                .Select(symbol => symbol[1..])
+                .ToHashSet();
+
             var splitSets = grammar.ProductionSymbols
                 .ToHashSet()
-                .SplitSets(context.Symbols);
+                .SplitSets(verifiedProductionSymbols);
 
             return new ValidationResult(
                 splitSets.intersection,
@@ -256,19 +271,25 @@ namespace Axis.Pulsar.Core.Grammar
             ArgumentNullException.ThrowIfNull(production);
             ArgumentNullException.ThrowIfNull(context);
 
+            var productionKey = NodeStack.ProductionKeyFor(production.Symbol);
+
             // Check for infinite recursion: for every production ref, ensure that the production node for the ref isn't already in the stack
-            if (HasNonHaltingProductionLoop(production, context))
+            if (!HasHaltingProductionLoop(production, context))
             {
                 // report infinite loop validation error, and traverse no further
                 context.UnresolvableProductions.Add(NodeStack.ProductionRefKeyFor(production.Symbol));
                 return;
             }
 
+            // no loops, but we have traversed the production
+            else if (context.Symbols.Contains(productionKey))
+                return;
+
             // No infinite recursion detected.
             else
             {
                 context.TraversalStack.Push(new ProductionNode(production));
-                context.Symbols.Add(NodeStack.ProductionKeyFor(production.Symbol));
+                context.Symbols.Add(productionKey);
 
                 if (production.Rule is IAtomicRule atomicRule)
                     TraverseAtomicRule(atomicRule, context);
@@ -383,6 +404,11 @@ namespace Axis.Pulsar.Core.Grammar
             return false;
         }
 
+        public static bool HasHaltingProductionLoop(
+            Production production,
+            ValidationContext context)
+            => !HasNonHaltingProductionLoop(production, context);
+
         #region Nested types
         public class ValidationContext
         {
@@ -461,6 +487,34 @@ namespace Axis.Pulsar.Core.Grammar
         public interface INode
         {
             int Index { get; }
+
+            public static string ToString(IAggregationElement element)
+            {
+                return element switch
+                {
+                    Set => "Node.Set",
+                    Choice => "Node.Choice",
+                    Sequence => "Node.Sequence",
+                    Repetition => "Node.Repetition",
+                    ProductionRef pr => $"Node.#${pr.Ref}",
+                    AtomicRuleRef arr => $"Node.#@{arr.Ref.Id}",
+                    _ => throw new InvalidOperationException($"Invalid rule: {element?.GetType()}")
+                };
+            }
+
+            public static string ToString(
+                Production production)
+                => $"Node.${production.Symbol}";
+
+            public static string ToString(Production.IRule rule)
+            {
+                return rule switch
+                {
+                    IAtomicRule arr => $"Node.@{arr.Id}",
+                    CompositeRule pr => ToString(pr.Element),
+                    _ => throw new InvalidOperationException($"Invalid rule: {rule?.GetType()}")
+                };
+            }
         }
 
         public class ProductionNode : INode
@@ -474,6 +528,8 @@ namespace Axis.Pulsar.Core.Grammar
                 ArgumentNullException.ThrowIfNull(production);
                 Production = production;
             }
+
+            public override string ToString() => INode.ToString(Production);
         }
 
         public class ProductionRuleNode: INode
@@ -488,6 +544,8 @@ namespace Axis.Pulsar.Core.Grammar
 
                 Rule = rule;
             }
+
+            public override string ToString() => INode.ToString(Rule);
         }
 
         public class AggregateRuleNode: INode
@@ -505,6 +563,8 @@ namespace Axis.Pulsar.Core.Grammar
                     i => i < 0,
                     _ => new ArgumentOutOfRangeException(nameof(index)));
             }
+
+            public override string ToString() => INode.ToString(Rule);
         }
 
         public class NodeStack

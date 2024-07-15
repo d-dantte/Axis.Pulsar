@@ -15,7 +15,9 @@ namespace Axis.Pulsar.Core.XBNF.Parsers
 
         object IUnion<TResult, FailedError, PartialError, XBNFResult<TResult>>.Value => _value!;
 
-        public XBNFResult(object value)
+        internal object? Value => _value;
+
+        internal XBNFResult(object value)
         {
             _value = value switch
             {
@@ -23,8 +25,7 @@ namespace Axis.Pulsar.Core.XBNF.Parsers
                 FailedError
                 or PartialError
                 or TResult => value,
-                _ => throw new ArgumentOutOfRangeException(
-                    nameof(value),
+                _ => throw new InvalidOperationException(
                     $"Invalid {nameof(value)} type: '{value.GetType()}'")
             };
         }
@@ -81,7 +82,7 @@ namespace Axis.Pulsar.Core.XBNF.Parsers
             Func<TResult, TOut> resultMapper,
             Func<FailedError, TOut> failedErrorMapper,
             Func<PartialError, TOut> partialErrorMapper,
-            Func<TOut> nullMapper = null!)
+            Func<TOut>? nullMapper = null!)
         {
             ArgumentNullException.ThrowIfNull(resultMapper);
             ArgumentNullException.ThrowIfNull(failedErrorMapper);
@@ -108,7 +109,7 @@ namespace Axis.Pulsar.Core.XBNF.Parsers
             Action<TResult> resultConsumer,
             Action<FailedError> failedErrorConsumer,
             Action<PartialError> partialErrorConsumer,
-            Action nullConsumer = null!)
+            Action? nullConsumer = null!)
         {
             ArgumentNullException.ThrowIfNull(resultConsumer);
             ArgumentNullException.ThrowIfNull(failedErrorConsumer);
@@ -123,7 +124,7 @@ namespace Axis.Pulsar.Core.XBNF.Parsers
             else if (_value is PartialError t3)
                 partialErrorConsumer.Invoke(t3);
 
-            else if (_value is null && nullConsumer is not null)
+            else if (nullConsumer is not null)
                 nullConsumer.Invoke();
         }
 
@@ -131,7 +132,7 @@ namespace Axis.Pulsar.Core.XBNF.Parsers
             Action<TResult> resultConsumer,
             Action<FailedError> failedErrorConsumer,
             Action<PartialError> partialErrorConsumer,
-            Action nullConsumer = null!)
+            Action? nullConsumer = null!)
         {
             ConsumeMatch(resultConsumer, failedErrorConsumer, partialErrorConsumer, nullConsumer);
             return this;

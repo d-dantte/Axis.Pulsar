@@ -13,7 +13,7 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules.Atomic
         public void Constructor_Tests()
         {
             var delimiter = new DelimiterInfo("'");
-            var constraint = new LegalCharacterRanges(delimiter, "a", "t-v");
+            var constraint = new LegalCharacterRanges("a", "t-v");
 
             var dc = new DelimitedContent("xyz", true, delimiter, delimiter, constraint);
             Assert.IsNotNull(dc);
@@ -25,17 +25,17 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules.Atomic
 
             dc = new DelimitedContent(
                 "xyz", true, delimiter,
-                new LegalCharacterRanges(delimiter, "a", "t-v"));
+                new LegalCharacterRanges("a", "t-v"));
             Assert.IsNotNull(dc);
 
             dc = Of(
                 "xyz", true, delimiter, delimiter,
-                new LegalCharacterRanges(delimiter, "a", "t-v"));
+                new LegalCharacterRanges("a", "t-v"));
             Assert.IsNotNull(dc);
 
             dc = Of(
                 "xyz", true, delimiter,
-                new LegalCharacterRanges(delimiter, "a", "t-v"));
+                new LegalCharacterRanges("a", "t-v"));
             Assert.IsNotNull(dc);
         }
 
@@ -61,26 +61,28 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules.Atomic
         public void TryRecognizeContent_Tests()
         {
             var delimiter = new DelimiterInfo("'", "\\'");
-            var constraint = new LegalCharacterRanges(delimiter, "\0-\uffff");
+            var constraint = new LegalCharacterRanges("\0-\uffff");
+            var dc = new DelimitedContent("id", true, delimiter, constraint);
 
-            var recognized = TryRecognizeContent("", constraint, true, out var tokens);
+            var recognized = dc.TryRecognizeContent("", out var tokens);
             Assert.IsTrue(recognized);
             Assert.IsTrue(tokens.IsEmpty);
 
-            recognized = TryRecognizeContent("", constraint, false, out tokens);
-            Assert.IsFalse(recognized);
-            Assert.IsTrue(tokens.IsEmpty);
-
-            recognized = TryRecognizeContent("abcd\uf2fc", constraint, false, out tokens);
+            recognized = dc.TryRecognizeContent("abcd\uf2fc", out tokens);
             Assert.IsTrue(recognized);
             Assert.AreEqual<Tokens>("abcd\uf2fc", tokens);
+
+            dc = new DelimitedContent("id", false, delimiter, constraint);
+            recognized = dc.TryRecognizeContent("", out tokens);
+            Assert.IsFalse(recognized);
+            Assert.IsTrue(tokens.IsEmpty);
         }
 
         [TestMethod]
         public void TryRecognize_Tests()
         {
             var delimiter = new DelimiterInfo("'", "\\'");
-            var constraint = new LegalCharacterRanges(delimiter, "\0-\uffff");
+            var constraint = new LegalCharacterRanges("\0-\uffff");
             var dc = new DelimitedContent("xyz", true, delimiter, delimiter, constraint);
             var dc2 = new DelimitedContent("xyz", false, delimiter, delimiter, constraint);
 
@@ -287,41 +289,37 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules.Atomic
         [TestMethod]
         public void Constructor_Tests()
         {
-            var lcr = new LegalCharacterRanges(
-                new DelimiterInfo("^"),
-                "a-g", "x", "p-s");
+            var dinfo = new DelimiterInfo("^");
+            var lcr = new LegalCharacterRanges("a-g", "x", "p-s");
 
             Assert.IsNotNull(lcr);
-            Assert.IsNotNull(lcr.EndDelimiter);
             Assert.AreEqual(3, lcr.Ranges.Length);
 
-            Assert.ThrowsException<ArgumentNullException>(() => new LegalCharacterRanges(default, null!));
-            Assert.ThrowsException<InvalidOperationException>(() => new LegalCharacterRanges(default));
+            Assert.ThrowsException<ArgumentNullException>(() => new LegalCharacterRanges((CharRange[]?)null!));
+            Assert.ThrowsException<InvalidOperationException>(() => new LegalCharacterRanges([]));
             Assert.ThrowsException<InvalidOperationException>(() => new LegalCharacterRanges(default, "a", default));
         }
 
         [TestMethod]
         public void ReadValidTokens_Tests()
         {
-            var lcr = new LegalCharacterRanges(
-                new DelimiterInfo("^"),
-                "a-g", "x", "p-s");
+            var di = new DelimiterInfo("^");
+            var lcr = new LegalCharacterRanges("a-g", "x", "p-s");
 
-            var lcr2 = new LegalCharacterRanges(
-                new DelimiterInfo("^", "\\^"),
-                "a-g", "x", "p-s", "\\", "^");
+            var di2 = new DelimiterInfo("^", "\\^");
+            var lcr2 = new LegalCharacterRanges("a-g", "x", "p-s", "\\", "^");
 
-            var tokens = lcr.ReadValidTokens("abcab");
-            Assert.AreEqual<Tokens>("abcab", tokens);
+            var tokens = lcr.ReadValidTokens("abcab", (di, di, false));
+            Assert.AreEqual<Tokens>("abcab", tokens!.Value);
 
-            tokens = lcr.ReadValidTokens("abcaqarbj");
-            Assert.AreEqual<Tokens>("abcaqarb", tokens);
+            tokens = lcr.ReadValidTokens("abcaqarbj", (di, di, false));
+            Assert.AreEqual<Tokens>("abcaqarb", tokens!.Value);
 
-            tokens = lcr.ReadValidTokens("abcaq^arbj");
-            Assert.AreEqual<Tokens>("abcaq", tokens);
+            tokens = lcr.ReadValidTokens("abcaq^arbj", (di, di, false));
+            Assert.AreEqual<Tokens>("abcaq", tokens!.Value);
 
-            tokens = lcr2.ReadValidTokens("abcd\\^eqs^bleh");
-            Assert.AreEqual<Tokens>("abcd\\^eqs", tokens);
+            tokens = lcr2.ReadValidTokens("abcd\\^eqs^bleh", (di2, di2, false));
+            Assert.AreEqual<Tokens>("abcd\\^eqs", tokens!.Value);
         }
     }
 
@@ -331,41 +329,39 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules.Atomic
         [TestMethod]
         public void Constructor_Tests()
         {
-            var lcr = new IllegalCharacterRanges(
-                new DelimiterInfo("^"),
-                "a-g", "x", "p-s");
+            var lcr = new IllegalCharacterRanges("a-g", "x", "p-s");
 
             Assert.IsNotNull(lcr);
-            Assert.IsNotNull(lcr.EndDelimiter);
             Assert.AreEqual(3, lcr.Ranges.Length);
 
-            Assert.ThrowsException<ArgumentNullException>(() => new IllegalCharacterRanges(default, null!));
-            Assert.ThrowsException<InvalidOperationException>(() => new IllegalCharacterRanges(default));
+            Assert.ThrowsException<ArgumentNullException>(() => new IllegalCharacterRanges((CharRange[]?)null!));
+            Assert.ThrowsException<InvalidOperationException>(() => new IllegalCharacterRanges([]));
             Assert.ThrowsException<InvalidOperationException>(() => new IllegalCharacterRanges(default, "a", default));
         }
 
         [TestMethod]
         public void ReadValidTokens_Tests()
         {
-            var lcr = new IllegalCharacterRanges(
-                new DelimiterInfo("^"),
-                "a-g", "x", "p-s");
+            var di = new DelimiterInfo("^");
+            var lcr = new IllegalCharacterRanges("a-g", "x", "p-s");
 
-            var lcr2 = new IllegalCharacterRanges(
-                new DelimiterInfo("^", "\\^"),
-                "a-g", "x", "p-s");
+            var di2 = new DelimiterInfo("^", "\\^");
+            var lcr2 = new IllegalCharacterRanges("a-g", "x", "p-s");
 
-            var tokens = lcr.ReadValidTokens("hijkl");
-            Assert.AreEqual<Tokens>("hijkl", tokens);
+            var tokens = lcr.ReadValidTokens("hijkl", (di, di, true));
+            Assert.AreEqual<Tokens>("hijkl", tokens!.Value);
 
-            tokens = lcr.ReadValidTokens("hijkla");
-            Assert.AreEqual<Tokens>("hijkl", tokens);
+            tokens = lcr.ReadValidTokens("hijkla", (di, di, true));
+            Assert.AreEqual<Tokens>("hijkl", tokens!.Value);
 
-            tokens = lcr.ReadValidTokens("hijkl^mno");
-            Assert.AreEqual<Tokens>("hijkl", tokens);
+            tokens = lcr.ReadValidTokens("hijkl^mno", (di, di, true));
+            Assert.AreEqual<Tokens>("hijkl", tokens!.Value);
 
-            tokens = lcr2.ReadValidTokens("hijkl\\^mno^tuvw");
-            Assert.AreEqual<Tokens>("hijkl\\^mno", tokens);
+            tokens = lcr2.ReadValidTokens("hijkl\\^mno^tuvw", (di2, di2, true));
+            Assert.AreEqual<Tokens>("hijkl\\^mno", tokens!.Value);
+
+            tokens = lcr2.ReadValidTokens("hijkl\\^mno^tuvw", (di2, null, true));
+            Assert.AreEqual<Tokens>("hijkl\\^mno^tuvw", tokens!.Value);
         }
     }
 
@@ -396,17 +392,17 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules.Atomic
                 new LiteralPattern("ab"),
                 new WildcardPattern("12345"));
 
-            var tokens = lcr.ReadValidTokens("abcdabababab");
-            Assert.AreEqual<Tokens>("abcdabababab", tokens);
+            var tokens = lcr.ReadValidTokens("abcdabababab", default);
+            Assert.AreEqual<Tokens>("abcdabababab", tokens!.Value);
 
-            tokens = lcr.ReadValidTokens("12345abcdaqarbj");
-            Assert.AreEqual<Tokens>("12345abcd", tokens);
+            tokens = lcr.ReadValidTokens("12345abcdaqarbj", default);
+            Assert.AreEqual<Tokens>("12345abcd", tokens!.Value);
 
-            tokens = lcr.ReadValidTokens("12345aacaq^arbj");
-            Assert.AreEqual<Tokens>("12345", tokens);
+            tokens = lcr.ReadValidTokens("12345aacaq^arbj", default);
+            Assert.AreEqual<Tokens>("12345", tokens!.Value);
 
-            tokens = lcr.ReadValidTokens("");
-            Assert.IsTrue(tokens.IsEmpty);
+            tokens = lcr.ReadValidTokens("", default);
+            Assert.IsTrue(tokens!.Value.IsEmpty);
         }
     }
 
@@ -417,7 +413,6 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules.Atomic
         public void Constructor_Tests()
         {
             var lcr = new IllegalDiscretePatterns(
-                new DelimiterInfo("^", "\\^"),
                 new LiteralPattern("abcd"),
                 new LiteralPattern("ab"),
                 new WildcardPattern("abcde"));
@@ -425,25 +420,58 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules.Atomic
             Assert.IsNotNull(lcr);
             Assert.AreEqual(3, lcr.Patterns.Length);
 
-            Assert.ThrowsException<ArgumentNullException>(() => new IllegalDiscretePatterns(new DelimiterInfo("^", "\\^"), default!));
-            Assert.ThrowsException<InvalidOperationException>(() => new IllegalDiscretePatterns(new DelimiterInfo("^", "\\^")));
-            Assert.ThrowsException<InvalidOperationException>(() => new IllegalDiscretePatterns(new DelimiterInfo("^", "\\^"), null!, null!));
+            Assert.ThrowsException<ArgumentNullException>(() => new IllegalDiscretePatterns(default!));
+            Assert.ThrowsException<InvalidOperationException>(() => new IllegalDiscretePatterns([]));
+            Assert.ThrowsException<InvalidOperationException>(() => new IllegalDiscretePatterns(null!, null!));
         }
 
         [TestMethod]
         public void ReadValidTokens_Tests()
         {
+            var di = new DelimiterInfo("^", "\\^");
             var lcr = new IllegalDiscretePatterns(
-                new DelimiterInfo("^", "\\^"),
                 new LiteralPattern("abcd"),
                 new LiteralPattern("ab"),
                 new WildcardPattern("12345"));
 
-            var tokens = lcr.ReadValidTokens("abcdabababab");
-            Assert.IsTrue(tokens.IsEmpty);
+            var tokens = lcr.ReadValidTokens("abcdabababab", (di, di, true));
+            Assert.IsTrue(tokens!.Value.IsEmpty);
 
-            tokens = lcr.ReadValidTokens("xyz9887^");
-            Assert.AreEqual<Tokens>("xyz9887", tokens);
+            tokens = lcr.ReadValidTokens("xyz9887^", (di, di, true));
+            Assert.AreEqual<Tokens>("xyz9887", tokens!.Value);
+
+            tokens = lcr.ReadValidTokens("xyz9887^", (di, null, true));
+            Assert.AreEqual<Tokens>("xyz9887^", tokens!.Value);
+        }
+    }
+
+    [TestClass]
+    public class DefaultContentConstraintTests
+    {
+        [TestMethod]
+        public void ReadValidTokens_Tests()
+        {
+            var delimInfo = new DelimiterInfo("\"", "\\\"");
+            var instance = DefaultContentConstraint.SingletonInstance;
+
+            Assert.ThrowsException<InvalidOperationException>(
+                () => instance.ReadValidTokens(
+                    "", (delimInfo, new DelimiterInfo("a"), true)));
+
+            var result = instance.ReadValidTokens("", (delimInfo, delimInfo, true));
+            Assert.IsTrue(result!.Value.IsEmpty);
+
+            result = instance.ReadValidTokens("abcd", (delimInfo, delimInfo, true));
+            Assert.AreEqual<Tokens>("abcd", result!.Value);
+
+            result = instance.ReadValidTokens("abc\\\"d", (delimInfo, delimInfo, true));
+            Assert.AreEqual<Tokens>("abc\\\"d", result!.Value);
+
+            result = instance.ReadValidTokens("abc\"d", (delimInfo, delimInfo, true));
+            Assert.AreEqual<Tokens>("abc", result!.Value);
+
+            result = instance.ReadValidTokens("abc\"d", (delimInfo, null, true));
+            Assert.IsNull(result);
         }
     }
 }

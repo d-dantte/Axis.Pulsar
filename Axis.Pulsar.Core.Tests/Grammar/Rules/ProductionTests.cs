@@ -4,6 +4,7 @@ using Axis.Pulsar.Core.Grammar;
 using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Results;
 using Axis.Pulsar.Core.Grammar.Rules;
+using Axis.Pulsar.Core.Grammar.Rules.Atomic;
 using Axis.Pulsar.Core.Grammar.Validation;
 using Axis.Pulsar.Core.Lang;
 using Axis.Pulsar.Core.Utils;
@@ -208,6 +209,15 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Rules
             Assert.IsFalse(success);
             Assert.IsNotNull(result);
             Assert.IsTrue(result.Is(out PartialRecognitionError _));
+        }
+
+        [TestMethod]
+        public void ToString_Tests()
+        {
+            var literal = new TerminalLiteral("abcd", "efgh");
+            var production = new Production("prod", literal);
+
+            Assert.AreEqual("$prod[TerminalLiteral]", production.ToString());
         }
 
         #region nested types

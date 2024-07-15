@@ -147,7 +147,7 @@ public readonly struct CharRange:
     }
 
     /// <summary>
-    /// Accepts a sting containing a 2 character representations separated by a dash. Whitespaces are
+    /// Accepts a sting containing a 2-character representation separated by a dash. Whitespaces are
     /// allowed between these 3 elements.
     /// <para/>
     /// Recognized special characters that must appear escaped are: '-', ' ', '\n', '\r', '\t'. these

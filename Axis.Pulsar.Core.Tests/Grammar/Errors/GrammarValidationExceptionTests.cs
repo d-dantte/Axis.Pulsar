@@ -11,8 +11,8 @@ namespace Axis.Pulsar.Core.Tests.Grammar.Errors
         public void Construction_Tests()
         {
             var error = new GrammarValidationException(
-                new GrammarValidator__old.ValidationResult(
-                    new FakeGrammar(),
+                new GrammarValidator.ValidationResult(
+                    Enumerable.Empty<string>(),
                     Enumerable.Empty<string>(),
                     Enumerable.Empty<string>(),
                     Enumerable.Empty<string>()));

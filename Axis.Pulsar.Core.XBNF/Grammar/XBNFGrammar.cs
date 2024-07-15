@@ -15,16 +15,17 @@ public class XBNFGrammar : IGrammar
 
     internal XBNFGrammar(string root, IEnumerable<Production> productions)
     {
-        _root = root.ThrowIf(
-            string.IsNullOrWhiteSpace,
-            _ => new ArgumentException($"Invalid {nameof(root)}: '{root}'"));
+        _root = root
+            .ThrowIfNull(() => new ArgumentNullException(nameof(root)))
+            .ThrowIfNot(
+                Production.SymbolPattern.IsMatch,
+                _ => new FormatException($"Invalid symbol format: '{root}'"));
 
         _productions = productions
             .ThrowIfNull(() => new ArgumentNullException(nameof(productions)))
+            .ThrowIf(prods => prods.IsEmpty(), _ => new ArgumentException($"Invalid {nameof(productions)}: empty"))
             .ThrowIfAny(prod => prod is null, _ => new ArgumentException($"Invalid production: null"))
             .ToDictionary(prod => prod.Symbol, prod => prod);
-
-        ValidateGrammar();
     }
 
     public static IGrammar Of(
@@ -50,21 +51,5 @@ public class XBNFGrammar : IGrammar
 
         production = _productions[name];
         return true;
-    }
-
-    /// <summary>
-    /// Validate the grammar. A valid grammar is one that:
-    /// <list type="number">
-    ///     <item>Has no unreferenced production. An unreferenced production is one that cannot be traced back to the root</item>
-    ///     <item>Has no orphaned symbol-references. An orphaned symbol-reference is one that refers to a non-existent production</item>
-    ///     <item>All symbols terminate in terminals</item>
-    ///     <item>Has no infinite recursion</item>
-    /// </list>
-    /// </summary>
-    private void ValidateGrammar()
-    {
-        var result = GrammarValidator__old.Validate(this);
-
-        // based on the result, throw some exceptions, or return
     }
 }

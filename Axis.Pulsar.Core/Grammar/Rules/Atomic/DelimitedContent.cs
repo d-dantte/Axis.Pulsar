@@ -17,7 +17,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
     {
         public string Id { get; }
         public DelimiterInfo StartDelimiter { get; }
-        public DelimiterInfo EndDelimiter { get; }
+        public DelimiterInfo? EndDelimiter { get; }
         public bool AcceptsEmptyContent { get; }
         public IContentConstraint ContentConstraint { get; }
 
@@ -26,7 +26,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
             string id,
             bool acceptsEmptyContent,
             DelimiterInfo startDelimiter,
-            DelimiterInfo endDelimiter,
+            DelimiterInfo? endDelimiter,
             IContentConstraint contentConstraint)
         {
             Id = id.ThrowIfNot(
@@ -39,7 +39,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
             StartDelimiter = startDelimiter.ThrowIfDefault(
                 _ => new ArgumentException($"Invalid {nameof(startDelimiter)}: default"));
 
-            EndDelimiter = endDelimiter.ThrowIfDefault(
+            EndDelimiter = endDelimiter?.ThrowIfDefault(
                 _ => new ArgumentException($"Invalid {nameof(endDelimiter)}: default"));
 
             AcceptsEmptyContent = acceptsEmptyContent;
@@ -50,7 +50,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
             bool acceptsEmptyContent,
             DelimiterInfo startDelimiter,
             IContentConstraint contentConstraint)
-            : this(id, acceptsEmptyContent, startDelimiter, startDelimiter, contentConstraint)
+            : this(id, acceptsEmptyContent, startDelimiter, null, contentConstraint)
         {
         }
 
@@ -94,7 +94,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
             tokens += startDelimTokens;
 
             // Content
-            if (!TryRecognizeContent(reader, ContentConstraint, AcceptsEmptyContent, out var contentToken))
+            if (!TryRecognizeContent(reader, out var contentToken))
             {
                 reader.Reset(position);
                 result = PartialRecognitionError
@@ -106,16 +106,19 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
             tokens += contentToken;
 
             // End Delimiter
-            if (!TryRecognizeDelimiter(reader, EndDelimiter, out var endDelimTokens))
+            if (EndDelimiter is not null)
             {
-                reader.Reset(position);
-                result = PartialRecognitionError
-                    .Of(delimPath, position, tokens.Segment.Count)
-                    .ApplyTo(NodeRecognitionResult.Of);
+                if (!TryRecognizeDelimiter(reader, EndDelimiter.Value, out var endDelimTokens))
+                {
+                    reader.Reset(position);
+                    result = PartialRecognitionError
+                        .Of(delimPath, position, tokens.Segment.Count)
+                        .ApplyTo(NodeRecognitionResult.Of);
 
-                return false;
+                    return false;
+                }
+                tokens += endDelimTokens;
             }
-            tokens += endDelimTokens;
 
             result = ISymbolNode
                 .Of(delimPath.Symbol, tokens)
@@ -123,16 +126,29 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
             return true;
         }
 
-        internal static bool TryRecognizeContent(
+        /// <summary>
+        /// TODO: pass in the endDelimiter
+        /// </summary>
+        /// <param name="reader"></param>
+        /// <param name="contentConstraint"></param>
+        /// <param name="acceptsEmptyContent"></param>
+        /// <param name="tokens"></param>
+        /// <returns></returns>
+        internal bool TryRecognizeContent(
             TokenReader reader,
-            IContentConstraint contentConstraint,
-            bool acceptsEmptyContent,
             out Tokens tokens)
         {
-            tokens = contentConstraint.ReadValidTokens(reader);
+            var resultTokens = ContentConstraint.ReadValidTokens(reader, (StartDelimiter, EndDelimiter, AcceptsEmptyContent));
 
+            if (resultTokens == null)
+            {
+                tokens = Tokens.Default;
+                return false;
+            }
+
+            tokens = resultTokens.Value;
             if (tokens.IsEmpty)
-                return acceptsEmptyContent;
+                return AcceptsEmptyContent;
 
             return true;
         }
@@ -157,6 +173,12 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
 
 
         #region Nested types
+        /// <summary>
+        /// Defines information that describes a delimieter.
+        /// <para>
+        /// Delimiters may have an accompanying escape sequence, which is a superset of the delimiter itself.
+        /// </para>
+        /// </summary>
         public readonly struct DelimiterInfo : IDefaultValueProvider<DelimiterInfo>
         {
             public string Delimiter { get; }
@@ -254,12 +276,18 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
             }
         }
 
+        /// <summary>
+        /// Defines the contract for specialized pattern matching with strings
+        /// </summary>
         public interface IPattern
         {
             bool Matches(Tokens tokens);
             int Length { get; }
         }
 
+        /// <summary>
+        /// Pattern that matches a literal string
+        /// </summary>
         public class LiteralPattern : IPattern
         {
             private readonly string literal;
@@ -284,6 +312,9 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
             }
         }
 
+        /// <summary>
+        /// Pattern containing mixture of literal string and wild-card characters
+        /// </summary>
         public class WildcardPattern : IPattern
         {
             private readonly WildcardExpression wildcard;
@@ -300,30 +331,32 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
                 => wildcard.IsMatch(tokens.AsSpan());
         }
 
+        /// <summary>
+        /// Contract for constraining the content of the delimiter-bound string
+        /// </summary>
         public interface IContentConstraint
         {
             /// <summary>
             /// Reads tokens from the <paramref name="reader"/>, until the encapsulated constraint-rule is violated, returning all valid
             /// tokens read, or an empty <see cref="Tokens"/> instance if no valid tokens were read.
+            /// <para/>
+            /// TODO: pass in the EndDelimiter to this function so we don't need to pass it into the constructors
             /// </summary>
             /// <param name="reader">The token reader to read from</param>
+            /// <param name="context">The delimited content info passed</param>
             /// <returns>A result of the tokens read</returns>
-            Tokens ReadValidTokens(TokenReader reader);
+            Tokens? ReadValidTokens(TokenReader reader, (DelimiterInfo start, DelimiterInfo? end, bool acceptsEmpty) context);
         }
 
         public class LegalCharacterRanges : IContentConstraint
         {
             public ImmutableArray<CharRange> Ranges { get; }
 
-            public DelimiterInfo EndDelimiter { get; }
-
             public LegalCharacterRanges(
-                DelimiterInfo endDelimiter,
                 params CharRange[] ranges)
             {
                 ArgumentNullException.ThrowIfNull(ranges);
 
-                EndDelimiter = endDelimiter;
                 Ranges = ranges
                     .ThrowIf(
                         arr => arr.IsEmpty(),
@@ -335,7 +368,9 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
                     .ToImmutableArray();
             }
 
-            public Tokens ReadValidTokens(TokenReader reader)
+            public Tokens? ReadValidTokens(
+                TokenReader reader,
+                (DelimiterInfo start, DelimiterInfo? end, bool acceptsEmpty) context)
             {
                 var position = reader.Position;
                 var tokens = Tokens.EmptyAt(reader.Source, position);
@@ -351,13 +386,16 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
                         break;
                     }
 
-                    if (EndDelimiter.MatchesEndOfTokens(tokens))
+                    if (context.end is not null && context.end.Value.MatchesEndOfTokens(tokens))
                     {
-                        reader.Back(EndDelimiter.Delimiter.Length);
-                        tokens = tokens[..^EndDelimiter.Delimiter.Length];
+                        reader.Back(context.end.Value.Delimiter.Length);
+                        tokens = tokens[..^context.end.Value.Delimiter.Length];
                         break;
                     }
                 }
+
+                if (tokens.IsEmpty && !context.acceptsEmpty)
+                    return null;
 
                 return tokens;
             }
@@ -367,15 +405,11 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
         {
             public ImmutableArray<CharRange> Ranges { get; }
 
-            public DelimiterInfo EndDelimiter { get; }
-
             public IllegalCharacterRanges(
-                DelimiterInfo endDelimiter,
                 params CharRange[] ranges)
             {
                 ArgumentNullException.ThrowIfNull(ranges);
 
-                EndDelimiter = endDelimiter;
                 Ranges = ranges
                     .ThrowIf(
                         arr => arr.IsEmpty(),
@@ -387,7 +421,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
                     .ToImmutableArray();
             }
 
-            public Tokens ReadValidTokens(TokenReader reader)
+            public Tokens? ReadValidTokens(TokenReader reader, (DelimiterInfo start, DelimiterInfo? end, bool acceptsEmpty) context)
             {
                 var position = reader.Position;
                 var tokens = Tokens.EmptyAt(reader.Source, position);
@@ -402,10 +436,11 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
 
                     tokens += token;
 
-                    if (EndDelimiter.MatchesEndOfTokens(tokens))
+                    if (context.end is not null
+                        && context.end.Value.MatchesEndOfTokens(tokens))
                     {
-                        reader.Back(EndDelimiter.Delimiter.Length);
-                        tokens = tokens[..^EndDelimiter.Delimiter.Length];
+                        reader.Back(context.end.Value.Delimiter.Length);
+                        tokens = tokens[..^context.end.Value.Delimiter.Length];
                         break;
                     }
                 }
@@ -432,7 +467,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
                     .ToImmutableArray();
             }
 
-            public Tokens ReadValidTokens(TokenReader reader)
+            public Tokens? ReadValidTokens(TokenReader reader, (DelimiterInfo start, DelimiterInfo? end, bool acceptsEmpty) context)
             {
                 var position = reader.Position;
                 var tokens = Tokens.EmptyAt(reader.Source, position);
@@ -463,13 +498,9 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
         {
             public ImmutableArray<IPattern> Patterns { get; }
 
-            public DelimiterInfo EndDelimiter { get; }
-
             public IllegalDiscretePatterns(
-                DelimiterInfo endDelimiter,
                 params IPattern[] patterns)
             {
-                EndDelimiter = endDelimiter;
                 Patterns = patterns
                     .ThrowIfNull(() => new ArgumentNullException(nameof(patterns)))
                     .ThrowIf(
@@ -482,7 +513,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
                     .ToImmutableArray();
             }
 
-            public Tokens ReadValidTokens(TokenReader reader)
+            public Tokens? ReadValidTokens(TokenReader reader, (DelimiterInfo start, DelimiterInfo? end, bool acceptsEmpty) context)
             {
                 var position = reader.Position;
                 var tokens = Tokens.EmptyAt(reader.Source, position);
@@ -491,9 +522,10 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
                 {
                     var tempTokens = tokens + token;
 
-                    if (EndDelimiter.MatchesEndOfTokens(tempTokens))
+                    if (context.end is not null
+                        && context.end.Value.MatchesEndOfTokens(tempTokens))
                     {
-                        tokens = tempTokens[..^EndDelimiter.Delimiter.Length];
+                        tokens = tempTokens[..^context.end.Value.Delimiter.Length];
                         break;
                     }
                     else
@@ -516,6 +548,49 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
                     }
 
                     tokens = tempTokens;
+                }
+
+                return tokens;
+            }
+        }
+
+        public class DefaultContentConstraint : IContentConstraint
+        {
+            private static readonly DefaultContentConstraint Instance = new();
+
+            public static DefaultContentConstraint SingletonInstance => Instance;
+
+            public Tokens? ReadValidTokens(
+                TokenReader reader,
+                (DelimiterInfo start, DelimiterInfo? end, bool acceptsEmpty) context)
+            {
+                if (context.end is null)
+                    return null;
+
+                if (context.end.Value.EscapeSequence is null)
+                    throw new InvalidOperationException($"Invalid end-delimiter: no escape found");
+
+                var tokens = Tokens.Empty;
+                var endEscape = context.end.Value.EscapeSequence!;
+                var endDelim = context.end.Value.Delimiter;
+                while (reader.TryPeekTokens(endEscape.Length, false, out var read))
+                {
+                    if (read.IsEmpty)
+                        break;
+
+                    else if (read.StartsWith(endDelim))
+                        break;
+
+                    else if (read.Equals(endEscape))
+                    {
+                        tokens += read;
+                        reader.Advance(read.Segment.Count);
+                    }
+                    else
+                    {
+                        tokens += read[..1];
+                        reader.Advance(1);
+                    }
                 }
 
                 return tokens;
