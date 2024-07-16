@@ -376,9 +376,6 @@ internal static class GrammarParser
             return false;
         }
 
-        // optional silent block
-        _ = TryParseSilentBlock(reader, thresholdPath, context, out _);
-
         result = uint
             .Parse(digitTokens.AsSpan())
             .ApplyTo(XBNFResult<uint>.Of);

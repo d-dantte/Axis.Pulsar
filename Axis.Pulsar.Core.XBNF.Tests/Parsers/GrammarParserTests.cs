@@ -1382,6 +1382,16 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsInstanceOfType<CompositeRule>(rule);
 
             success = GrammarParser.TryParseCompositeRule(
+                ":2 #[$tuff ?[$other-stuff $more-stuff]]",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.Is(out rule));
+            Assert.IsInstanceOfType<CompositeRule>(rule);
+
+            success = GrammarParser.TryParseCompositeRule(
                 "&[$tuff ?[$other-stuff $more-stuff].?]",
                 "parent",
                 metaContext,
