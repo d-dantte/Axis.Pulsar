@@ -47,7 +47,7 @@ namespace Axis.Pulsar.Core.Grammar.Rules.Atomic
             var literalPath = symbolPath.Next(Id);
 
             if (reader.TryGetTokens(Tokens.Length, true, out var tokens)
-                && tokens.Equals(Tokens, !IsCaseSensitive))
+                && tokens.Equals(Tokens, IsCaseSensitive))
             {
                 result = ISymbolNode
                     .Of(literalPath.Symbol, tokens)

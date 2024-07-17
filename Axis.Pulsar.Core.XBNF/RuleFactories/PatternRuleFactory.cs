@@ -73,7 +73,7 @@ public class PatternRuleFactory : IAtomicRuleFactory
     private static IMatchType ParseMatchType(ImmutableDictionary<IArgument, string> arguments)
     {
         if (!arguments.TryGetValue(MatchTypeArgument, out var value))
-            return IMatchType.Of(1);
+            return IMatchType.Of(0); // defaults to an open match-type with max-mismatch of 0, meaning any mis-match fails the match
 
         var parts = value.Split(',');
 

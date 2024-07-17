@@ -673,7 +673,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.AreEqual("literal", literal.Tokens);
 
             success = GrammarParser.TryParseAtomicRule(
-                "\"literal with falg\"{case-insensitive}",
+                "\"literal\"{case-insensitive}",
                 "parent",
                 metaContext,
                 out result);
@@ -683,7 +683,11 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsInstanceOfType<TerminalLiteral>(rule);
             literal = rule.As<TerminalLiteral>();
             Assert.IsFalse(literal.IsCaseSensitive);
-            Assert.AreEqual("literal with falg", literal.Tokens);
+            Assert.AreEqual("literal", literal.Tokens);
+            var recognized = literal.TryRecognize("literal", "pth", null!, out var rrr);
+            Assert.IsTrue(recognized);
+            recognized = literal.TryRecognize("LitEraL", "pth", null!, out rrr);
+            Assert.IsTrue(recognized);
             #endregion
 
             #region Pattern
@@ -697,12 +701,12 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(result.Is(out rule));
             Assert.IsInstanceOfType<TerminalPattern>(rule);
             var pattern = rule.As<TerminalPattern>();
-            Assert.AreEqual(IMatchType.Of(1), pattern.MatchType);
+            Assert.AreEqual(IMatchType.Of(0), pattern.MatchType);
             Assert.AreEqual("the pattern", pattern.Pattern.ToString());
             Assert.AreEqual(RegexOptions.Compiled, pattern.Pattern.Options);
 
             success = GrammarParser.TryParseAtomicRule(
-                "/the pattern/{flags: 'ixcn'}",
+                "/the pattern/{flags:'ixcn'}",
                 "parent",
                 metaContext,
                 out result);
@@ -711,7 +715,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(result.Is(out rule));
             Assert.IsInstanceOfType<TerminalPattern>(rule);
             pattern = rule.As<TerminalPattern>();
-            Assert.AreEqual(IMatchType.Of(1), pattern.MatchType);
+            Assert.AreEqual(IMatchType.Of(0), pattern.MatchType);
             Assert.AreEqual("the pattern", pattern.Pattern.ToString());
             Assert.AreEqual(
                 RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture |
@@ -741,6 +745,18 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             pattern = rule.As<TerminalPattern>();
             Assert.AreEqual(IMatchType.Of(1, false), pattern.MatchType);
             Assert.AreEqual("the pattern", pattern.Pattern.ToString());
+
+            success = GrammarParser.TryParseAtomicRule(
+                "/^[a-zA-Z_](([.-])?[a-zA-Z0-9_])*\\z/{ match-type: '1,+' }",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.Is(out rule));
+            pattern = rule.As<TerminalPattern>();
+            Assert.AreEqual(IMatchType.Of(1, false), pattern.MatchType);
+            pattern.TryRecognize("att", "pth", null!, out rrr);
             #endregion
 
             #region char ranges
@@ -783,6 +799,18 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             dstring = rule.As<DelimitedContent>();
             Assert.AreEqual("\\(", dstring.StartDelimiter.Delimiter);
             Assert.AreEqual(")", dstring.EndDelimiter!.Value.Delimiter);
+
+            success = GrammarParser.TryParseAtomicRule(
+                "@bleh{start: '\\\'\\\'\\\'', end: '\\'\\'\\'', end-escape: '\\\\'\\'\\'', content-rule: 'default'}",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.Is(out rule));
+            dstring = rule.As<DelimitedContent>();
+            Assert.AreEqual("\'\'\'", dstring.StartDelimiter.Delimiter);
+            Assert.AreEqual("\'\'\'", dstring.EndDelimiter!.Value.Delimiter);
             #endregion
 
             #region unregistered
@@ -1215,6 +1243,18 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsTrue(result.Is(out sequence));
             Assert.AreEqual(2, sequence.sequence.Elements.Length);
             Assert.AreEqual(Cardinality.OccursOnlyOnce(), sequence.cardinality);
+
+
+            success = GrammarParser.TryParseSequence(
+                "+[\"@\" /^[a-zA-Z_](([.-])?[a-zA-Z0-9_])*\\z/{ match-type: '1,+' }]",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
+            Assert.IsTrue(result.Is(out sequence));
+            sequence.sequence.TryRecognize("@att", "pth", null!, out var rrr);
+
 
 
             success = GrammarParser.TryParseSequence(

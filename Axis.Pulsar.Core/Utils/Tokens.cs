@@ -3,7 +3,6 @@ using Axis.Luna.Common.Indexers;
 using Axis.Luna.Extensions;
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.ExceptionServices;
 
 namespace Axis.Pulsar.Core.Utils
 {
