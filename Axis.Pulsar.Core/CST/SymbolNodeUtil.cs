@@ -1,5 +1,6 @@
 ﻿using Axis.Luna.Common;
 using Axis.Luna.Extensions;
+using System.Collections.Immutable;
 
 namespace Axis.Pulsar.Core.CST
 {
@@ -23,6 +24,17 @@ namespace Axis.Pulsar.Core.CST
                     })
                     .Where(segment.Matches);
             });
+        }
+
+        public static bool TryFindNodes(this
+            ISymbolNode node,
+            NodePath searchPath,
+            out ImmutableArray<ISymbolNode> nodes)
+        {
+            nodes = node
+                .FindNodes(searchPath)
+                .ToImmutableArray();
+            return nodes.Any();
         }
 
         /// <summary>

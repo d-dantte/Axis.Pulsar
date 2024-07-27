@@ -217,7 +217,7 @@ namespace Axis.Pulsar.Core.XBNF.Lang
             ArgumentNullException.ThrowIfNull(context);
 
             var mrc = set.MinRecognitionCount;
-            return $"#{(mrc > 1 ? mrc.ToString() : "")}{WriteGroup(set, context)}";
+            return $"%{(mrc > 1 ? mrc.ToString() : "")}{WriteGroup(set, context)}";
         }
 
         #region Nested types

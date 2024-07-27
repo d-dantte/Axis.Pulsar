@@ -570,7 +570,7 @@ internal static class GrammarParser
         var position = reader.Position;
         var setPath = path.Next("set");
 
-        if (!reader.TryGetTokens("#", out var delimiterToken))
+        if (!reader.TryGetTokens("%", out var delimiterToken))
         {
             reader.Reset(position);
             result = XBNFResult<(Set, Cardinality)>.Of(FailedRecognitionError.Of(

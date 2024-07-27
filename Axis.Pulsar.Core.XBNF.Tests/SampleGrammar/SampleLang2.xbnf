@@ -1,2 +1,102 @@
-﻿
-$root -> 
+﻿$dpql -> +[$path $block-space.?]
+
+
+# Path
+$path -> +[$block-space.? $segment].+
+
+
+# Spaces
+$block-space -> ?[$char-space $block-comment $line-comment].+
+$char-space -> ?[$space $tab $new-line $carriage-return $form-feed $vertical-tab]
+$space -> " "
+$tab -> "\t"
+$new-line -> "\n"
+$carriage-return -> "\r"
+$form-feed -> "\f"
+$vertical-tab -> "\v"
+
+
+# Comments
+$block-comment -> @delimited-content{
+	start: '/*',
+	end: '*/',
+	end-escape: '\\*/',
+	content-rule: 'default'
+}
+$line-comment -> @delimited-content{
+	start:'//',
+	content-rule: 'icr: \x0d, \x0a'
+}
+
+
+# Segment
+$segment -> +[ "/" $negation.? $filter]
+$negation -> "!"
+
+
+# Filter
+$filter -> ?[
+	$property-filter
+	$attribute-filter
+	$index-range-filter
+	$type-qualifier-filter
+]
+
+
+# Property Filter
+$property-filter -> +[":" $text-pattern]
+
+
+# Attribute Filter
+$attribute-filter -> +[$block-space.? $attribute-expression].+
+$attribute-expression -> +["@" $text-pattern ":" $text-pattern]
+
+
+# Text Pattern
+$text-pattern -> ?[$regular-expression $identifier-expression]
+$regular-expression -> @delimited-content{
+    start:'`',
+	end:'`',
+	end-escape: '\\`',
+	content-rule: 'default'
+}
+$identifier-expression -> +[+[?[$token-group $tokens] $cardinality.?].+]
+$token-group -> +["(" $tokens ")"]
+$tokens -> /^[a-zA-Z0-9_.-]+\z/
+$cardinality -> +[
+	"{" $block-space.?
+	?[$digits "*" "?" "+"]
+	+["," $block-space.? ?[$digits "+"]].?
+	$block-space.? "}"
+]
+$digits -> /^\d+\z/
+
+
+# Index Range Filter
+$index-range-filter -> +["#" $index +[".." $index].?]
+$index -> +["^".? $digits]
+
+
+# Type Qualifier Filter
+$type-qualifier-filter -> %1[
+	$bool-type
+	$blob-type
+	$decimal-type
+	$duration-type
+	$integer-type
+	$record-type
+	$sequence-type
+	$string-type
+	$symbol-type
+	$timestamp-type
+]
+$bool-type -> +[$block-space.? ?["$Boolean"{case-insensitive} "$Bool"{case-insensitive}]]
+$blob-type -> +[$block-space.? "$Blob"{case-insensitive}]
+$decimal-type -> +[$block-space.? ?["$Decimal"{case-insensitive} "$Dec"{case-insensitive}]]
+$duration-type -> +[$block-space.? ?["$Duration"{case-insensitive} "$Dur"{case-insensitive}]]
+$integer-type -> +[$block-space.? ?["$Integer"{case-insensitive} "$Int"{case-insensitive}]]
+$record-type -> +[$block-space.? ?["$Record"{case-insensitive} "$Rec"{case-insensitive}]]
+$sequence-type -> +[$block-space.? ?["$Sequence"{case-insensitive} "$Seq"{case-insensitive}]]
+$string-type -> +[$block-space.? ?["$String"{case-insensitive} "$Str"{case-insensitive}]]
+$symbol-type -> +[$block-space.? ?["$Symbol"{case-insensitive} "$Sym"{case-insensitive}]]
+$timestamp-type -> +[$block-space.? ?["$TimeStamp"{case-insensitive} "$TS"{case-insensitive}]]

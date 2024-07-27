@@ -15,6 +15,7 @@
     <None Remove="SampleGrammar\Int2.xbnf" />
     <None Remove="SampleGrammar\json.xbnf" />
     <None Remove="SampleGrammar\SampleLang.xbnf" />
+    <None Remove="SampleGrammar\SampleLang2.xbnf" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,6 +23,7 @@
     <EmbeddedResource Include="SampleGrammar\Int1.xbnf" />
     <EmbeddedResource Include="SampleGrammar\json.xbnf" />
     <EmbeddedResource Include="SampleGrammar\SampleLang.xbnf" />
+    <EmbeddedResource Include="SampleGrammar\SampleLang2.xbnf" />
   </ItemGroup>
 
   <ItemGroup>

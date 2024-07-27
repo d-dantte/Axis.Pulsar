@@ -1292,7 +1292,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
 
             var success = GrammarParser.TryParseSet(
-                "#[ $stuff $other-stuff ]",
+                "%[ $stuff $other-stuff ]",
                 "parent",
                 metaContext,
                 out var result);
@@ -1304,7 +1304,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
 
             success = GrammarParser.TryParseSet(
-                "#2[ $stuff $other-stuff ]",
+                "%2[ $stuff $other-stuff ]",
                 "parent",
                 metaContext,
                 out result);
@@ -1317,7 +1317,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
 
             success = GrammarParser.TryParseSet(
-                "#2[ $stuff $other-stuff ].+",
+                "%2[ $stuff $other-stuff ].+",
                 "parent",
                 metaContext,
                 out result);
@@ -1328,7 +1328,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
 
 
             success = GrammarParser.TryParseSet(
-                "#^^[ $stuff $other-stuff ].+",
+                "%^^[ $stuff $other-stuff ].+",
                 "parent",
                 metaContext,
                 out result);
@@ -1346,7 +1346,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 .ApplyTo(x => new ParserContext(x));
 
             var success = GrammarParser.TryParseAggregation(
-                "#[$tuff]",
+                "%[$tuff]",
                 "parent",
                 metaContext,
                 out var result);
@@ -1412,7 +1412,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
                 .ApplyTo(x => new ParserContext(x));
 
             var success = GrammarParser.TryParseCompositeRule(
-                "#[$tuff ?[$other-stuff $more-stuff].?]",
+                "%[$tuff ?[$other-stuff $more-stuff].?]",
                 "parent",
                 metaContext,
                 out var result);
@@ -1422,7 +1422,7 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsInstanceOfType<CompositeRule>(rule);
 
             success = GrammarParser.TryParseCompositeRule(
-                ":2 #[$tuff ?[$other-stuff $more-stuff]]",
+                ":2 %[$tuff ?[$other-stuff $more-stuff]]",
                 "parent",
                 metaContext,
                 out result);
@@ -1681,6 +1681,25 @@ namespace Axis.Pulsar.Core.XBNF.Tests.Parsers
             Assert.IsInstanceOfType<CompositeRule>(production.Rule);
             var nt = production.Rule as CompositeRule;
             Assert.IsInstanceOfType<AtomicRuleRef>(nt!.Element);
+
+            success = GrammarParser.TryParseProduction(
+                @"$name -> %1[
+	$bool-type
+	 $blob-type
+	$decimal-type
+	$duration-type
+	$integer-type
+	$record-type
+	$sequence-type
+	$string-type
+	$symbol-type
+	$timestamp-type
+]",
+                "parent",
+                metaContext,
+                out result);
+
+            Assert.IsTrue(success);
         }
 
         [TestMethod]

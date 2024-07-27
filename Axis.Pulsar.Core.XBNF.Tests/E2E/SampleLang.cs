@@ -80,5 +80,31 @@ namespace Axis.Pulsar.Core.XBNF.Tests.E2E
             Assert.IsTrue(result.Is(out node));
             Assert.AreEqual($"true", node.Tokens.ToString());
         }
+
+        [TestMethod]
+        public void SampleLang2Tests()
+        {
+            ILanguageContext? _lang = null;
+            try
+            {
+                // get language string
+                using var langDefStream = ResourceLoader.Load("SampleGrammar.SampleLang2.xbnf");
+                var langText = new StreamReader(langDefStream!).ReadToEnd();
+
+                // build importer
+                var importer = XBNFImporter
+                    .NewBuilder()
+                    .WithDefaultAtomicRuleDefinitions()
+                    .Build();
+
+                // import
+                _lang = importer.ImportLanguage(langText);
+                Assert.IsNotNull(_lang);
+            }
+            catch (Exception ex)
+            {
+                ex.Throw();
+            }
+        }
     }
 }
