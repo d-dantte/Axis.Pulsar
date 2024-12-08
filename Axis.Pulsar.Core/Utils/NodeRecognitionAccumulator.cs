@@ -1,4 +1,5 @@
 ﻿using Axis.Luna.Common;
+using Axis.Luna.Unions;
 using Axis.Pulsar.Core.Grammar.Errors;
 using Axis.Pulsar.Core.Grammar.Results;
 
@@ -183,7 +184,7 @@ public readonly struct NodeRecognitionAccumulator<TData, TSymbolID, TContext> :
 
         var localData = _data;
         var overrideError = freMapper is not null;
-        return tresult.MapMatch(
+        return tresult.Match(
 
             // recognition/parsing was successful, map the data
             result => new NodeRecognitionAccumulator<TData, TSymbolID, TContext>(
