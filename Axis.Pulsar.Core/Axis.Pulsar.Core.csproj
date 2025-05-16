@@ -18,6 +18,7 @@
     <Company>Axiis</Company>
     <Authors>Dantte</Authors>
     <PackageReadmeFile>axis.pulsar.core.readme.md</PackageReadmeFile>
+	  <PackAndPush>true</PackAndPush>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,12 +29,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Axis.Luna.Common" Version="7.0.10" />
-    <PackageReference Include="Axis.Luna.Extensions" Version="7.0.10" />
-    <PackageReference Include="Axis.Luna.Optional" Version="7.0.10" />
-    <PackageReference Include="Axis.Luna.Result" Version="7.0.10" />
-    <PackageReference Include="Axis.Luna.Unions" Version="7.0.10" />
-    <PackageReference Include="System.Collections.Immutable" Version="9.0.0" />
+    <PackageReference Include="Axis.Luna.Common" Version="7.0.15" />
+    <PackageReference Include="Axis.Luna.Extensions" Version="7.0.15" />
+    <PackageReference Include="Axis.Luna.Optional" Version="7.0.15" />
+    <PackageReference Include="Axis.Luna.Result" Version="7.0.15" />
+    <PackageReference Include="Axis.Luna.Unions" Version="7.0.15" />
+    <PackageReference Include="System.Collections.Immutable" Version="9.0.5" />
   </ItemGroup>
 
 </Project>
